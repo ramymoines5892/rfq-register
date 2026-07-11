@@ -555,6 +555,8 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
         expiry_date: form.expiry_date || null,
         notes: form.notes.trim() || null,
         workflow_template_id: form.workflow_template_id || null,
+        customer_id: form.customer_id || null,
+        terms_override: form.override_enabled ? (form.terms_override.trim() || null) : null,
       };
 
       let quoteId: string;
