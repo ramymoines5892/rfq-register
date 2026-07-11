@@ -29,8 +29,13 @@ function AuthPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
+      // Validate any existing session against the server. A stale JWT
+      // (user deleted from DB) returns 403 user_not_found — sign it out
+      // so we don't loop through the protected layout.
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) {
+        await supabase.auth.signOut().catch(() => {});
+      } else {
         navigate({ to: "/" });
         return;
       }
