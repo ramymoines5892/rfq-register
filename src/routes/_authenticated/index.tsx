@@ -320,25 +320,18 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
       // Update quote state
       await supabase.from("quotes").update({ approval_state: "in_progress" as ApprovalState, current_stage_id: currentStage.id }).eq("id", quote.id);
 
-      // Signed URLs for attachments (7 days)
-      const signedLinks: { name: string; url: string }[] = [];
-      for (const a of attachments) {
-        const { data } = await supabase.storage.from("quote-attachments").createSignedUrl(a.storage_path, 60 * 60 * 24 * 7);
-        if (data?.signedUrl) signedLinks.push({ name: a.file_name, url: data.signedUrl });
+      // Send email via Gmail connector (server function attaches files from storage)
+      try {
+        const result = await sendEmailFn({ data: { quoteId: quote.id } });
+        toast.success(t("workflowStarted"));
+        toast.success(`${lang === "ar" ? "تم إرسال الإيميل إلى" : "Email sent to"}: ${(result as { recipients: string[] }).recipients.join(", ")}`);
+      } catch (mailErr) {
+        toast.success(t("workflowStarted"));
+        toast.error(`${lang === "ar" ? "فشل إرسال الإيميل" : "Email send failed"}: ${(mailErr as Error).message}`);
       }
-
-      // Log the send attempt with recipient emails
-      const recipientEmails = profiles.filter(p => approverIds.includes(p.id)).map(p => p.email);
-      await supabase.from("quote_email_log").insert({
-        quote_id: quote.id, stage_id: currentStage.id, sender_id: userId,
-        recipients: recipientEmails,
-        subject: `${lang === "ar" ? "طلب موافقة على عرض من " : "Approval request for quote from "}${quote.supplier_name}`,
-      });
-
-      toast.success(t("workflowStarted"));
-      toast.info(t("emailNotConfigured"));
       setSendOpen(false);
       onChanged();
+
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
