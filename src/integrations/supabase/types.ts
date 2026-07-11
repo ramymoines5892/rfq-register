@@ -549,6 +549,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      can_manage_workflow_stage_approvers: {
+        Args: { _stage_id: string; _user_id: string }
+        Returns: boolean
+      }
       find_customer_by_tax_id: {
         Args: { _tax_id: string }
         Returns: {
@@ -563,6 +567,10 @@ export type Database = {
       }
       is_workflow_approver: {
         Args: { _template_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_workflow_stage_approver: {
+        Args: { _stage_id: string; _user_id: string }
         Returns: boolean
       }
     }
