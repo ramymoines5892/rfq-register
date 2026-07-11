@@ -14,39 +14,172 @@ export type Database = {
   }
   public: {
     Tables: {
-      customers: {
+      customer_banks: {
         Row: {
+          account_name: string | null
+          account_number: string | null
+          bank_name: string
+          branch: string | null
           created_at: string
           currency: string
+          customer_id: string
+          iban: string | null
           id: string
+          is_primary: boolean
+          notes: string | null
+          swift: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_name: string
+          branch?: string | null
+          created_at?: string
+          currency?: string
+          customer_id: string
+          iban?: string | null
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          swift?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_name?: string
+          branch?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string
+          iban?: string | null
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          swift?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_banks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_contacts: {
+        Row: {
+          created_at: string
+          customer_id: string
+          email: string | null
+          id: string
+          is_primary: boolean
           name: string
           notes: string | null
-          tax_id: string | null
-          terms: string | null
+          phone: string | null
+          title: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          currency?: string
+          customer_id: string
+          email?: string | null
           id?: string
+          is_primary?: boolean
           name: string
           notes?: string | null
-          tax_id?: string | null
-          terms?: string | null
+          phone?: string | null
+          title?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          currency?: string
+          customer_id?: string
+          email?: string | null
           id?: string
+          is_primary?: boolean
           name?: string
           notes?: string | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_contacts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          currency: string
+          email: string | null
+          id: string
+          industry: string | null
+          name: string
+          notes: string | null
+          payment_terms: string | null
+          phone: string | null
+          tax_id: string | null
+          terms: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string
+          email?: string | null
+          id?: string
+          industry?: string | null
+          name: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          tax_id?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string
+          email?: string | null
+          id?: string
+          industry?: string | null
+          name?: string
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
           tax_id?: string | null
           terms?: string | null
           updated_at?: string
           user_id?: string
+          website?: string | null
         }
         Relationships: []
       }
