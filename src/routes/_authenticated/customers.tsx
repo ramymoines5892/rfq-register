@@ -486,9 +486,52 @@ function CustomerDialog({
                   </Select>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2 md:col-span-2">
                   <Label>{t("paymentTerms")}</Label>
-                  <Input value={form.payment_terms} onChange={(e) => setForm({ ...form, payment_terms: e.target.value })} maxLength={200} placeholder={lang === "ar" ? "مثال: 30 يوم" : "e.g. Net 30"} />
+                  <div className="flex gap-2">
+                    <Input
+                      value={paymentInput}
+                      onChange={(e) => setPaymentInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const v = paymentInput.trim();
+                          if (v && !paymentTermsList.includes(v)) setPaymentTermsList([...paymentTermsList, v]);
+                          setPaymentInput("");
+                        }
+                      }}
+                      maxLength={200}
+                      placeholder={lang === "ar" ? "اكتب شرط الدفع واضغط Enter" : "Type a payment term and press Enter"}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const v = paymentInput.trim();
+                        if (v && !paymentTermsList.includes(v)) setPaymentTermsList([...paymentTermsList, v]);
+                        setPaymentInput("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {paymentTermsList.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {paymentTermsList.map((p, i) => (
+                        <Badge key={i} variant="secondary" className="gap-1.5 py-1 ps-2.5 pe-1">
+                          <span>{p}</span>
+                          <button
+                            type="button"
+                            className="rounded-full hover:bg-destructive/20 p-0.5"
+                            onClick={() => setPaymentTermsList(paymentTermsList.filter((_, idx) => idx !== i))}
+                            aria-label="remove"
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
