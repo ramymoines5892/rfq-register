@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       customer_banks: {
         Row: {
           account_name: string | null
@@ -249,6 +291,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          kind: string
+          link: string | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -766,6 +847,20 @@ export type Database = {
         | "team.view"
         | "team.manage"
         | "reports.view"
+        | "customers.create"
+        | "customers.edit"
+        | "customers.delete"
+        | "customers.view_payment_info"
+        | "quotes.view_own"
+        | "quotes.view_team"
+        | "quotes.view_all"
+        | "quotes.create"
+        | "quotes.edit"
+        | "quotes.delete"
+        | "quotes.assign"
+        | "users.manage_roles"
+        | "templates.manage"
+        | "notifications.view"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
       profile_status: "pending" | "active" | "suspended"
@@ -911,6 +1006,20 @@ export const Constants = {
         "team.view",
         "team.manage",
         "reports.view",
+        "customers.create",
+        "customers.edit",
+        "customers.delete",
+        "customers.view_payment_info",
+        "quotes.view_own",
+        "quotes.view_team",
+        "quotes.view_all",
+        "quotes.create",
+        "quotes.edit",
+        "quotes.delete",
+        "quotes.assign",
+        "users.manage_roles",
+        "templates.manage",
+        "notifications.view",
       ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
