@@ -702,6 +702,15 @@ export type Database = {
         Args: { _stage_id: string; _user_id: string }
         Returns: boolean
       }
+      current_profile_locked_fields: {
+        Args: never
+        Returns: {
+          department_id: string
+          job_title_id: string
+          manager_id: string
+          status: Database["public"]["Enums"]["profile_status"]
+        }[]
+      }
       current_user_status: {
         Args: never
         Returns: Database["public"]["Enums"]["profile_status"]
