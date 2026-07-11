@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { sendQuoteForApproval } from "@/lib/send-quote-email.functions";
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, LogOut, Search, AlertTriangle, FileText, Send, Check, X, Workflow, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText } from "lucide-react";
 import { useI18n, type TKey } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -228,7 +228,7 @@ function Dashboard() {
         </Tabs>
       </main>
 
-      <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quote={editing} templates={templates} onSaved={load} />
+      <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quote={editing} templates={templates} customers={customers} onSaved={load} />
     </div>
   );
 }
