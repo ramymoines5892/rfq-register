@@ -14,7 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      quote_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          quote_id: string
+          size_bytes: number | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          quote_id: string
+          size_bytes?: number | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          quote_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_attachments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: string
+          description: string | null
+          expiry_date: string | null
+          id: string
+          notes: string | null
+          received_date: string
+          reference_no: string | null
+          status: Database["public"]["Enums"]["quote_status"]
+          supplier_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          notes?: string | null
+          received_date?: string
+          reference_no?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          supplier_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          notes?: string | null
+          received_date?: string
+          reference_no?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          supplier_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +111,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +238,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
+    },
   },
 } as const
