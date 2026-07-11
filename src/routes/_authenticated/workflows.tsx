@@ -139,7 +139,7 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
     const stagesList = (st ?? []) as Stage[];
     setStages(stagesList);
     if (stagesList.length) {
-      const { data: ap } = await supabase.from("workflow_stage_approvers").select("*").in("stage_id", stagesList.map(s => s.id));
+      const { data: ap } = await supabase.from("workflow_stage_approvers").select("*").in("stage_id", stagesList.map(s => s.id)).order("position");
       const grouped: Record<string, StageApprover[]> = {};
       (ap ?? []).forEach(a => { (grouped[(a as StageApprover).stage_id] ??= []).push(a as StageApprover); });
       setApprovers(grouped);
