@@ -145,7 +145,10 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   }
 
   async function addStage() {
-    const nextPos = (stages[stages.length - 1]?.position ?? 0) + 1;
+    const { data: maxRow } = await supabase.from("workflow_stages")
+      .select("position").eq("template_id", template.id)
+      .order("position", { ascending: false }).limit(1).maybeSingle();
+    const nextPos = ((maxRow?.position ?? 0) as number) + 1;
     const { error } = await supabase.from("workflow_stages").insert({
       template_id: template.id, position: nextPos, name: `Stage ${nextPos}`,
     });
