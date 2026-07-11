@@ -21,20 +21,40 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 type AppPermission = Database["public"]["Enums"]["app_permission"];
 
 const ALL_PERMISSIONS: AppPermission[] = [
-  "customers.view", "customers.manage",
-  "quotes.view", "quotes.manage", "quotes.approve",
+  "customers.view", "customers.create", "customers.edit", "customers.delete", "customers.manage", "customers.view_payment_info",
+  "quotes.view_own", "quotes.view_team", "quotes.view_all", "quotes.view",
+  "quotes.create", "quotes.edit", "quotes.delete", "quotes.assign", "quotes.manage", "quotes.approve",
   "workflows.view", "workflows.manage",
   "hr.view", "hr.manage",
   "team.view", "team.manage",
+  "users.manage_roles", "templates.manage",
+  "notifications.view",
   "reports.view",
 ];
 
 const permLabelAr: Record<AppPermission, string> = {
-  "customers.view": "عرض العملاء", "customers.manage": "إدارة العملاء",
-  "quotes.view": "عرض العروض", "quotes.manage": "إدارة العروض", "quotes.approve": "الموافقة على العروض",
+  "customers.view": "عرض العملاء",
+  "customers.create": "إضافة عميل",
+  "customers.edit": "تعديل عميل",
+  "customers.delete": "حذف عميل",
+  "customers.manage": "إدارة العملاء",
+  "customers.view_payment_info": "عرض بيانات الدفع/البنوك",
+  "quotes.view": "عرض العروض",
+  "quotes.view_own": "عرض عروضه فقط",
+  "quotes.view_team": "عرض عروض الفريق",
+  "quotes.view_all": "عرض كل العروض",
+  "quotes.create": "إنشاء عرض",
+  "quotes.edit": "تعديل عرض",
+  "quotes.delete": "حذف عرض",
+  "quotes.assign": "تكليف عرض",
+  "quotes.manage": "إدارة العروض",
+  "quotes.approve": "الموافقة على العروض",
   "workflows.view": "عرض القوالب", "workflows.manage": "إدارة القوالب",
   "hr.view": "عرض HR", "hr.manage": "إدارة HR",
   "team.view": "عرض الفريق", "team.manage": "إدارة الفريق",
+  "users.manage_roles": "إدارة الأدوار",
+  "templates.manage": "إدارة قوالب الحقول",
+  "notifications.view": "عرض الإشعارات",
   "reports.view": "عرض التقارير",
 };
 
