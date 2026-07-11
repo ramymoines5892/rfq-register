@@ -28,3 +28,24 @@ export function formatTermsPlain(items: TermItem[]): string {
     .map((i) => (i.title ? `• ${i.title}: ${i.body}` : `• ${i.body}`))
     .join("\n");
 }
+
+export function parseList(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((x) => String(x)).filter(Boolean);
+  } catch {
+    // legacy free text: split by commas / newlines
+    return raw
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+export function stringifyList(items: string[]): string | null {
+  const cleaned = items.map((s) => s.trim()).filter(Boolean);
+  return cleaned.length ? JSON.stringify(cleaned) : null;
+}
+
