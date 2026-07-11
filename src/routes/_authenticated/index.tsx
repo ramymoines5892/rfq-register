@@ -32,6 +32,7 @@ type Quote = {
   status: "new" | "reviewing" | "accepted" | "rejected" | "expired";
   received_date: string; expiry_date: string | null; notes: string | null; created_at: string;
   workflow_template_id: string | null; current_stage_id: string | null; approval_state: ApprovalState;
+  customer_id: string | null; terms_override: string | null;
 };
 type Attachment = { id: string; quote_id: string; file_name: string; storage_path: string; mime_type: string | null; size_bytes: number | null };
 type Template = { id: string; name: string };
@@ -39,6 +40,7 @@ type Stage = { id: string; template_id: string; position: number; name: string }
 type StageApprover = { id: string; stage_id: string; approver_id: string };
 type Approval = { id: string; quote_id: string; stage_id: string; approver_id: string; decision: Decision; comment: string | null; decided_at: string | null };
 type Profile = { id: string; email: string; full_name: string | null };
+type Customer = { id: string; name: string; tax_id: string | null; currency: string; terms: string | null };
 
 const STATUSES: Quote["status"][] = ["new", "reviewing", "accepted", "rejected", "expired"];
 const statusColor: Record<Quote["status"], string> = {
