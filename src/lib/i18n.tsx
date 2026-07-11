@@ -136,6 +136,10 @@ const dict = {
   noContacts: { ar: "لا يوجد أشخاص مسؤولون", en: "No contacts yet" },
   noBanks: { ar: "لا يوجد حسابات بنكية", en: "No bank accounts yet" },
   saveFirst: { ar: "احفظ بيانات العميل أولاً لإضافة المزيد", en: "Save the customer first to add more details" },
+  addTerm: { ar: "إضافة شرط", en: "Add term" },
+  termTitle: { ar: "اسم الشرط", en: "Term name" },
+  termBody: { ar: "بيان الشرط", en: "Term details" },
+  noTerms: { ar: "لا يوجد شروط بعد", en: "No terms yet" },
 } satisfies Dict;
 
 export type TKey = keyof typeof dict;
