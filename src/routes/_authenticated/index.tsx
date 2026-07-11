@@ -678,16 +678,26 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
                   <ScrollText className="h-4 w-4 text-primary" />
                   {t("effectiveTerms")}
                 </div>
-                {selectedCustomer.terms ? (
-                  <div className="text-xs whitespace-pre-wrap bg-background rounded p-2 border">{selectedCustomer.terms}</div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">{lang === "ar" ? "لا شروط مسجلة لهذا العميل" : "No terms set for this customer"}</p>
-                )}
+                {(() => {
+                  const items = parseTerms(selectedCustomer.terms);
+                  return items.length > 0 ? (
+                    <ul className="space-y-1.5 bg-background rounded p-2 border">
+                      {items.map((it, i) => (
+                        <li key={i} className="text-xs">
+                          {it.title && <span className="font-semibold">{it.title}: </span>}
+                          <span className="whitespace-pre-wrap">{it.body}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">{lang === "ar" ? "لا شروط مسجلة لهذا العميل" : "No terms set for this customer"}</p>
+                  );
+                })()}
                 <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
                   <input
                     type="checkbox"
                     checked={form.override_enabled}
-                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || selectedCustomer.terms || "") : "" })}
+                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || formatTermsPlain(parseTerms(selectedCustomer.terms))) : "" })}
                   />
                   {t("overrideTerms")}
                 </label>
