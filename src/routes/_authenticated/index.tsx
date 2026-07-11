@@ -264,10 +264,12 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
   isOwner: boolean; userId: string; onEdit: () => void; onChanged: () => void;
 }) {
   const { t, lang } = useI18n();
+  const sendEmailFn = useServerFn(sendQuoteForApproval);
   const [sendOpen, setSendOpen] = useState(false);
   const [decisionDialog, setDecisionDialog] = useState<null | "approved" | "rejected">(null);
   const [comment, setComment] = useState("");
   const [sending, setSending] = useState(false);
+
 
   const expiryDays = quote.expiry_date ? daysBetween(quote.expiry_date) : null;
   const isSoon = expiryDays !== null && expiryDays >= 0 && expiryDays <= 7 && quote.status !== "expired" && quote.status !== "rejected";
