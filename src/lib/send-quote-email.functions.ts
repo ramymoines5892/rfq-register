@@ -86,7 +86,7 @@ export const sendQuoteForApproval = createServerFn({ method: "POST" })
     // Attachments
     const { data: atts } = await supabase
       .from("quote_attachments")
-      .select("file_name, storage_path, content_type")
+      .select("file_name, storage_path, mime_type")
       .eq("quote_id", quote.id);
 
     const attachmentParts: Array<{ filename: string; contentType: string; b64: string }> = [];
@@ -98,10 +98,11 @@ export const sendQuoteForApproval = createServerFn({ method: "POST" })
       const buf = new Uint8Array(await blob.arrayBuffer());
       attachmentParts.push({
         filename: a.file_name,
-        contentType: a.content_type || "application/octet-stream",
+        contentType: a.mime_type || "application/octet-stream",
         b64: b64Encode(buf),
       });
     }
+
 
     // Sender profile
     const { data: me } = await supabase.from("profiles").select("email, full_name").eq("id", userId).single();
