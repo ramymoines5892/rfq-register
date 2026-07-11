@@ -3,13 +3,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound } from "lucide-react";
+import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
+    const { data: prof } = await supabase.from("profiles").select("status").eq("id", data.user.id).maybeSingle();
+    if (prof && prof.status !== "active") throw redirect({ to: "/pending" });
     return { user: data.user };
   },
   component: AuthenticatedLayout,
