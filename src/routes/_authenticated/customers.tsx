@@ -226,10 +226,11 @@ function CustomerDialog({
 }) {
   const { t, lang } = useI18n();
   const emptyForm = {
-    name: "", tax_id: "", currency: "EGP", terms: "", notes: "",
+    name: "", tax_id: "", currency: "EGP", notes: "",
     email: "", phone: "", website: "", address: "", city: "", country: "", industry: "", payment_terms: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [terms, setTerms] = useState<TermItem[]>([]);
   const [taxIdConflict, setTaxIdConflict] = useState<{ name: string; ownedByMe: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
