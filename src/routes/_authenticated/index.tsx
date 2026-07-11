@@ -603,6 +603,23 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5 sm:col-span-2">
+              <Label>{t("customer")}</Label>
+              <Select
+                value={form.customer_id || "none"}
+                onValueChange={(v) => {
+                  const cid = v === "none" ? "" : v;
+                  const c = customers.find(x => x.id === cid);
+                  setForm({ ...form, customer_id: cid, currency: c ? c.currency : form.currency });
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("noCustomer")}</SelectItem>
+                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.tax_id ? ` — ${c.tax_id}` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
               <Label>{t("supplier")} *</Label>
               <Input required value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} maxLength={200} />
             </div>
@@ -654,6 +671,30 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
               <Label>{t("notes")}</Label>
               <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={2000} />
             </div>
+            {selectedCustomer && (
+              <div className="space-y-1.5 sm:col-span-2 border rounded-lg p-3 bg-muted/40">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <ScrollText className="h-4 w-4 text-primary" />
+                  {t("effectiveTerms")}
+                </div>
+                {selectedCustomer.terms ? (
+                  <div className="text-xs whitespace-pre-wrap bg-background rounded p-2 border">{selectedCustomer.terms}</div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{lang === "ar" ? "لا شروط مسجلة لهذا العميل" : "No terms set for this customer"}</p>
+                )}
+                <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={form.override_enabled}
+                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || selectedCustomer.terms || "") : "" })}
+                  />
+                  {t("overrideTerms")}
+                </label>
+                {form.override_enabled && (
+                  <Textarea rows={3} value={form.terms_override} onChange={(e) => setForm({ ...form, terms_override: e.target.value })} maxLength={4000} placeholder={t("termsPlaceholder")} />
+                )}
+              </div>
+            )}
             <div className="space-y-1.5 sm:col-span-2">
               <Label>{t("attachments")}</Label>
               {existingAttachments.length > 0 && (
