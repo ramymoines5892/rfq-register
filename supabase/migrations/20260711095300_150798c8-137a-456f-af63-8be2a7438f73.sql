@@ -1,0 +1,12 @@
+REVOKE ALL ON FUNCTION public.is_template_owner(uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_template_owner(uuid, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.is_template_owner(uuid, uuid) FROM authenticated;
+REVOKE ALL ON FUNCTION public.is_workflow_approver(uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_workflow_approver(uuid, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.is_workflow_approver(uuid, uuid) FROM authenticated;
+REVOKE ALL ON FUNCTION public.is_workflow_stage_approver(uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_workflow_stage_approver(uuid, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.is_workflow_stage_approver(uuid, uuid) FROM authenticated;
+REVOKE ALL ON FUNCTION public.can_manage_workflow_stage_approvers(uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.can_manage_workflow_stage_approvers(uuid, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.can_manage_workflow_stage_approvers(uuid, uuid) FROM authenticated;
