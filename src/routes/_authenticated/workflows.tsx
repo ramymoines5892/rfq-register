@@ -121,7 +121,16 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   useEffect(() => {
     if (!open) return;
     setName(template.name);
-    supabase.from("profiles").select("id, email, full_name").then(({ data }) => setProfiles((data ?? []) as Profile[]));
+    // Only list users who are part of the team (have a role assigned)
+    supabase.from("user_roles").select("user_id, profiles!inner(id, email, full_name)").then(({ data }) => {
+      const seen = new Set<string>();
+      const list: Profile[] = [];
+      (data ?? []).forEach((row: any) => {
+        const p = row.profiles;
+        if (p && !seen.has(p.id)) { seen.add(p.id); list.push(p as Profile); }
+      });
+      setProfiles(list);
+    });
     reloadStages();
   }, [open, template.id]);
 
