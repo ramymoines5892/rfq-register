@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/workflows")({
 type Profile = { id: string; email: string; full_name: string | null };
 type Template = { id: string; name: string; owner_id: string };
 type Stage = { id: string; template_id: string; position: number; name: string };
-type StageApprover = { id: string; stage_id: string; approver_id: string };
+type StageApprover = { id: string; stage_id: string; approver_id: string; position: number };
 
 function WorkflowsPage() {
   const { t, lang } = useI18n();
@@ -121,7 +121,16 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   useEffect(() => {
     if (!open) return;
     setName(template.name);
-    supabase.from("profiles").select("id, email, full_name").then(({ data }) => setProfiles((data ?? []) as Profile[]));
+    // Only list users who are part of the team (have a role assigned)
+    supabase.from("user_roles").select("user_id, profiles!inner(id, email, full_name)").then(({ data }) => {
+      const seen = new Set<string>();
+      const list: Profile[] = [];
+      (data ?? []).forEach((row: any) => {
+        const p = row.profiles;
+        if (p && !seen.has(p.id)) { seen.add(p.id); list.push(p as Profile); }
+      });
+      setProfiles(list);
+    });
     reloadStages();
   }, [open, template.id]);
 
@@ -130,7 +139,7 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
     const stagesList = (st ?? []) as Stage[];
     setStages(stagesList);
     if (stagesList.length) {
-      const { data: ap } = await supabase.from("workflow_stage_approvers").select("*").in("stage_id", stagesList.map(s => s.id));
+      const { data: ap } = await supabase.from("workflow_stage_approvers").select("*").in("stage_id", stagesList.map(s => s.id)).order("position");
       const grouped: Record<string, StageApprover[]> = {};
       (ap ?? []).forEach(a => { (grouped[(a as StageApprover).stage_id] ??= []).push(a as StageApprover); });
       setApprovers(grouped);
@@ -177,7 +186,9 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
 
   async function addApprover(stageId: string, approverId: string) {
     if (!approverId) return;
-    const { error } = await supabase.from("workflow_stage_approvers").insert({ stage_id: stageId, approver_id: approverId });
+    const current = approvers[stageId] ?? [];
+    const nextPos = (current.reduce((m, a) => Math.max(m, (a as any).position ?? 0), 0)) + 1;
+    const { error } = await supabase.from("workflow_stage_approvers").insert({ stage_id: stageId, approver_id: approverId, position: nextPos });
     if (error && !error.message.includes("duplicate")) { toast.error(error.message); return; }
     reloadStages();
   }
@@ -216,12 +227,13 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
                         <Button size="icon" variant="ghost" onClick={() => deleteStage(s.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
                       </div>
                       <div className="ps-8 space-y-1.5">
-                        <div className="text-xs text-muted-foreground">{t("approvers")}:</div>
+                        <div className="text-xs text-muted-foreground">{t("approvers")} <span className="opacity-70">({t("primaryApprover")} → {t("backupApprover")})</span>:</div>
                         <div className="flex flex-wrap gap-1.5">
-                          {(approvers[s.id] ?? []).map(a => {
+                          {(approvers[s.id] ?? []).map((a, i) => {
                             const p = profiles.find(x => x.id === a.approver_id);
                             return (
                               <div key={a.id} className="inline-flex items-center gap-1 bg-muted rounded px-2 py-0.5 text-xs">
+                                <span className="text-[10px] font-mono opacity-60">{i + 1}.</span>
                                 {p?.full_name || p?.email || a.approver_id}
                                 <button onClick={() => removeApprover(a.id)}><X className="h-3 w-3" /></button>
                               </div>

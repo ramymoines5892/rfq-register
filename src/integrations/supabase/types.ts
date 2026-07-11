@@ -436,23 +436,47 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       workflow_stage_approvers: {
         Row: {
           approver_id: string
           created_at: string
           id: string
+          position: number
           stage_id: string
         }
         Insert: {
           approver_id: string
           created_at?: string
           id?: string
+          position?: number
           stage_id: string
         }
         Update: {
           approver_id?: string
           created_at?: string
           id?: string
+          position?: number
           stage_id?: string
         }
         Relationships: [
@@ -561,6 +585,14 @@ export type Database = {
           owner_id: string
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin_or_owner: { Args: { _user_id: string }; Returns: boolean }
       is_template_owner: {
         Args: { _template_id: string; _user_id: string }
         Returns: boolean
@@ -575,6 +607,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -705,6 +738,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],

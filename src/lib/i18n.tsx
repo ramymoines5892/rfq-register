@@ -140,6 +140,23 @@ const dict = {
   termTitle: { ar: "اسم الشرط", en: "Term name" },
   termBody: { ar: "بيان الشرط", en: "Term details" },
   noTerms: { ar: "لا يوجد شروط بعد", en: "No terms yet" },
+  team: { ar: "الفريق", en: "Team" },
+  teamMembers: { ar: "أعضاء الفريق", en: "Team members" },
+  role: { ar: "الدور", en: "Role" },
+  roleOwner: { ar: "المالك", en: "Owner" },
+  roleAdmin: { ar: "مسؤول", en: "Admin" },
+  roleMember: { ar: "عضو", en: "Member" },
+  changeRole: { ar: "تغيير الدور", en: "Change role" },
+  removeFromTeam: { ar: "إزالة من الفريق", en: "Remove from team" },
+  notInTeam: { ar: "خارج الفريق", en: "Not in team" },
+  addToTeam: { ar: "إضافة للفريق", en: "Add to team" },
+  addByEmail: { ar: "إضافة عضو بالإيميل", en: "Invite member by email" },
+  emailPlaceholder: { ar: "user@example.com", en: "user@example.com" },
+  userNotFound: { ar: "لازم المستخدم يسجّل حساب في التطبيق أولاً", en: "User must sign up first" },
+  onlyAdminsCanManage: { ar: "الإدارة متاحة للمالك والمسؤولين فقط", en: "Only Owner/Admin can manage team" },
+  noTeamMembersHint: { ar: "لم يتم تعيين أي أعضاء بعد. اطلب من الإدارة تعيينك أو إضافة أعضاء.", en: "No team members yet. Ask an admin to add members." },
+  primaryApprover: { ar: "أساسي", en: "Primary" },
+  backupApprover: { ar: "بديل", en: "Backup" },
 } satisfies Dict;
 
 export type TKey = keyof typeof dict;
