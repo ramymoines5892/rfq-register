@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Users, AlertTriangle, Receipt, Phone, Mail, Globe, MapPin, Building2, Landmark, Star, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { parseTerms, stringifyTerms, type TermItem } from "@/lib/terms";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   component: CustomersPage,
@@ -225,10 +226,11 @@ function CustomerDialog({
 }) {
   const { t, lang } = useI18n();
   const emptyForm = {
-    name: "", tax_id: "", currency: "EGP", terms: "", notes: "",
+    name: "", tax_id: "", currency: "EGP", notes: "",
     email: "", phone: "", website: "", address: "", city: "", country: "", industry: "", payment_terms: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [terms, setTerms] = useState<TermItem[]>([]);
   const [taxIdConflict, setTaxIdConflict] = useState<{ name: string; ownedByMe: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -243,7 +245,6 @@ function CustomerDialog({
         name: customer.name,
         tax_id: customer.tax_id ?? "",
         currency: customer.currency,
-        terms: customer.terms ?? "",
         notes: customer.notes ?? "",
         email: customer.email ?? "",
         phone: customer.phone ?? "",
@@ -254,9 +255,11 @@ function CustomerDialog({
         industry: customer.industry ?? "",
         payment_terms: customer.payment_terms ?? "",
       });
+      setTerms(parseTerms(customer.terms));
       loadRelated(customer.id);
     } else {
       setForm(emptyForm);
+      setTerms([]);
       setContacts([]);
       setBanks([]);
     }
@@ -307,7 +310,7 @@ function CustomerDialog({
         name: form.name.trim(),
         tax_id: form.tax_id.trim() || null,
         currency: form.currency,
-        terms: form.terms.trim() || null,
+        terms: stringifyTerms(terms),
         notes: form.notes.trim() || null,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
@@ -484,9 +487,54 @@ function CustomerDialog({
                   <Input value={form.payment_terms} onChange={(e) => setForm({ ...form, payment_terms: e.target.value })} maxLength={200} placeholder={lang === "ar" ? "مثال: 30 يوم" : "e.g. Net 30"} />
                 </div>
 
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label>{t("terms")}</Label>
-                  <Textarea rows={3} value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} maxLength={4000} placeholder={t("termsPlaceholder")} />
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <Label>{t("terms")}</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTerms([...terms, { title: "", body: "" }])}
+                    >
+                      <Plus className="h-4 w-4 me-1" />{t("addTerm")}
+                    </Button>
+                  </div>
+                  {terms.length === 0 ? (
+                    <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
+                      {t("noTerms")}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {terms.map((it, idx) => (
+                        <div key={idx} className="flex items-start gap-2 border rounded-md p-2 bg-muted/30">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+                            <Input
+                              placeholder={t("termTitle")}
+                              value={it.title}
+                              maxLength={120}
+                              onChange={(e) => setTerms(terms.map((x, i) => i === idx ? { ...x, title: e.target.value } : x))}
+                            />
+                            <Textarea
+                              rows={1}
+                              placeholder={t("termBody")}
+                              value={it.body}
+                              maxLength={1000}
+                              className="md:col-span-2 min-h-[38px]"
+                              onChange={(e) => setTerms(terms.map((x, i) => i === idx ? { ...x, body: e.target.value } : x))}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setTerms(terms.filter((_, i) => i !== idx))}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
