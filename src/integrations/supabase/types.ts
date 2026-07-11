@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          notes: string | null
+          tax_id: string | null
+          terms: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          name: string
+          notes?: string | null
+          tax_id?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          tax_id?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -189,6 +225,7 @@ export type Database = {
           created_at: string
           currency: string
           current_stage_id: string | null
+          customer_id: string | null
           description: string | null
           expiry_date: string | null
           id: string
@@ -197,6 +234,7 @@ export type Database = {
           reference_no: string | null
           status: Database["public"]["Enums"]["quote_status"]
           supplier_name: string
+          terms_override: string | null
           updated_at: string
           user_id: string
           workflow_template_id: string | null
@@ -207,6 +245,7 @@ export type Database = {
           created_at?: string
           currency?: string
           current_stage_id?: string | null
+          customer_id?: string | null
           description?: string | null
           expiry_date?: string | null
           id?: string
@@ -215,6 +254,7 @@ export type Database = {
           reference_no?: string | null
           status?: Database["public"]["Enums"]["quote_status"]
           supplier_name: string
+          terms_override?: string | null
           updated_at?: string
           user_id: string
           workflow_template_id?: string | null
@@ -225,6 +265,7 @@ export type Database = {
           created_at?: string
           currency?: string
           current_stage_id?: string | null
+          customer_id?: string | null
           description?: string | null
           expiry_date?: string | null
           id?: string
@@ -233,6 +274,7 @@ export type Database = {
           reference_no?: string | null
           status?: Database["public"]["Enums"]["quote_status"]
           supplier_name?: string
+          terms_override?: string | null
           updated_at?: string
           user_id?: string
           workflow_template_id?: string | null
@@ -243,6 +285,13 @@ export type Database = {
             columns: ["current_stage_id"]
             isOneToOne: false
             referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
           {
@@ -351,7 +400,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      find_customer_by_tax_id: {
+        Args: { _tax_id: string }
+        Returns: {
+          id: string
+          name: string
+          owner_id: string
+        }[]
+      }
     }
     Enums: {
       approval_decision: "pending" | "approved" | "rejected"

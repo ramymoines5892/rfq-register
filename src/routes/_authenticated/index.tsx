@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { sendQuoteForApproval } from "@/lib/send-quote-email.functions";
 import { useEffect, useMemo, useState } from "react";
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, LogOut, Search, AlertTriangle, FileText, Send, Check, X, Workflow, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText } from "lucide-react";
 import { useI18n, type TKey } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -32,6 +32,7 @@ type Quote = {
   status: "new" | "reviewing" | "accepted" | "rejected" | "expired";
   received_date: string; expiry_date: string | null; notes: string | null; created_at: string;
   workflow_template_id: string | null; current_stage_id: string | null; approval_state: ApprovalState;
+  customer_id: string | null; terms_override: string | null;
 };
 type Attachment = { id: string; quote_id: string; file_name: string; storage_path: string; mime_type: string | null; size_bytes: number | null };
 type Template = { id: string; name: string };
@@ -39,6 +40,7 @@ type Stage = { id: string; template_id: string; position: number; name: string }
 type StageApprover = { id: string; stage_id: string; approver_id: string };
 type Approval = { id: string; quote_id: string; stage_id: string; approver_id: string; decision: Decision; comment: string | null; decided_at: string | null };
 type Profile = { id: string; email: string; full_name: string | null };
+type Customer = { id: string; name: string; tax_id: string | null; currency: string; terms: string | null };
 
 const STATUSES: Quote["status"][] = ["new", "reviewing", "accepted", "rejected", "expired"];
 const statusColor: Record<Quote["status"], string> = {
@@ -55,10 +57,8 @@ function daysBetween(dateStr: string) {
 }
 
 function Dashboard() {
-  const { t, lang, setLang } = useI18n();
-  const router = useRouter();
+  const { t, lang } = useI18n();
   const [userId, setUserId] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pendingQuotes, setPendingQuotes] = useState<Quote[]>([]);
   const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({});
@@ -66,6 +66,7 @@ function Dashboard() {
   const [approvalsByQuote, setApprovalsByQuote] = useState<Record<string, Approval[]>>({});
   const [templates, setTemplates] = useState<Template[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | Quote["status"]>("all");
@@ -74,17 +75,19 @@ function Dashboard() {
   const [tab, setTab] = useState<"mine" | "pending">("mine");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); setUserEmail(data.user?.email ?? ""); });
+    supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); });
     load();
   }, []);
 
   async function load() {
     setLoading(true);
-    const [{ data: qs }, { data: tpls }, { data: profs }] = await Promise.all([
+    const [{ data: qs }, { data: tpls }, { data: profs }, { data: cus }] = await Promise.all([
       supabase.from("quotes").select("*").order("received_date", { ascending: false }),
       supabase.from("workflow_templates").select("id, name"),
       supabase.from("profiles").select("id, email, full_name"),
+      supabase.from("customers").select("id, name, tax_id, currency, terms").order("name"),
     ]);
+    setCustomers((cus ?? []) as Customer[]);
     const allQuotes = (qs ?? []) as Quote[];
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id ?? "";
@@ -117,10 +120,8 @@ function Dashboard() {
     setLoading(false);
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.navigate({ to: "/auth", replace: true });
-  }
+
+
 
   const filtered = useMemo(() => quotes.filter(q => {
     if (filterStatus !== "all" && q.status !== filterStatus) return false;
@@ -144,20 +145,23 @@ function Dashboard() {
   }), [pendingQuotes, approvalsByQuote, userId]);
 
   return (
-    <div className="min-h-screen bg-muted/20">
-      <header className="border-b bg-background sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-lg md:text-xl font-bold">{t("appName")}</h1>
-          <div className="flex items-center gap-2">
-            <Link to="/workflows"><Button variant="ghost" size="sm"><Workflow className="h-4 w-4 me-1" />{t("workflows")}</Button></Link>
-            <span className="text-xs text-muted-foreground hidden sm:inline">{userEmail}</span>
-            <Button variant="ghost" size="sm" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>{t("langToggle")}</Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}><LogOut className="h-4 w-4" /></Button>
+    <div className="min-h-screen">
+      <div className="bg-gradient-to-br from-primary via-primary to-[oklch(0.32_0.07_160)] text-primary-foreground">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-accent/90 flex items-center justify-center text-accent-foreground">
+              <FileText className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">{t("overview")}</h1>
+              <p className="text-sm opacity-80">{t("tagline")}</p>
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6 -mt-6">
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("quotesCount")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.count}</div></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("totalValue")} ({t("accepted")})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div></CardContent></Card>
@@ -224,7 +228,7 @@ function Dashboard() {
         </Tabs>
       </main>
 
-      <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quote={editing} templates={templates} onSaved={load} />
+      <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quote={editing} templates={templates} customers={customers} onSaved={load} />
     </div>
   );
 }
@@ -496,13 +500,14 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
   );
 }
 
-function QuoteDialog({ open, onOpenChange, quote, templates, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; quote: Quote | null; templates: Template[]; onSaved: () => void }) {
+function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; quote: Quote | null; templates: Template[]; customers: Customer[]; onSaved: () => void }) {
   const { t, lang } = useI18n();
   const [form, setForm] = useState({
     supplier_name: "", reference_no: "", description: "", amount: "",
     currency: "EGP", status: "new" as Quote["status"],
     received_date: new Date().toISOString().slice(0, 10),
     expiry_date: "", notes: "", workflow_template_id: "" as string,
+    customer_id: "" as string, terms_override: "", override_enabled: false,
   });
   const [files, setFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
@@ -517,15 +522,20 @@ function QuoteDialog({ open, onOpenChange, quote, templates, onSaved }: { open: 
           currency: quote.currency, status: quote.status,
           received_date: quote.received_date, expiry_date: quote.expiry_date ?? "",
           notes: quote.notes ?? "", workflow_template_id: quote.workflow_template_id ?? "",
+          customer_id: quote.customer_id ?? "",
+          terms_override: quote.terms_override ?? "",
+          override_enabled: quote.terms_override !== null,
         });
         supabase.from("quote_attachments").select("*").eq("quote_id", quote.id).then(({ data }) => setExistingAttachments((data ?? []) as Attachment[]));
       } else {
-        setForm({ supplier_name: "", reference_no: "", description: "", amount: "", currency: "EGP", status: "new", received_date: new Date().toISOString().slice(0, 10), expiry_date: "", notes: "", workflow_template_id: "" });
+        setForm({ supplier_name: "", reference_no: "", description: "", amount: "", currency: "EGP", status: "new", received_date: new Date().toISOString().slice(0, 10), expiry_date: "", notes: "", workflow_template_id: "", customer_id: "", terms_override: "", override_enabled: false });
         setExistingAttachments([]);
       }
       setFiles([]);
     }
   }, [open, quote]);
+
+  const selectedCustomer = customers.find(c => c.id === form.customer_id) ?? null;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -545,6 +555,8 @@ function QuoteDialog({ open, onOpenChange, quote, templates, onSaved }: { open: 
         expiry_date: form.expiry_date || null,
         notes: form.notes.trim() || null,
         workflow_template_id: form.workflow_template_id || null,
+        customer_id: form.customer_id || null,
+        terms_override: form.override_enabled ? (form.terms_override.trim() || null) : null,
       };
 
       let quoteId: string;
@@ -590,6 +602,23 @@ function QuoteDialog({ open, onOpenChange, quote, templates, onSaved }: { open: 
         <DialogHeader><DialogTitle>{quote ? t("editQuote") : t("newQuote")}</DialogTitle></DialogHeader>
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>{t("customer")}</Label>
+              <Select
+                value={form.customer_id || "none"}
+                onValueChange={(v) => {
+                  const cid = v === "none" ? "" : v;
+                  const c = customers.find(x => x.id === cid);
+                  setForm({ ...form, customer_id: cid, currency: c ? c.currency : form.currency });
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("noCustomer")}</SelectItem>
+                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.tax_id ? ` — ${c.tax_id}` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>{t("supplier")} *</Label>
               <Input required value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} maxLength={200} />
@@ -642,6 +671,30 @@ function QuoteDialog({ open, onOpenChange, quote, templates, onSaved }: { open: 
               <Label>{t("notes")}</Label>
               <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={2000} />
             </div>
+            {selectedCustomer && (
+              <div className="space-y-1.5 sm:col-span-2 border rounded-lg p-3 bg-muted/40">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <ScrollText className="h-4 w-4 text-primary" />
+                  {t("effectiveTerms")}
+                </div>
+                {selectedCustomer.terms ? (
+                  <div className="text-xs whitespace-pre-wrap bg-background rounded p-2 border">{selectedCustomer.terms}</div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">{lang === "ar" ? "لا شروط مسجلة لهذا العميل" : "No terms set for this customer"}</p>
+                )}
+                <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={form.override_enabled}
+                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || selectedCustomer.terms || "") : "" })}
+                  />
+                  {t("overrideTerms")}
+                </label>
+                {form.override_enabled && (
+                  <Textarea rows={3} value={form.terms_override} onChange={(e) => setForm({ ...form, terms_override: e.target.value })} maxLength={4000} placeholder={t("termsPlaceholder")} />
+                )}
+              </div>
+            )}
             <div className="space-y-1.5 sm:col-span-2">
               <Label>{t("attachments")}</Label>
               {existingAttachments.length > 0 && (
