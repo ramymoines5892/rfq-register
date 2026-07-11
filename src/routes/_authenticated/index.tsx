@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText } from "lucide-react";
 import { useI18n, type TKey } from "@/lib/i18n";
+import { parseTerms, formatTermsPlain } from "@/lib/terms";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
