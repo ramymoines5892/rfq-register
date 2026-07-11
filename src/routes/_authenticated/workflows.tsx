@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/workflows")({
 type Profile = { id: string; email: string; full_name: string | null };
 type Template = { id: string; name: string; owner_id: string };
 type Stage = { id: string; template_id: string; position: number; name: string };
-type StageApprover = { id: string; stage_id: string; approver_id: string };
+type StageApprover = { id: string; stage_id: string; approver_id: string; position: number };
 
 function WorkflowsPage() {
   const { t, lang } = useI18n();
