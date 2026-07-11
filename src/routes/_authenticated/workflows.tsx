@@ -186,7 +186,9 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
 
   async function addApprover(stageId: string, approverId: string) {
     if (!approverId) return;
-    const { error } = await supabase.from("workflow_stage_approvers").insert({ stage_id: stageId, approver_id: approverId });
+    const current = approvers[stageId] ?? [];
+    const nextPos = (current.reduce((m, a) => Math.max(m, (a as any).position ?? 0), 0)) + 1;
+    const { error } = await supabase.from("workflow_stage_approvers").insert({ stage_id: stageId, approver_id: approverId, position: nextPos });
     if (error && !error.message.includes("duplicate")) { toast.error(error.message); return; }
     reloadStages();
   }
