@@ -541,6 +541,14 @@ export type Database = {
           owner_id: string
         }[]
       }
+      is_template_owner: {
+        Args: { _template_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_workflow_approver: {
+        Args: { _template_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       approval_decision: "pending" | "approved" | "rejected"
