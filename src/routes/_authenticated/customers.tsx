@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Users, AlertTriangle, Receipt, Phone, Mail, Globe, MapPin, Building2, Landmark, Star, UserRound } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { parseTerms, stringifyTerms, type TermItem } from "@/lib/terms";
+import { parseTerms, stringifyTerms, parseList, stringifyList, type TermItem } from "@/lib/terms";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   component: CustomersPage,
