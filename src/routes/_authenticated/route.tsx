@@ -34,15 +34,15 @@ function AuthenticatedLayout() {
     })();
   }, []);
 
-  const nav = [
+  const mainNav = [
     { to: "/", label: t("overview"), icon: LayoutDashboard, match: (p: string) => p === "/" },
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
-    ...(isAdmin ? [
-      { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
-      { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
-    ] : []),
   ];
+  const adminNav = isAdmin ? [
+    { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
+    { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
+  ] : [];
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -50,47 +50,76 @@ function AuthenticatedLayout() {
   }
 
   const sideStart = dir === "rtl" ? "border-s" : "border-e";
+  const initial = (email?.[0] || "U").toUpperCase();
+
+  const renderNav = (items: typeof mainNav) => items.map((n) => {
+    const active = n.match(pathname);
+    const Icon = n.icon;
+    return (
+      <Link
+        key={n.to}
+        to={n.to}
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+        }`}
+      >
+        <Icon className="h-4 w-4 opacity-90" />
+        <span>{n.label}</span>
+      </Link>
+    );
+  });
 
   return (
     <div className="min-h-screen flex bg-background" dir={dir}>
       {/* Sidebar */}
       <aside className={`hidden md:flex md:w-64 lg:w-72 flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border`}>
-        <div className="h-16 flex items-center gap-2 px-5 border-b border-sidebar-border">
-          <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground">
-            <Gem className="h-5 w-5" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-sm font-semibold">{t("appName")}</div>
-            <div className="text-[11px] opacity-70">{t("tagline")}</div>
+        <div className="px-6 pt-7 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-sm">
+              <Gem className="h-4 w-4" />
+            </div>
+            <div className="font-display text-lg font-bold tracking-tight">
+              <span className="text-sidebar-primary">Core</span>
+              <span>Suite</span>
+            </div>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {nav.map((n) => {
-            const active = n.match(pathname);
-            const Icon = n.icon;
-            return (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  active
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm"
-                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {n.label}
-              </Link>
-            );
-          })}
+
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+          <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-4 pb-2 text-sidebar-primary/70">
+            {t("mainMenu") ?? "القائمة الرئيسية"}
+          </div>
+          {renderNav(mainNav)}
+
+          {adminNav.length > 0 && (
+            <>
+              <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-6 pb-2 text-sidebar-primary/70">
+                {t("administration") ?? "الإدارة"}
+              </div>
+              {renderNav(adminNav)}
+            </>
+          )}
         </nav>
-        <div className="p-3 border-t border-sidebar-border space-y-2">
-          <div className="text-xs opacity-70 px-2 truncate">{email}</div>
+
+        <div className="p-4 space-y-2">
+          <div className="bg-sidebar-accent/60 rounded-2xl p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center font-bold text-sidebar-primary-foreground shrink-0">
+              {initial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold truncate">{email}</div>
+              <div className="text-[10px] text-sidebar-foreground/60">
+                {isAdmin ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "مستخدم" : "Member")}
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="flex-1 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
+            <Button variant="ghost" size="sm" className="flex-1 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
               <Languages className="h-4 w-4 me-1" /> {t("langToggle")}
             </Button>
-            <Button variant="ghost" size="sm" className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={signOut}>
+            <Button variant="ghost" size="sm" className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={signOut}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -101,14 +130,14 @@ function AuthenticatedLayout() {
       <div className="md:hidden fixed top-0 inset-x-0 z-20 h-14 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
           <Gem className="h-5 w-5 text-sidebar-primary" />
-          <span className="font-semibold text-sm">{t("appName")}</span>
+          <span className="font-display font-bold text-sm">CoreSuite</span>
         </div>
         <div className="flex items-center gap-1">
-          {nav.map((n) => {
+          {[...mainNav, ...adminNav].map((n) => {
             const active = n.match(pathname);
             const Icon = n.icon;
             return (
-              <Link key={n.to} to={n.to} className={`p-2 rounded ${active ? "bg-sidebar-primary text-sidebar-primary-foreground" : ""}`}>
+              <Link key={n.to} to={n.to} className={`p-2 rounded-lg ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70"}`}>
                 <Icon className="h-4 w-4" />
               </Link>
             );

@@ -112,6 +112,8 @@ const dict = {
   noCustomersYet: { ar: "لا يوجد عملاء بعد. أضف أول عميل.", en: "No customers yet. Add one." },
   customerSaved: { ar: "تم حفظ العميل", en: "Customer saved" },
   overview: { ar: "نظرة عامة", en: "Overview" },
+  mainMenu: { ar: "القائمة الرئيسية", en: "Main Menu" },
+  administration: { ar: "الإدارة", en: "Administration" },
   phone: { ar: "التليفون", en: "Phone" },
   website: { ar: "الموقع الإلكتروني", en: "Website" },
   address: { ar: "العنوان", en: "Address" },

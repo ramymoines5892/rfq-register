@@ -19,6 +19,8 @@
  */
 
 @theme inline {
+  --font-sans: "Epilogue", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Urbanist", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -62,40 +64,40 @@
 }
 
 :root {
-  /* Emerald Prestige — deep emerald, muted gold, warm cream */
-  --radius: 0.75rem;
-  --background: oklch(0.985 0.008 95);
-  --foreground: oklch(0.22 0.03 160);
+  /* Navy Trust — #0f1b3d / #1e3a5f / #3b6fa0 / #e8edf3 */
+  --radius: 0.875rem;
+  --background: oklch(0.975 0.008 250);
+  --foreground: oklch(0.22 0.08 265);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.03 160);
+  --card-foreground: oklch(0.22 0.08 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.03 160);
-  --primary: oklch(0.38 0.09 160);
-  --primary-foreground: oklch(0.98 0.02 95);
-  --secondary: oklch(0.94 0.03 95);
-  --secondary-foreground: oklch(0.25 0.05 160);
-  --muted: oklch(0.94 0.02 95);
-  --muted-foreground: oklch(0.48 0.04 155);
-  --accent: oklch(0.75 0.13 85);
-  --accent-foreground: oklch(0.22 0.05 160);
+  --popover-foreground: oklch(0.22 0.08 265);
+  --primary: oklch(0.35 0.08 258);           /* #1e3a5f */
+  --primary-foreground: oklch(0.98 0.005 250);
+  --secondary: oklch(0.94 0.012 250);         /* #e8edf3 */
+  --secondary-foreground: oklch(0.22 0.08 265);
+  --muted: oklch(0.94 0.012 250);
+  --muted-foreground: oklch(0.5 0.04 255);
+  --accent: oklch(0.56 0.10 250);             /* #3b6fa0 */
+  --accent-foreground: oklch(0.98 0.005 250);
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.9 0.02 100);
-  --input: oklch(0.9 0.02 100);
-  --ring: oklch(0.55 0.11 160);
-  --chart-1: oklch(0.38 0.09 160);
-  --chart-2: oklch(0.75 0.13 85);
-  --chart-3: oklch(0.55 0.11 160);
+  --border: oklch(0.9 0.015 250);
+  --input: oklch(0.9 0.015 250);
+  --ring: oklch(0.56 0.10 250);
+  --chart-1: oklch(0.35 0.08 258);
+  --chart-2: oklch(0.56 0.10 250);
+  --chart-3: oklch(0.7 0.09 220);
   --chart-4: oklch(0.65 0.15 40);
-  --chart-5: oklch(0.6 0.12 200);
-  --sidebar: oklch(0.24 0.04 160);
-  --sidebar-foreground: oklch(0.96 0.02 95);
-  --sidebar-primary: oklch(0.75 0.13 85);
-  --sidebar-primary-foreground: oklch(0.22 0.05 160);
-  --sidebar-accent: oklch(0.32 0.06 160);
-  --sidebar-accent-foreground: oklch(0.96 0.02 95);
-  --sidebar-border: oklch(0.32 0.05 160);
-  --sidebar-ring: oklch(0.75 0.13 85);
+  --chart-5: oklch(0.6 0.12 155);
+  --sidebar: oklch(0.22 0.08 265);            /* #0f1b3d */
+  --sidebar-foreground: oklch(0.94 0.012 250);
+  --sidebar-primary: oklch(0.56 0.10 250);    /* #3b6fa0 */
+  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-accent: oklch(0.35 0.08 258);     /* #1e3a5f */
+  --sidebar-accent-foreground: oklch(0.98 0.005 250);
+  --sidebar-border: oklch(0.35 0.08 258 / 40%);
+  --sidebar-ring: oklch(0.56 0.10 250);
 }
 
 .dark {
@@ -141,5 +143,12 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
   }
 }
