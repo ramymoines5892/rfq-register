@@ -14,6 +14,88 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quote_approvals: {
+        Row: {
+          approver_id: string
+          comment: string | null
+          created_at: string
+          decided_at: string | null
+          decision: Database["public"]["Enums"]["approval_decision"]
+          id: string
+          quote_id: string
+          stage_id: string
+          updated_at: string
+        }
+        Insert: {
+          approver_id: string
+          comment?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision?: Database["public"]["Enums"]["approval_decision"]
+          id?: string
+          quote_id: string
+          stage_id: string
+          updated_at?: string
+        }
+        Update: {
+          approver_id?: string
+          comment?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decision?: Database["public"]["Enums"]["approval_decision"]
+          id?: string
+          quote_id?: string
+          stage_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_approvals_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_approvals_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_attachments: {
         Row: {
           created_at: string
@@ -55,11 +137,58 @@ export type Database = {
           },
         ]
       }
+      quote_email_log: {
+        Row: {
+          id: string
+          quote_id: string
+          recipients: string[]
+          sender_id: string
+          sent_at: string
+          stage_id: string | null
+          subject: string | null
+        }
+        Insert: {
+          id?: string
+          quote_id: string
+          recipients: string[]
+          sender_id: string
+          sent_at?: string
+          stage_id?: string | null
+          subject?: string | null
+        }
+        Update: {
+          id?: string
+          quote_id?: string
+          recipients?: string[]
+          sender_id?: string
+          sent_at?: string
+          stage_id?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_email_log_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_email_log_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           amount: number | null
+          approval_state: Database["public"]["Enums"]["quote_approval_state"]
           created_at: string
           currency: string
+          current_stage_id: string | null
           description: string | null
           expiry_date: string | null
           id: string
@@ -70,11 +199,14 @@ export type Database = {
           supplier_name: string
           updated_at: string
           user_id: string
+          workflow_template_id: string | null
         }
         Insert: {
           amount?: number | null
+          approval_state?: Database["public"]["Enums"]["quote_approval_state"]
           created_at?: string
           currency?: string
+          current_stage_id?: string | null
           description?: string | null
           expiry_date?: string | null
           id?: string
@@ -85,11 +217,14 @@ export type Database = {
           supplier_name: string
           updated_at?: string
           user_id: string
+          workflow_template_id?: string | null
         }
         Update: {
           amount?: number | null
+          approval_state?: Database["public"]["Enums"]["quote_approval_state"]
           created_at?: string
           currency?: string
+          current_stage_id?: string | null
           description?: string | null
           expiry_date?: string | null
           id?: string
@@ -100,6 +235,114 @@ export type Database = {
           supplier_name?: string
           updated_at?: string
           user_id?: string
+          workflow_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_current_stage_id_fkey"
+            columns: ["current_stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_stage_approvers: {
+        Row: {
+          approver_id: string
+          created_at: string
+          id: string
+          stage_id: string
+        }
+        Insert: {
+          approver_id: string
+          created_at?: string
+          id?: string
+          stage_id: string
+        }
+        Update: {
+          approver_id?: string
+          created_at?: string
+          id?: string
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_stage_approvers_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_stage_approvers_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_stages: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          position: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_stages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -111,6 +354,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      approval_decision: "pending" | "approved" | "rejected"
+      quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
     }
     CompositeTypes: {
@@ -239,6 +484,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      approval_decision: ["pending", "approved", "rejected"],
+      quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
     },
   },
