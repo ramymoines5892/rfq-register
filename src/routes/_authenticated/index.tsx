@@ -306,10 +306,11 @@ function QuoteDialog({ open, onOpenChange, quote, onSaved }: { open: boolean; on
         notes: form.notes.trim() || null,
       };
 
-      let quoteId = quote?.id;
+      let quoteId: string;
       if (quote) {
         const { error } = await supabase.from("quotes").update(payload).eq("id", quote.id);
         if (error) throw error;
+        quoteId = quote.id;
       } else {
         const { data, error } = await supabase.from("quotes").insert({ ...payload, user_id: uid }).select("id").single();
         if (error) throw error;
