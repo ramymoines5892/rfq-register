@@ -57,10 +57,8 @@ function daysBetween(dateStr: string) {
 }
 
 function Dashboard() {
-  const { t, lang, setLang } = useI18n();
-  const router = useRouter();
+  const { t, lang } = useI18n();
   const [userId, setUserId] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [pendingQuotes, setPendingQuotes] = useState<Quote[]>([]);
   const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({});
@@ -68,6 +66,7 @@ function Dashboard() {
   const [approvalsByQuote, setApprovalsByQuote] = useState<Record<string, Approval[]>>({});
   const [templates, setTemplates] = useState<Template[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | Quote["status"]>("all");
@@ -76,7 +75,7 @@ function Dashboard() {
   const [tab, setTab] = useState<"mine" | "pending">("mine");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); setUserEmail(data.user?.email ?? ""); });
+    supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); });
     load();
   }, []);
 
