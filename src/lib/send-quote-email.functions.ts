@@ -114,7 +114,7 @@ export const sendQuoteForApproval = createServerFn({ method: "POST" })
       <div style="font-family:Arial,sans-serif;font-size:14px;color:#111">
         <h2>طلب موافقة على عرض سعر</h2>
         <p><b>المورد / Supplier:</b> ${escapeHtml(quote.supplier_name)}</p>
-        <p><b>المرجع / Reference:</b> ${escapeHtml(quote.reference ?? "-")}</p>
+        <p><b>المرجع / Reference:</b> ${escapeHtml(quote.reference_no ?? "-")}</p>
         <p><b>المبلغ / Amount:</b> ${escapeHtml(String(quote.amount ?? "-"))} ${escapeHtml(quote.currency ?? "")}</p>
         <p><b>تاريخ الاستلام / Received:</b> ${escapeHtml(quote.received_date ?? "-")}</p>
         <p><b>تاريخ الانتهاء / Expires:</b> ${escapeHtml(quote.expiry_date ?? "-")}</p>
