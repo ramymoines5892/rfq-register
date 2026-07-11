@@ -81,11 +81,13 @@ function Dashboard() {
 
   async function load() {
     setLoading(true);
-    const [{ data: qs }, { data: tpls }, { data: profs }] = await Promise.all([
+    const [{ data: qs }, { data: tpls }, { data: profs }, { data: cus }] = await Promise.all([
       supabase.from("quotes").select("*").order("received_date", { ascending: false }),
       supabase.from("workflow_templates").select("id, name"),
       supabase.from("profiles").select("id, email, full_name"),
+      supabase.from("customers").select("id, name, tax_id, currency, terms").order("name"),
     ]);
+    setCustomers((cus ?? []) as Customer[]);
     const allQuotes = (qs ?? []) as Quote[];
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id ?? "";
@@ -118,10 +120,8 @@ function Dashboard() {
     setLoading(false);
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.navigate({ to: "/auth", replace: true });
-  }
+
+
 
   const filtered = useMemo(() => quotes.filter(q => {
     if (filterStatus !== "all" && q.status !== filterStatus) return false;
@@ -145,20 +145,23 @@ function Dashboard() {
   }), [pendingQuotes, approvalsByQuote, userId]);
 
   return (
-    <div className="min-h-screen bg-muted/20">
-      <header className="border-b bg-background sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-lg md:text-xl font-bold">{t("appName")}</h1>
-          <div className="flex items-center gap-2">
-            <Link to="/workflows"><Button variant="ghost" size="sm"><Workflow className="h-4 w-4 me-1" />{t("workflows")}</Button></Link>
-            <span className="text-xs text-muted-foreground hidden sm:inline">{userEmail}</span>
-            <Button variant="ghost" size="sm" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>{t("langToggle")}</Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}><LogOut className="h-4 w-4" /></Button>
+    <div className="min-h-screen">
+      <div className="bg-gradient-to-br from-primary via-primary to-[oklch(0.32_0.07_160)] text-primary-foreground">
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-accent/90 flex items-center justify-center text-accent-foreground">
+              <FileText className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">{t("overview")}</h1>
+              <p className="text-sm opacity-80">{t("tagline")}</p>
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6 -mt-6">
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("quotesCount")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.count}</div></CardContent></Card>
           <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("totalValue")} ({t("accepted")})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div></CardContent></Card>
