@@ -533,6 +533,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_workflow_stage: {
+        Args: { _name?: string; _template_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          template_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workflow_stages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       find_customer_by_tax_id: {
         Args: { _tax_id: string }
         Returns: {
