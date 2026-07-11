@@ -3,13 +3,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound } from "lucide-react";
+import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
+    const { data: prof } = await supabase.from("profiles").select("status").eq("id", data.user.id).maybeSingle();
+    if (prof && prof.status !== "active") throw redirect({ to: "/pending" });
     return { user: data.user };
   },
   component: AuthenticatedLayout,
@@ -19,16 +21,27 @@ function AuthenticatedLayout() {
   const { t, lang, setLang, dir } = useI18n();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [email, setEmail] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      setEmail(data.user?.email ?? "");
+      if (data.user) {
+        const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+        setIsAdmin(!!roles?.some((r) => r.role === "owner" || r.role === "admin"));
+      }
+    })();
   }, []);
 
   const nav = [
     { to: "/", label: t("overview"), icon: LayoutDashboard, match: (p: string) => p === "/" },
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
-    { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
+    ...(isAdmin ? [
+      { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
+      { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
+    ] : []),
   ];
 
   async function signOut() {

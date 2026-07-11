@@ -183,29 +183,130 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      departments: {
         Row: {
           created_at: string
-          email: string
-          full_name: string | null
+          description: string | null
           id: string
+          manager_id: string | null
+          name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
-          email: string
-          full_name?: string | null
-          id: string
+          description?: string | null
+          id?: string
+          manager_id?: string | null
+          name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
+          id?: string
+          manager_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_titles: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_titles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          email: string
+          full_name: string | null
+          id: string
+          job_title_id: string | null
+          manager_id: string | null
+          status: Database["public"]["Enums"]["profile_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          job_title_id?: string | null
+          manager_id?: string | null
+          status?: Database["public"]["Enums"]["profile_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          job_title_id?: string | null
+          manager_id?: string | null
+          status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_fk"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_job_title_fk"
+            columns: ["job_title_id"]
+            isOneToOne: false
+            referencedRelation: "job_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quote_approvals: {
         Row: {
@@ -436,6 +537,30 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -577,6 +702,10 @@ export type Database = {
         Args: { _stage_id: string; _user_id: string }
         Returns: boolean
       }
+      current_user_status: {
+        Args: never
+        Returns: Database["public"]["Enums"]["profile_status"]
+      }
       find_customer_by_tax_id: {
         Args: { _tax_id: string }
         Returns: {
@@ -584,6 +713,14 @@ export type Database = {
           name: string
           owner_id: string
         }[]
+      }
+      has_any_user: { Args: never; Returns: boolean }
+      has_permission: {
+        Args: {
+          _perm: Database["public"]["Enums"]["app_permission"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -607,8 +744,22 @@ export type Database = {
       }
     }
     Enums: {
+      app_permission:
+        | "customers.view"
+        | "customers.manage"
+        | "quotes.view"
+        | "quotes.manage"
+        | "quotes.approve"
+        | "workflows.view"
+        | "workflows.manage"
+        | "hr.view"
+        | "hr.manage"
+        | "team.view"
+        | "team.manage"
+        | "reports.view"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
+      profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
     }
@@ -738,8 +889,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_permission: [
+        "customers.view",
+        "customers.manage",
+        "quotes.view",
+        "quotes.manage",
+        "quotes.approve",
+        "workflows.view",
+        "workflows.manage",
+        "hr.view",
+        "hr.manage",
+        "team.view",
+        "team.manage",
+        "reports.view",
+      ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
+      profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
     },
