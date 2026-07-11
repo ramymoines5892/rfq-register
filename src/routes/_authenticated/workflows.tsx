@@ -227,12 +227,13 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
                         <Button size="icon" variant="ghost" onClick={() => deleteStage(s.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
                       </div>
                       <div className="ps-8 space-y-1.5">
-                        <div className="text-xs text-muted-foreground">{t("approvers")}:</div>
+                        <div className="text-xs text-muted-foreground">{t("approvers")} <span className="opacity-70">({t("primaryApprover")} → {t("backupApprover")})</span>:</div>
                         <div className="flex flex-wrap gap-1.5">
-                          {(approvers[s.id] ?? []).map(a => {
+                          {(approvers[s.id] ?? []).map((a, i) => {
                             const p = profiles.find(x => x.id === a.approver_id);
                             return (
                               <div key={a.id} className="inline-flex items-center gap-1 bg-muted rounded px-2 py-0.5 text-xs">
+                                <span className="text-[10px] font-mono opacity-60">{i + 1}.</span>
                                 {p?.full_name || p?.email || a.approver_id}
                                 <button onClick={() => removeApprover(a.id)}><X className="h-3 w-3" /></button>
                               </div>
