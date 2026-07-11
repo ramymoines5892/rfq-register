@@ -28,6 +28,7 @@ function AuthenticatedLayout() {
     { to: "/", label: t("overview"), icon: LayoutDashboard, match: (p: string) => p === "/" },
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
+    { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
   ];
 
   async function signOut() {
