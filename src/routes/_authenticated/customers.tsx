@@ -245,7 +245,6 @@ function CustomerDialog({
         name: customer.name,
         tax_id: customer.tax_id ?? "",
         currency: customer.currency,
-        terms: customer.terms ?? "",
         notes: customer.notes ?? "",
         email: customer.email ?? "",
         phone: customer.phone ?? "",
@@ -256,9 +255,11 @@ function CustomerDialog({
         industry: customer.industry ?? "",
         payment_terms: customer.payment_terms ?? "",
       });
+      setTerms(parseTerms(customer.terms));
       loadRelated(customer.id);
     } else {
       setForm(emptyForm);
+      setTerms([]);
       setContacts([]);
       setBanks([]);
     }
