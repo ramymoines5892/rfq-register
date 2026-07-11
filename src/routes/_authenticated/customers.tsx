@@ -310,7 +310,7 @@ function CustomerDialog({
         name: form.name.trim(),
         tax_id: form.tax_id.trim() || null,
         currency: form.currency,
-        terms: form.terms.trim() || null,
+        terms: stringifyTerms(terms),
         notes: form.notes.trim() || null,
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
