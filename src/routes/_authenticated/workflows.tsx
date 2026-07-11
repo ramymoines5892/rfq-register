@@ -116,6 +116,7 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   const [stages, setStages] = useState<Stage[]>([]);
   const [approvers, setApprovers] = useState<Record<string, StageApprover[]>>({});
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [addingStage, setAddingStage] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -145,13 +146,10 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   }
 
   async function addStage() {
-    const { data: maxRow } = await supabase.from("workflow_stages")
-      .select("position").eq("template_id", template.id)
-      .order("position", { ascending: false }).limit(1).maybeSingle();
-    const nextPos = ((maxRow?.position ?? 0) as number) + 1;
-    const { error } = await supabase.from("workflow_stages").insert({
-      template_id: template.id, position: nextPos, name: `Stage ${nextPos}`,
-    });
+    if (addingStage) return;
+    setAddingStage(true);
+    const { error } = await supabase.rpc("add_workflow_stage", { _template_id: template.id });
+    setAddingStage(false);
     if (error) { toast.error(error.message); return; }
     reloadStages();
   }
@@ -201,7 +199,7 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>{t("stages")}</Label>
-              <Button size="sm" variant="outline" onClick={addStage}><Plus className="h-4 w-4 me-1" />{t("addStage")}</Button>
+              <Button size="sm" variant="outline" onClick={addStage} disabled={addingStage}><Plus className="h-4 w-4 me-1" />{t("addStage")}</Button>
             </div>
             {stages.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">{t("addStagesFirst")}</p>
