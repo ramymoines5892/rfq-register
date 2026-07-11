@@ -323,7 +323,7 @@ function CustomerDialog({
         city: form.city.trim() || null,
         country: form.country.trim() || null,
         industry: form.industry.trim() || null,
-        payment_terms: form.payment_terms.trim() || null,
+        payment_terms: stringifyList(paymentTermsList),
       };
 
       if (customer) {
