@@ -1057,6 +1057,36 @@ export type Database = {
           },
         ]
       }
+      search_history: {
+        Row: {
+          clicked_entity: string | null
+          clicked_id: string | null
+          clicked_link: string | null
+          created_at: string
+          id: string
+          query: string
+          user_id: string
+        }
+        Insert: {
+          clicked_entity?: string | null
+          clicked_id?: string | null
+          clicked_link?: string | null
+          created_at?: string
+          id?: string
+          query: string
+          user_id: string
+        }
+        Update: {
+          clicked_entity?: string | null
+          clicked_id?: string | null
+          clicked_link?: string | null
+          created_at?: string
+          id?: string
+          query?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           created_at: string
@@ -1269,6 +1299,17 @@ export type Database = {
           id: string
           name: string
           owner_id: string
+        }[]
+      }
+      global_search: {
+        Args: { _limit?: number; _q: string }
+        Returns: {
+          entity: string
+          id: string
+          link: string
+          rank: number
+          subtitle: string
+          title: string
         }[]
       }
       has_any_user: { Args: never; Returns: boolean }
