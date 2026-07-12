@@ -129,30 +129,51 @@ function OrganizationPage() {
   const closeInspector = () => { setSelected(null); setDraft(null); };
 
   const remove = async (id: string, kind: "department" | "job_title") => {
+    const label =
+      kind === "department"
+        ? pick(depts.find((d) => d.id === id) ?? ({ name: "" } as any), lang)
+        : pick(jobs.find((j) => j.id === id) ?? ({ name: "" } as any), lang);
+
+    const blockers: string[] = [];
     if (kind === "department") {
       const memberCount = memberCounts[id] || 0;
       const childCount = depts.filter((d) => d.parent_id === id).length;
       const jobCount = jobs.filter((j) => j.department_id === id).length;
-      if (memberCount > 0 || childCount > 0 || jobCount > 0) {
-        const parts: string[] = [];
-        if (memberCount) parts.push(ar ? `${memberCount} موظف` : `${memberCount} member(s)`);
-        if (childCount) parts.push(ar ? `${childCount} قسم فرعي` : `${childCount} sub-dept`);
-        if (jobCount) parts.push(ar ? `${jobCount} مسمى وظيفي` : `${jobCount} job title(s)`);
-        return toast.error(
-          ar ? "لا يمكن حذف الإدارة" : "Cannot delete department",
-          { description: (ar ? "الإدارة تحتوي على: " : "Contains: ") + parts.join("، ") },
-        );
-      }
+      if (memberCount) blockers.push(ar ? `• ${memberCount} موظف` : `• ${memberCount} member(s)`);
+      if (childCount) blockers.push(ar ? `• ${childCount} قسم فرعي` : `• ${childCount} sub-department(s)`);
+      if (jobCount) blockers.push(ar ? `• ${jobCount} مسمى وظيفي` : `• ${jobCount} job title(s)`);
     }
+
+    if (blockers.length > 0) {
+      await confirm({
+        title: ar ? `تعذر حذف "${label}"` : `Cannot delete "${label}"`,
+        description:
+          (ar
+            ? "لا يمكن حذف هذا العنصر لأنه يحتوي على:\n"
+            : "This item cannot be deleted because it contains:\n") +
+          blockers.join("\n") +
+          (ar
+            ? "\n\nانقل أو احذف العناصر التابعة أولاً."
+            : "\n\nMove or delete the dependent items first."),
+        confirmText: ar ? "حسنًا" : "OK",
+        cancelText: ar ? "إغلاق" : "Close",
+      });
+      return;
+    }
+
     const ok = await confirm({
-      title: ar ? "تأكيد الحذف" : "Confirm delete",
-      description: ar ? "سيتم نقل السجل إلى سلة المحذوفات." : "The record will be moved to trash.",
+      title: ar ? `حذف "${label}"؟` : `Delete "${label}"?`,
+      description: ar
+        ? "سيتم نقل السجل إلى سلة المحذوفات ويمكن استعادته لاحقًا."
+        : "The record will be moved to trash and can be restored later.",
+      confirmText: ar ? "حذف" : "Delete",
       variant: "destructive",
     });
     if (!ok) return;
     const table = kind === "department" ? "departments" : "job_titles";
     const { error } = await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) return toast.error(ar ? "تعذر الحذف" : "Failed", { description: error.message });
+    toast.success(ar ? "تم الحذف" : "Deleted");
     if (selected?.id === id) closeInspector();
     await load();
   };
