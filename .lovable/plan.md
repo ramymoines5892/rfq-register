@@ -21,11 +21,12 @@
 - `useTemplates`, `useTemplateDetail`, `useTeamProfiles`, وكل الـ mutations (create/rename/delete/stages/approvers)
 - `workflows.tsx` اتعاد كتابته بالكامل — مفيش `supabase.from` مباشر ولا `useEffect+fetch`
 
-### المرحلة 1.5 — HR / Team ✅ (جزئي)
-- `src/features/hr/api.ts` + `queries.ts`
-- `useProfiles`, `useUserRoles`, `useCurrentUserId`, `useSetUserRole`, `useRemoveFromTeam`, `useHrDashboard`
-- `team.tsx` اتحوّل بالكامل للـ hooks
-- `hr.tsx` قراءة القوائم (profiles/roles/departments/job_titles) بقت من الـ cache؛ الـ mutations لسه بتنادى `load()` اللى بقى `refetch()` — شغال بس مش React-Query-native بالكامل
+### المرحلة 1.5 — HR / Team ✅
+- `src/features/hr/api.ts` + `queries.ts` (reads + writes + permissions)
+- Reads: `useProfiles`, `useUserRoles`, `useCurrentUserId`, `useHrDashboard`, `useUserPermissions`
+- Mutations: `useApproveUser`, `useBulkApproveUsers`, `useSetProfileStatus`, `useBulkSetProfileStatus`, `useUpdateProfile`, `useSetUserRole`, `useRemoveFromTeam`, `useGrantPermission`, `useRevokePermission`
+- `team.tsx` و `hr.tsx` صفر `supabase.from` مباشر — كل الـ mutations بتعمل invalidate تلقائى
+- Dead code (Departments/JobTitles tabs) اتشال — الوظيفة موجودة فى `/settings/organization`
 
 ### المرحلة 1.6 — Trash (Settings) ✅
 - `src/features/trash/api.ts` + `queries.ts`
@@ -34,7 +35,6 @@
 
 ## ⏳ اللى لسه (نطاق كبير — يحتاج جلسات مخصّصة)
 
-- **`hr.tsx` mutations** (~30 استدعاء `supabase.from` للـ writes: departments/job_titles/permissions) — تحويلها لـ `useMutation` مستقلة.
 - **`settings.form-builder.tsx`** (1348 سطر) — feature module لـ `customer_field_definitions` + `customer_field_options`.
 - **`settings.organization.tsx`** (1111 سطر) — feature module للـ org fields + مخطط الشركة.
 

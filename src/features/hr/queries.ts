@@ -1,14 +1,24 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/features/_shared/queryKeys";
 import {
+  approveUser,
+  bulkApproveUsers,
+  bulkSetProfileStatus,
   fetchCurrentUserId,
   fetchHrDashboard,
   fetchProfiles,
+  fetchUserPermissions,
   fetchUserRoles,
+  grantUserPermission,
   removeUserFromTeam,
+  revokeUserPermission,
+  setProfileStatus,
   setUserRole,
+  updateProfileFields,
+  type AppPermission,
   type AppRole,
 } from "./api";
+import type { Database } from "@/integrations/supabase/types";
 
 export function useHrDashboard() {
   return useQuery({
@@ -61,5 +71,82 @@ export function useRemoveFromTeam() {
   return useMutation({
     mutationFn: (userId: string) => removeUserFromTeam(userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hr"] }),
+  });
+}
+
+const invalidateHr = (qc: ReturnType<typeof useQueryClient>) => {
+  qc.invalidateQueries({ queryKey: ["hr"] });
+};
+
+export function useApproveUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => approveUser(userId),
+    onSuccess: () => invalidateHr(qc),
+  });
+}
+
+export function useBulkApproveUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userIds: string[]) => bulkApproveUsers(userIds),
+    onSuccess: () => invalidateHr(qc),
+  });
+}
+
+export function useSetProfileStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { userId: string; status: "active" | "suspended" }) =>
+      setProfileStatus(v.userId, v.status),
+    onSuccess: () => invalidateHr(qc),
+  });
+}
+
+export function useBulkSetProfileStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { userIds: string[]; status: "active" | "suspended" }) =>
+      bulkSetProfileStatus(v.userIds, v.status),
+    onSuccess: () => invalidateHr(qc),
+  });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      userId: string;
+      patch: Partial<Database["public"]["Tables"]["profiles"]["Update"]>;
+    }) => updateProfileFields(v.userId, v.patch),
+    onSuccess: () => invalidateHr(qc),
+  });
+}
+
+export function useUserPermissions(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: qk.hr.userPermissions(userId ?? ""),
+    queryFn: () => fetchUserPermissions(userId!),
+    enabled: !!userId,
+  });
+}
+
+export function useGrantPermission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { userId: string; permission: AppPermission }) =>
+      grantUserPermission(v.userId, v.permission),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: qk.hr.userPermissions(v.userId) }),
+  });
+}
+
+export function useRevokePermission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { userId: string; permission: AppPermission }) =>
+      revokeUserPermission(v.userId, v.permission),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: qk.hr.userPermissions(v.userId) }),
   });
 }

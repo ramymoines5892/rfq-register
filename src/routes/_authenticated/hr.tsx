@@ -1,9 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useHrDashboard } from "@/features/hr/queries";
+import { useMemo, useState } from "react";
+import {
+  useApproveUser,
+  useBulkApproveUsers,
+  useBulkSetProfileStatus,
+  useGrantPermission,
+  useHrDashboard,
+  useRevokePermission,
+  useSetProfileStatus,
+  useSetUserRole,
+  useUpdateProfile,
+  useUserPermissions,
+} from "@/features/hr/queries";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,12 +22,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Building2, Briefcase, Trash2, UserCheck, Users, Plus, Ban, Play,
+  ArrowLeft, Building2, UserCheck, Users, Ban, Play,
   Search, ArrowUpDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { useConfirm } from "@/hooks/useConfirm";
-import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
+import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -145,35 +153,38 @@ function HrPage() {
     sortKey !== k ? <ArrowUpDown className="h-3 w-3 opacity-40" /> :
     sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
 
+  const approveM = useApproveUser();
+  const setStatusM = useSetProfileStatus();
+  const bulkApproveM = useBulkApproveUsers();
+  const bulkStatusM = useBulkSetProfileStatus();
+
   async function approve(userId: string) {
-    const { error: e1 } = await supabase.from("profiles").update({ status: "active" }).eq("id", userId);
-    if (e1) { toast.error(e1.message); return; }
-    await supabase.from("user_roles").insert({ user_id: userId, role: "member" as AppRole });
-    toast.success(t("saved"));
-    load();
+    try { await approveM.mutateAsync(userId); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
+    setSelected(new Set());
   }
   async function setStatus(userId: string, status: "active" | "suspended") {
-    const { error } = await supabase.from("profiles").update({ status }).eq("id", userId);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("saved"));
-    load();
+    try { await setStatusM.mutateAsync({ userId, status }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function bulk(action: "approve" | "suspend" | "activate") {
     const ids = Array.from(selected);
     if (!ids.length) return;
     const targets = profiles.filter((p) => ids.includes(p.id) && p.id !== me && roleOf(p.id) !== "owner");
-    if (action === "approve") {
-      const pendingIds = targets.filter((p) => p.status === "pending").map((p) => p.id);
-      if (!pendingIds.length) { toast.error(lang === "ar" ? "لا يوجد طلبات جديدة ضمن المحدد" : "No pending users selected"); return; }
-      await supabase.from("profiles").update({ status: "active" }).in("id", pendingIds);
-      await supabase.from("user_roles").insert(pendingIds.map((id) => ({ user_id: id, role: "member" as AppRole })));
-    } else {
-      const status = action === "suspend" ? "suspended" : "active";
-      await supabase.from("profiles").update({ status }).in("id", targets.map((p) => p.id));
-    }
-    toast.success(t("saved"));
-    load();
+    try {
+      if (action === "approve") {
+        const pendingIds = targets.filter((p) => p.status === "pending").map((p) => p.id);
+        if (!pendingIds.length) { toast.error(lang === "ar" ? "لا يوجد طلبات جديدة ضمن المحدد" : "No pending users selected"); return; }
+        await bulkApproveM.mutateAsync(pendingIds);
+      } else {
+        const status = action === "suspend" ? "suspended" : "active";
+        await bulkStatusM.mutateAsync({ userIds: targets.map((p) => p.id), status });
+      }
+      toast.success(t("saved"));
+    } catch (e) { toast.error((e as Error).message); }
+    setSelected(new Set());
   }
+
 
   const allChecked = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
   const someChecked = filtered.some((p) => selected.has(p.id));
@@ -377,49 +388,35 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
   onClose: () => void;
 }) {
   const { t, lang } = useI18n();
-  const [granted, setGranted] = useState<Set<AppPermission>>(new Set());
-  const [permLoading, setPermLoading] = useState(false);
+  const permsQ = useUserPermissions(user?.id);
+  const granted = useMemo(() => new Set(permsQ.data ?? []), [permsQ.data]);
+  const permLoading = permsQ.isLoading || permsQ.isFetching;
   const isSelf = user?.id === me;
   const isOwner = role === "owner";
 
-  useEffect(() => {
-    if (!user) return;
-    setPermLoading(true);
-    supabase.from("user_permissions").select("permission").eq("user_id", user.id).then(({ data }) => {
-      setGranted(new Set((data ?? []).map((r) => r.permission as AppPermission)));
-      setPermLoading(false);
-    });
-  }, [user?.id]);
+  const updateProfile = useUpdateProfile();
+  const setRoleM = useSetUserRole();
+  const grantM = useGrantPermission();
+  const revokeM = useRevokePermission();
 
   async function updateField(patch: Partial<Profile>) {
     if (!user) return;
-    const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("saved"));
+    try { await updateProfile.mutateAsync({ userId: user.id, patch }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function changeRole(newRole: AppRole) {
     if (!user) return;
-    const { data: existing } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-    for (const r of existing ?? []) {
-      if (r.role !== newRole) await supabase.from("user_roles").delete().eq("user_id", user.id).eq("role", r.role);
-    }
-    if (!(existing ?? []).some((r) => r.role === newRole)) {
-      await supabase.from("user_roles").insert({ user_id: user.id, role: newRole });
-    }
-    toast.success(t("saved"));
+    try { await setRoleM.mutateAsync({ userId: user.id, role: newRole }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function togglePerm(p: AppPermission, checked: boolean) {
     if (!user) return;
-    if (checked) {
-      const { error } = await supabase.from("user_permissions").insert({ user_id: user.id, permission: p });
-      if (error) { toast.error(error.message); return; }
-      setGranted((s) => new Set(s).add(p));
-    } else {
-      const { error } = await supabase.from("user_permissions").delete().eq("user_id", user.id).eq("permission", p);
-      if (error) { toast.error(error.message); return; }
-      setGranted((s) => { const n = new Set(s); n.delete(p); return n; });
-    }
+    try {
+      if (checked) await grantM.mutateAsync({ userId: user.id, permission: p });
+      else await revokeM.mutateAsync({ userId: user.id, permission: p });
+    } catch (e) { toast.error((e as Error).message); }
   }
+
 
   return (
     <Sheet open={!!user} onOpenChange={(o) => !o && onClose()}>
@@ -512,219 +509,6 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
     <div className="grid grid-cols-[110px_1fr] items-center gap-2">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div>{children}</div>
-    </div>
-  );
-}
-
-function DepartmentsTab({ departments, profiles, onChanged }: { departments: Department[]; profiles: Profile[]; onChanged: () => void }) {
-  const { t, lang } = useI18n();
-  const confirm = useConfirm();
-  const [nameAr, setNameAr] = useState("");
-  const [nameEn, setNameEn] = useState("");
-  const [managerId, setManagerId] = useState<string>("none");
-
-  async function add() {
-    const ar = nameAr.trim();
-    const en = nameEn.trim();
-    if (!ar && !en) return;
-    const legacy = ar || en;
-    const { error } = await supabase.from("departments").insert({
-      name: legacy,
-      name_ar: ar || null,
-      name_en: en || null,
-      manager_id: managerId === "none" ? null : managerId,
-    });
-    if (error) { toast.error(error.message); return; }
-    setNameAr(""); setNameEn(""); setManagerId("none");
-    toast.success(t("saved"));
-    onChanged();
-  }
-  async function remove(id: string) {
-    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
-    if (!ok) return;
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("departments").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    onChanged();
-  }
-  async function updateManager(id: string, mid: string) {
-    await supabase.from("departments").update({ manager_id: mid === "none" ? null : mid }).eq("id", id);
-    onChanged();
-  }
-  async function renameDept(id: string, ar: string, en: string) {
-    const legacy = ar.trim() || en.trim();
-    if (!legacy) return;
-    await supabase.from("departments").update({
-      name: legacy,
-      name_ar: ar.trim() || null,
-      name_en: en.trim() || null,
-    }).eq("id", id);
-    onChanged();
-  }
-
-  return (
-    <div className="space-y-3">
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <BilingualInputs
-            label={t("departmentName")}
-            valueAr={nameAr}
-            valueEn={nameEn}
-            onChangeAr={setNameAr}
-            onChangeEn={setNameEn}
-            maxLength={120}
-          />
-          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-            <Select value={managerId} onValueChange={setManagerId}>
-              <SelectTrigger><SelectValue placeholder={t("departmentManager")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t("none")}</SelectItem>
-                {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addDepartment")}</Button>
-          </div>
-        </CardContent>
-      </Card>
-      <div className="grid gap-2">
-        {departments.map((d) => (
-          <Card key={d.id}>
-            <CardContent className="p-3 space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="font-medium flex-1">
-                  <BilingualText row={d as any} base="name" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Select value={d.manager_id ?? "none"} onValueChange={(v) => updateManager(d.id, v)}>
-                    <SelectTrigger className="h-8 text-xs w-48"><SelectValue placeholder={t("departmentManager")} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("none")}</SelectItem>
-                      {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="ghost" size="icon" onClick={() => remove(d.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
-                </div>
-              </div>
-              <BilingualInputs
-                valueAr={(d as any).name_ar ?? ""}
-                valueEn={(d as any).name_en ?? ""}
-                onChangeAr={(v) => renameDept(d.id, v, (d as any).name_en ?? "")}
-                onChangeEn={(v) => renameDept(d.id, (d as any).name_ar ?? "", v)}
-                maxLength={120}
-              />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTitle[]; departments: Department[]; onChanged: () => void }) {
-  const { t, lang } = useI18n();
-  const confirm = useConfirm();
-  const [nameAr, setNameAr] = useState("");
-  const [nameEn, setNameEn] = useState("");
-  const [depId, setDepId] = useState<string>("none");
-
-  async function add() {
-    const ar = nameAr.trim();
-    const en = nameEn.trim();
-    if (!ar && !en) return;
-    const legacy = ar || en;
-    const { error } = await supabase.from("job_titles").insert({
-      name: legacy,
-      name_ar: ar || null,
-      name_en: en || null,
-      department_id: depId === "none" ? null : depId,
-    });
-    if (error) { toast.error(error.message); return; }
-    setNameAr(""); setNameEn(""); setDepId("none");
-    toast.success(t("saved"));
-    onChanged();
-  }
-  async function remove(id: string) {
-    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
-    if (!ok) return;
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("job_titles").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    onChanged();
-  }
-  async function renameJob(id: string, ar: string, en: string) {
-    const legacy = ar.trim() || en.trim();
-    if (!legacy) return;
-    await supabase.from("job_titles").update({
-      name: legacy,
-      name_ar: ar.trim() || null,
-      name_en: en.trim() || null,
-    }).eq("id", id);
-    onChanged();
-  }
-
-  return (
-    <div className="space-y-3">
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <BilingualInputs
-            label={t("jobTitleName")}
-            valueAr={nameAr}
-            valueEn={nameEn}
-            onChangeAr={setNameAr}
-            onChangeEn={setNameEn}
-            maxLength={120}
-          />
-          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-            <Select value={depId} onValueChange={setDepId}>
-              <SelectTrigger><SelectValue placeholder={t("department")} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t("none")}</SelectItem>
-                {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
-                  <SelectItem key={d.id} value={d.id}>
-                    <span style={{ paddingInlineStart: depth * 14 }}>
-                      {depth > 0 ? "└ " : ""}{pickLangValue(d as any, "name", lang).value || d.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addJobTitle")}</Button>
-          </div>
-        </CardContent>
-      </Card>
-      <div className="grid gap-2">
-        {jobTitles.map((j) => {
-          const dept = departments.find((d) => d.id === j.department_id);
-          return (
-            <Card key={j.id}>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="font-medium"><BilingualText row={j as any} base="name" /></div>
-                    <div className="text-xs text-muted-foreground">
-                      {dept ? <BilingualText row={dept as any} base="name" /> : "—"}
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" onClick={() => remove(j.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
-                </div>
-                <BilingualInputs
-                  valueAr={(j as any).name_ar ?? ""}
-                  valueEn={(j as any).name_en ?? ""}
-                  onChangeAr={(v) => renameJob(j.id, v, (j as any).name_en ?? "")}
-                  onChangeEn={(v) => renameJob(j.id, (j as any).name_ar ?? "", v)}
-                  maxLength={120}
-                />
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
     </div>
   );
 }
