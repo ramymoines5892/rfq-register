@@ -151,6 +151,7 @@ function AuthenticatedLayout() {
               </Link>
             );
           })}
+          <button onClick={() => window.dispatchEvent(new Event("open-global-search"))} className="p-2 rounded-lg text-sidebar-foreground/70" title="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
           <NotificationBell />
           <Button variant="ghost" size="sm" className="text-sidebar-foreground" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </div>
