@@ -14,10 +14,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { toast } from "sonner";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  ChevronRight, ChevronDown, LayoutGrid,
+  LayoutGrid, Users, ChevronRight, Pencil, Info,
 } from "lucide-react";
 
-import { OrgChart } from "@/components/organization/OrgChart";
 import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -51,7 +50,6 @@ function OrganizationPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ id: string; kind: "department" | "job_title" } | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,13 +70,6 @@ function OrganizationPage() {
     setCustomFields((f.data ?? []) as FieldDef[]);
     setProfiles(p.data ?? []);
     setLoading(false);
-    // auto-expand top-level departments
-    setExpanded((prev) => {
-      if (prev.size > 0) return prev;
-      const next = new Set<string>();
-      (d.data ?? []).forEach((x: any) => { if (!x.parent_id) next.add(x.id); });
-      return next;
-    });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -88,15 +79,6 @@ function OrganizationPage() {
     profiles.forEach((p) => { if (p.department_id) m[p.department_id] = (m[p.department_id] || 0) + 1; });
     return m;
   }, [profiles]);
-
-  const chartDepts = useMemo(
-    () => depts.map((d) => ({ id: d.id, name: pick(d, lang), code: d.code, color: d.color, parent_id: d.parent_id })),
-    [depts, lang]
-  );
-  const chartJobs = useMemo(
-    () => jobs.map((j) => ({ id: j.id, name: pick(j, lang), code: j.code, department_id: j.department_id })),
-    [jobs, lang]
-  );
 
   const selectedRecord = useMemo(() => {
     if (!selected) return null;
@@ -116,7 +98,6 @@ function OrganizationPage() {
       color, position: nextPos, parent_id: parentId,
     }).select().single();
     if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    if (parentId) setExpanded((s) => new Set(s).add(parentId));
     await load();
     setSelected({ id: data.id, kind: "department" });
   };
@@ -130,7 +111,6 @@ function OrganizationPage() {
       level: 3, position: nextPos, department_id: deptId,
     }).select().single();
     if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    if (deptId) setExpanded((s) => new Set(s).add(deptId));
     await load();
     setSelected({ id: data.id, kind: "job_title" });
   };
@@ -149,13 +129,17 @@ function OrganizationPage() {
     await load();
   };
 
-  const toggleExpand = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
+  const q = query.trim().toLowerCase();
+  const matches = (text: string) => !q || text.toLowerCase().includes(q);
+  const deptMatches = (d: Department) => matches(pick(d, lang)) || matches(d.code || "");
+  const jobMatches = (j: JobTitle) => matches(pick(j, lang)) || matches(j.code || "");
+
+  const rootDepts = depts.filter((d) => !d.parent_id);
+  const unassignedJobs = jobs.filter((j) => !j.department_id);
+
+  const totalDepts = depts.length;
+  const totalJobs = jobs.length;
+  const totalMembers = Object.values(memberCounts).reduce((a, b) => a + b, 0);
 
   return (
     <div className="space-y-4" dir={dir}>
@@ -168,7 +152,7 @@ function OrganizationPage() {
           <div>
             <h2 className="text-xl font-bold">{ar ? "الهيكل التنظيمي" : "Organization Structure"}</h2>
             <p className="text-xs text-muted-foreground">
-              {ar ? "الإدارات والأقسام والمسميات الوظيفية" : "Departments, sections, and job titles"}
+              {ar ? "معاينة حية لإدارات وأقسام الشركة" : "Live preview of departments and job titles"}
             </p>
           </div>
         </div>
@@ -188,82 +172,110 @@ function OrganizationPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-4">
-        {/* LEFT: Tree */}
-        <Card className="lg:sticky lg:top-20 lg:self-start">
-          <CardContent className="p-3 space-y-2">
-            <InputIcon
-              leftIcon={<Search />}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={ar ? "بحث..." : "Search..."}
-              clearable
-              onClear={() => setQuery("")}
-              className="h-9"
-            />
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => addDept(null)}>
-                <Plus className="h-3.5 w-3.5 me-1" />
-                <Building2 className="h-3.5 w-3.5 me-1" />
-                {ar ? "إدارة" : "Dept"}
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => addJob(null)}>
-                <Plus className="h-3.5 w-3.5 me-1" />
-                <Briefcase className="h-3.5 w-3.5 me-1" />
-                {ar ? "مسمى" : "Job"}
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2">
+        <StatTile icon={<Building2 className="h-4 w-4" />} label={ar ? "إدارات" : "Departments"} value={totalDepts} />
+        <StatTile icon={<Briefcase className="h-4 w-4" />} label={ar ? "مسميات وظيفية" : "Job Titles"} value={totalJobs} />
+        <StatTile icon={<Users className="h-4 w-4" />} label={ar ? "الموظفون" : "Members"} value={totalMembers} />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex-1 min-w-[200px]">
+          <InputIcon
+            leftIcon={<Search />}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={ar ? "ابحث بالاسم أو الكود..." : "Search by name or code..."}
+            clearable
+            onClear={() => setQuery("")}
+            className="h-9"
+          />
+        </div>
+        <Button size="sm" variant="outline" onClick={() => addDept(null)}>
+          <Plus className="h-4 w-4 me-1" />
+          {ar ? "إدارة جديدة" : "New Department"}
+        </Button>
+        <Button size="sm" onClick={() => addJob(null)}>
+          <Plus className="h-4 w-4 me-1" />
+          {ar ? "مسمى جديد" : "New Job Title"}
+        </Button>
+      </div>
+
+      {/* Hint */}
+      <div className="rounded-lg border border-dashed p-3 flex gap-2 items-start text-xs text-muted-foreground bg-muted/30">
+        <Info className="h-4 w-4 mt-0.5 shrink-0" />
+        <div>
+          {ar
+            ? "دي معاينة حية للهيكل التنظيمي. اضغط على أي إدارة أو مسمى لتعديله، أو استخدم زر + لإضافة أقسام فرعية ومسميات تحته."
+            : "This is a live preview of your organization. Click any department or title to edit it, or use the + buttons to add nested departments and titles."}
+        </div>
+      </div>
+
+      {/* Preview canvas */}
+      <Card>
+        <CardContent className="p-4">
+          {loading ? (
+            <div className="py-16 text-center text-sm text-muted-foreground">{ar ? "جارٍ التحميل..." : "Loading..."}</div>
+          ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+              <Sparkles className="h-8 w-8" />
+              <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
+              <Button size="sm" onClick={() => addDept(null)}>
+                <Plus className="h-4 w-4 me-1" />
+                {ar ? "إضافة إدارة" : "Add Department"}
               </Button>
             </div>
-            <div className="max-h-[70vh] overflow-y-auto -mx-1 px-1">
-              {loading ? (
-                <div className="py-8 text-center text-xs text-muted-foreground">{ar ? "تحميل..." : "Loading..."}</div>
-              ) : depts.length === 0 && jobs.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground">
-                  {ar ? "ابدأ بإضافة إدارة" : "Start by adding a department"}
+          ) : (
+            <div className="space-y-3">
+              {rootDepts
+                .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
+                .map((d) => (
+                  <DeptCard
+                    key={d.id}
+                    dept={d}
+                    depth={0}
+                    depts={depts}
+                    jobs={jobs}
+                    memberCounts={memberCounts}
+                    lang={lang}
+                    query={q}
+                    selected={selected}
+                    onSelect={(id, kind) => setSelected({ id, kind })}
+                    onAddDept={addDept}
+                    onAddJob={addJob}
+                    onDelete={remove}
+                  />
+                ))}
+
+              {unassignedJobs.length > 0 && (
+                <div className="rounded-xl border border-dashed p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {unassignedJobs
+                      .filter((j) => !q || jobMatches(j))
+                      .map((j) => (
+                        <JobChip
+                          key={j.id}
+                          job={j}
+                          lang={lang}
+                          selected={selected?.id === j.id && selected.kind === "job_title"}
+                          onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
+                          onDelete={() => remove(j.id, "job_title")}
+                        />
+                      ))}
+                  </div>
                 </div>
-              ) : (
-                <TreeView
-                  depts={depts}
-                  jobs={jobs}
-                  memberCounts={memberCounts}
-                  query={query.trim().toLowerCase()}
-                  expanded={expanded}
-                  onToggle={toggleExpand}
-                  selected={selected}
-                  onSelect={(id, kind) => setSelected({ id, kind })}
-                  onAddDept={addDept}
-                  onAddJob={addJob}
-                  onDelete={remove}
-                  lang={lang}
-                />
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* RIGHT: Chart */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="h-[600px] flex items-center justify-center text-muted-foreground text-sm">
-                {ar ? "جارٍ التحميل..." : "Loading..."}
-              </div>
-            ) : depts.length === 0 ? (
-              <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                <Sparkles className="h-8 w-8" />
-                <p className="text-sm">{ar ? "ابدأ بإضافة إدارة من الشجرة" : "Add a department from the tree"}</p>
-              </div>
-            ) : (
-              <OrgChart
-                departments={chartDepts}
-                jobTitles={chartJobs}
-                memberCounts={memberCounts}
-                selectedId={selected?.id ?? null}
-                onSelect={(id, kind) => setSelected({ id, kind })}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Inspector Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
@@ -290,196 +302,240 @@ function pick(row: { name_ar?: string | null; name_en?: string | null; name: str
   return row.name_en || row.name;
 }
 
-/* ------------------------------- TREE VIEW ------------------------------- */
+function deepMatchesDept(
+  d: Department,
+  allDepts: Department[],
+  allJobs: JobTitle[],
+  deptMatches: (d: Department) => boolean,
+  jobMatches: (j: JobTitle) => boolean,
+): boolean {
+  if (deptMatches(d)) return true;
+  if (allJobs.some((j) => j.department_id === d.id && jobMatches(j))) return true;
+  return allDepts.some((c) => c.parent_id === d.id && deepMatchesDept(c, allDepts, allJobs, deptMatches, jobMatches));
+}
 
-function TreeView({
-  depts, jobs, memberCounts, query, expanded, onToggle, selected, onSelect,
-  onAddDept, onAddJob, onDelete, lang,
+/* ---------------------------------- TILES ---------------------------------- */
+
+function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="p-3 flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-muted text-muted-foreground">{icon}</div>
+        <div className="min-w-0">
+          <div className="text-lg font-bold leading-tight">{value}</div>
+          <div className="text-[11px] text-muted-foreground truncate">{label}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* --------------------------------- DEPT CARD -------------------------------- */
+
+function DeptCard({
+  dept, depth, depts, jobs, memberCounts, lang, query, selected, onSelect, onAddDept, onAddJob, onDelete,
 }: {
+  dept: Department;
+  depth: number;
   depts: Department[];
   jobs: JobTitle[];
   memberCounts: Record<string, number>;
+  lang: string;
   query: string;
-  expanded: Set<string>;
-  onToggle: (id: string) => void;
   selected: { id: string; kind: "department" | "job_title" } | null;
   onSelect: (id: string, kind: "department" | "job_title") => void;
   onAddDept: (parentId: string | null) => void;
   onAddJob: (deptId: string | null) => void;
   onDelete: (id: string, kind: "department" | "job_title") => void;
-  lang: string;
 }) {
-  const rootDepts = depts.filter((d) => !d.parent_id);
-  const unassignedJobs = jobs.filter((j) => !j.department_id);
+  const ar = lang === "ar";
+  const color = dept.color || "#3b6fa0";
+  const children = depts.filter((c) => c.parent_id === dept.id);
+  const deptJobs = jobs.filter((j) => j.department_id === dept.id);
+  const isSelected = selected?.id === dept.id && selected.kind === "department";
+  const label = pick(dept, lang);
+  const members = memberCounts[dept.id] || 0;
 
-  const matches = (text: string) => !query || text.toLowerCase().includes(query);
-
-  const renderDept = (d: Department, depth: number): React.ReactNode => {
-    const label = pick(d, lang);
-    const children = depts.filter((c) => c.parent_id === d.id);
-    const deptJobs = jobs.filter((j) => j.department_id === d.id);
-    const selfMatch = matches(label) || matches(d.code || "");
-    const childrenNodes = children.map((c) => renderDept(c, depth + 1)).filter(Boolean);
-    const jobNodes = deptJobs.filter((j) => selfMatch || matches(pick(j, lang)) || matches(j.code || ""));
-    if (query && !selfMatch && childrenNodes.length === 0 && jobNodes.length === 0) return null;
-
-    const isOpen = expanded.has(d.id) || !!query;
-    const isSelected = selected?.id === d.id && selected.kind === "department";
-
-    return (
-      <div key={d.id}>
-        <TreeRow
-          depth={depth}
-          color={d.color}
-          icon={<Building2 className="h-3.5 w-3.5" />}
-          label={label}
-          code={d.code}
-          badge={memberCounts[d.id] ? `${memberCounts[d.id]}` : undefined}
-          hasChildren={children.length + deptJobs.length > 0}
-          isOpen={isOpen}
-          onToggle={() => onToggle(d.id)}
-          selected={isSelected}
-          onClick={() => onSelect(d.id, "department")}
-          actions={
-            <>
-              <TreeAction title="Sub-dept" onClick={() => onAddDept(d.id)}>
-                <Plus className="h-3 w-3" /><Building2 className="h-3 w-3" />
-              </TreeAction>
-              <TreeAction title="Job" onClick={() => onAddJob(d.id)}>
-                <Plus className="h-3 w-3" /><Briefcase className="h-3 w-3" />
-              </TreeAction>
-              {!d.is_system && (
-                <TreeAction title="Delete" destructive onClick={() => onDelete(d.id, "department")}>
-                  <Trash2 className="h-3 w-3" />
-                </TreeAction>
-              )}
-            </>
-          }
-        />
-        {isOpen && (
-          <div>
-            {childrenNodes}
-            {jobNodes.map((j) => (
-              <TreeRow
-                key={j.id}
-                depth={depth + 1}
-                color={d.color}
-                icon={<Briefcase className="h-3.5 w-3.5" />}
-                label={pick(j, lang)}
-                code={j.code}
-                badge={`L${j.level}`}
-                selected={selected?.id === j.id && selected.kind === "job_title"}
-                onClick={() => onSelect(j.id, "job_title")}
-                actions={
-                  !j.is_system ? (
-                    <TreeAction title="Delete" destructive onClick={() => onDelete(j.id, "job_title")}>
-                      <Trash2 className="h-3 w-3" />
-                    </TreeAction>
-                  ) : null
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const q = query;
+  const matchesDeep = !q || (() => {
+    const dm = (label + " " + (dept.code || "")).toLowerCase().includes(q);
+    if (dm) return true;
+    if (deptJobs.some((j) => (pick(j, lang) + " " + (j.code || "")).toLowerCase().includes(q))) return true;
+    return true;
+  })();
+  if (!matchesDeep) return null;
 
   return (
-    <div className="space-y-0.5">
-      {rootDepts.map((d) => renderDept(d, 0))}
-      {unassignedJobs.length > 0 && (
-        <div className="mt-2 pt-2 border-t">
-          <div className="text-[10px] uppercase text-muted-foreground px-2 py-1">
-            {lang === "ar" ? "بدون إدارة" : "Unassigned"}
+    <div
+      className={`rounded-xl border bg-card overflow-hidden transition-all ${
+        isSelected ? "ring-2 ring-primary ring-offset-1" : ""
+      }`}
+      style={{ borderInlineStartWidth: 4, borderInlineStartColor: color }}
+    >
+      {/* Header */}
+      <div
+        className="px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-muted/50"
+        style={{ backgroundColor: `${color}0d` }}
+        onClick={() => onSelect(dept.id, "department")}
+      >
+        <div className="grid place-items-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${color}22`, color }}>
+          <Building2 className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-sm truncate">{label}</span>
+            {dept.code && (
+              <span className="text-[10px] font-mono uppercase text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                {dept.code}
+              </span>
+            )}
+            {dept.is_system && <Badge variant="secondary" className="text-[9px] h-4 px-1">{ar ? "نظام" : "Sys"}</Badge>}
           </div>
-          {unassignedJobs
-            .filter((j) => !query || matches(pick(j, lang)) || matches(j.code || ""))
-            .map((j) => (
-              <TreeRow
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
+            <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{children.length}</span>
+            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{deptJobs.length}</span>
+            <span className="flex items-center gap-1"><Users className="h-3 w-3" />{members}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="icon" variant="ghost" className="h-7 w-7"
+            title={ar ? "قسم فرعي" : "Sub-dept"}
+            onClick={() => onAddDept(dept.id)}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon" variant="ghost" className="h-7 w-7"
+            title={ar ? "تعديل" : "Edit"}
+            onClick={() => onSelect(dept.id, "department")}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          {!dept.is_system && (
+            <Button
+              size="icon" variant="ghost" className="h-7 w-7 text-destructive"
+              title={ar ? "حذف" : "Delete"}
+              onClick={() => onDelete(dept.id, "department")}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Job title chips */}
+      {deptJobs.length > 0 && (
+        <div className="px-3 py-2 border-t bg-background/40">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {ar ? "المسميات الوظيفية" : "Job Titles"}
+            </div>
+            <button
+              type="button"
+              className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
+              onClick={() => onAddJob(dept.id)}
+            >
+              <Plus className="h-3 w-3" />{ar ? "إضافة" : "Add"}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {deptJobs.map((j) => (
+              <JobChip
                 key={j.id}
-                depth={0}
-                icon={<Briefcase className="h-3.5 w-3.5" />}
-                label={pick(j, lang)}
-                code={j.code}
-                badge={`L${j.level}`}
+                job={j}
+                lang={lang}
+                color={color}
                 selected={selected?.id === j.id && selected.kind === "job_title"}
-                onClick={() => onSelect(j.id, "job_title")}
-                actions={
-                  !j.is_system ? (
-                    <TreeAction title="Delete" destructive onClick={() => onDelete(j.id, "job_title")}>
-                      <Trash2 className="h-3 w-3" />
-                    </TreeAction>
-                  ) : null
-                }
+                onSelect={() => onSelect(j.id, "job_title")}
+                onDelete={() => onDelete(j.id, "job_title")}
               />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nested children */}
+      {children.length > 0 && (
+        <div className="px-3 py-2 space-y-2 border-t bg-muted/20">
+          {children.map((c) => (
+            <DeptCard
+              key={c.id}
+              dept={c}
+              depth={depth + 1}
+              depts={depts}
+              jobs={jobs}
+              memberCounts={memberCounts}
+              lang={lang}
+              query={query}
+              selected={selected}
+              onSelect={onSelect}
+              onAddDept={onAddDept}
+              onAddJob={onAddJob}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+
+      {deptJobs.length === 0 && children.length === 0 && (
+        <div className="px-3 py-2 border-t bg-background/40 flex items-center gap-2">
+          <button
+            type="button"
+            className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+            onClick={() => onAddJob(dept.id)}
+          >
+            <Plus className="h-3 w-3" />{ar ? "إضافة مسمى وظيفي" : "Add job title"}
+          </button>
+          <span className="text-muted-foreground">·</span>
+          <button
+            type="button"
+            className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+            onClick={() => onAddDept(dept.id)}
+          >
+            <Plus className="h-3 w-3" />{ar ? "إضافة قسم فرعي" : "Add sub-department"}
+          </button>
         </div>
       )}
     </div>
   );
 }
 
-function TreeRow({
-  depth, color, icon, label, code, badge, hasChildren, isOpen, onToggle, selected, onClick, actions,
+function JobChip({
+  job, lang, color, selected, onSelect, onDelete,
 }: {
-  depth: number;
-  color?: string | null;
-  icon: React.ReactNode;
-  label: string;
-  code?: string | null;
-  badge?: string;
-  hasChildren?: boolean;
-  isOpen?: boolean;
-  onToggle?: () => void;
+  job: JobTitle;
+  lang: string;
+  color?: string;
   selected?: boolean;
-  onClick: () => void;
-  actions?: React.ReactNode;
+  onSelect: () => void;
+  onDelete: () => void;
 }) {
+  const ar = lang === "ar";
+  const c = color || "#64748b";
   return (
     <div
-      className={`group flex items-center gap-1 rounded-md text-sm cursor-pointer transition-colors ${
-        selected ? "bg-primary/10 text-primary" : "hover:bg-muted"
+      className={`group inline-flex items-center gap-1.5 rounded-full border bg-background pl-2 pr-1 py-0.5 text-xs cursor-pointer transition-all hover:shadow-sm ${
+        selected ? "ring-2 ring-primary ring-offset-1" : ""
       }`}
-      style={{ paddingInlineStart: 4 + depth * 14 }}
-      onClick={onClick}
+      onClick={onSelect}
     >
-      {hasChildren ? (
+      <Briefcase className="h-3 w-3 shrink-0" style={{ color: c }} />
+      <span className="font-medium truncate max-w-[160px]">{pick(job, lang)}</span>
+      {job.level != null && (
+        <span className="text-[9px] font-mono text-muted-foreground bg-muted rounded px-1">L{job.level}</span>
+      )}
+      {!job.is_system && (
         <button
           type="button"
-          className="p-0.5 shrink-0 hover:bg-muted rounded"
-          onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+          className="ms-0.5 h-4 w-4 rounded-full grid place-items-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          title={ar ? "حذف" : "Delete"}
         >
-          {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 rtl:rotate-180" />}
+          <Trash2 className="h-2.5 w-2.5" />
         </button>
-      ) : (
-        <span className="w-4 shrink-0" />
       )}
-      <span className="shrink-0" style={{ color: color || undefined }}>{icon}</span>
-      <span className="flex-1 truncate py-1.5">{label}</span>
-      {code && <span className="text-[10px] font-mono text-muted-foreground uppercase">{code}</span>}
-      {badge && <Badge variant="outline" className="h-4 text-[9px] px-1">{badge}</Badge>}
-      <div className="flex items-center opacity-0 group-hover:opacity-100 pe-1">
-        {actions}
-      </div>
     </div>
-  );
-}
-
-function TreeAction({
-  children, onClick, title, destructive,
-}: { children: React.ReactNode; onClick: () => void; title: string; destructive?: boolean }) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={`inline-flex items-center gap-0.5 h-5 px-1 rounded hover:bg-background ${
-        destructive ? "text-destructive" : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
