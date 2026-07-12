@@ -28,9 +28,7 @@ function AuthenticatedLayout() {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("cs.sidebar.pinned") !== "0";
   });
-  const [hovered, setHovered] = useState(false);
-  const expanded = pinned || hovered;
-  const collapsed = !expanded;
+  const collapsed = !pinned;
 
   useEffect(() => {
     localStorage.setItem("cs.sidebar.pinned", pinned ? "1" : "0");
