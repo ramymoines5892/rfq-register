@@ -67,3 +67,25 @@ export async function fetchCurrentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? "";
 }
+
+/** Aggregate load for the HR dashboard: profiles + roles + departments + job titles. */
+export async function fetchHrDashboard() {
+  const [p, r, d, j, me] = await Promise.all([
+    supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+    supabase.from("user_roles").select("user_id, role"),
+    supabase.from("departments").select("*").is("deleted_at", null).order("name"),
+    supabase.from("job_titles").select("*").is("deleted_at", null).order("name"),
+    fetchCurrentUserId(),
+  ]);
+  if (p.error) throw p.error;
+  if (r.error) throw r.error;
+  if (d.error) throw d.error;
+  if (j.error) throw j.error;
+  return {
+    profiles: (p.data ?? []) as import("@/integrations/supabase/types").Database["public"]["Tables"]["profiles"]["Row"][],
+    roles: (r.data ?? []) as Array<{ user_id: string; role: AppRole }>,
+    departments: (d.data ?? []) as import("@/integrations/supabase/types").Database["public"]["Tables"]["departments"]["Row"][],
+    jobTitles: (j.data ?? []) as import("@/integrations/supabase/types").Database["public"]["Tables"]["job_titles"]["Row"][],
+    me,
+  };
+}
