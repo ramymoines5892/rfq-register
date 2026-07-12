@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { semanticSearch } from "@/lib/semantic-search.functions";
 import {
   Users,
   FileText,
@@ -23,6 +25,7 @@ import {
   Search,
   Building2,
   Clock,
+  Sparkles,
 } from "lucide-react";
 
 type Hit = {
@@ -52,6 +55,7 @@ const PAGES: PageEntry[] = [
   { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings" },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", keywords: "fields forms builder حقول تخصيص نماذج", icon: LayoutGrid, group: "settings" },
   { to: "/settings/notifications", labelAr: "الإشعارات", labelEn: "Notifications", keywords: "notifications alerts إشعارات تنبيهات", icon: Bell, group: "settings" },
+  { to: "/settings/search", labelAr: "البحث الذكي", labelEn: "AI Search", keywords: "search semantic ai بحث ذكي دلالي embeddings", icon: Sparkles, group: "settings" },
   { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", keywords: "trash deleted recycle bin سلة محذوفات", icon: Trash2, group: "settings" },
 ];
 
@@ -78,6 +82,17 @@ export function GlobalSearch() {
   const [hits, setHits] = useState<Hit[]>([]);
   const [recent, setRecent] = useState<{ link: string; title: string; entity: string; hits: number }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [aiMode, setAiMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("search.ai.enabled") === "1";
+  });
+  const runSemantic = useServerFn(semanticSearch);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("search.ai.enabled", aiMode ? "1" : "0");
+    }
+  }, [aiMode]);
 
   // Cmd/Ctrl+K + custom open event
   useEffect(() => {
@@ -118,7 +133,7 @@ export function GlobalSearch() {
     })();
   }, [open]);
 
-  // Debounced server search
+  // Debounced server search (plain or AI)
   useEffect(() => {
     const s = q.trim();
     if (s.length < 2) {
@@ -127,12 +142,31 @@ export function GlobalSearch() {
     }
     setLoading(true);
     const t = setTimeout(async () => {
-      const { data, error } = await supabase.rpc("global_search", { _q: s, _limit: 6 });
-      if (!error && data) setHits(data as Hit[]);
-      setLoading(false);
-    }, 180);
+      try {
+        if (aiMode) {
+          const rows = await runSemantic({ data: { q: s, limit: 8 } });
+          setHits(
+            (rows ?? []).map((r) => ({
+              entity: r.entity as Hit["entity"],
+              id: r.entity_id,
+              title: r.title,
+              subtitle: r.subtitle,
+              link: r.link,
+              rank: r.similarity,
+            })),
+          );
+        } else {
+          const { data, error } = await supabase.rpc("global_search", { _q: s, _limit: 6 });
+          if (!error && data) setHits(data as Hit[]);
+        }
+      } catch {
+        setHits([]);
+      } finally {
+        setLoading(false);
+      }
+    }, aiMode ? 320 : 180);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, aiMode, runSemantic]);
 
   const filteredPages = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -164,11 +198,30 @@ export function GlobalSearch() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput
-        placeholder={ar ? "ابحث عن أي شيء… (⌘K)" : "Search anything… (⌘K)"}
-        value={q}
-        onValueChange={setQ}
-      />
+      <div className="relative">
+        <CommandInput
+          placeholder={
+            aiMode
+              ? ar ? "اسأل بالمعنى… (AI)" : "Ask by meaning… (AI)"
+              : ar ? "ابحث عن أي شيء… (⌘K)" : "Search anything… (⌘K)"
+          }
+          value={q}
+          onValueChange={setQ}
+        />
+        <button
+          type="button"
+          onClick={() => setAiMode((v) => !v)}
+          className={`absolute top-1/2 -translate-y-1/2 ${ar ? "left-2" : "right-2"} inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-medium transition-colors ${
+            aiMode
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+          title={ar ? "بحث ذكي بالمعنى" : "Semantic AI search"}
+        >
+          <Sparkles className="h-3 w-3" />
+          AI
+        </button>
+      </div>
       <CommandList className="max-h-[420px]">
         <CommandEmpty>
           {loading ? (ar ? "جارٍ البحث…" : "Searching…") : (ar ? "لا نتائج" : "No results")}

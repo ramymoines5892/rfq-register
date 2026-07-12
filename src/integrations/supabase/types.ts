@@ -1057,6 +1057,45 @@ export type Database = {
           },
         ]
       }
+      search_embeddings: {
+        Row: {
+          content: string
+          embedding: string
+          entity: string
+          entity_id: string
+          id: string
+          link: string
+          model: string
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          embedding: string
+          entity: string
+          entity_id: string
+          id?: string
+          link: string
+          model?: string
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          embedding?: string
+          entity?: string
+          entity_id?: string
+          id?: string
+          link?: string
+          model?: string
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       search_history: {
         Row: {
           clicked_entity: string | null
@@ -1340,6 +1379,17 @@ export type Database = {
       is_workflow_stage_approver: {
         Args: { _stage_id: string; _user_id: string }
         Returns: boolean
+      }
+      match_search_embeddings: {
+        Args: { _embedding: string; _limit?: number; _min_similarity?: number }
+        Returns: {
+          entity: string
+          entity_id: string
+          link: string
+          similarity: number
+          subtitle: string
+          title: string
+        }[]
       }
     }
     Enums: {
