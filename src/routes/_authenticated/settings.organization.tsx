@@ -391,7 +391,7 @@ function OrganizationPage() {
             </div>
           ) : (
             <TooltipProvider delayDuration={120}>
-              <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-10 py-4">
+              <div className="flex flex-nowrap items-start justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 lg:gap-x-8 py-4 overflow-x-auto max-w-full">
               {rootDepts
                 .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                 .map((d) => (
