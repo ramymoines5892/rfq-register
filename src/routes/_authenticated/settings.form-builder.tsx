@@ -58,6 +58,15 @@ const FIELD_TYPES: { value: FieldType; ar: string; en: string }[] = [
 const COL_OPTIONS = [3, 4, 6, 8, 12] as const;
 const needsOptions = (t: FieldType) => t === "dropdown" || t === "multiselect";
 
+// System fields that reference another table — displayed as a locked DB-linked dropdown.
+const REFERENCE_FIELDS: Record<string, { ar: string; en: string }> = {
+  parent_id: { ar: "الإدارة الأب (من قاعدة البيانات)", en: "Parent Department (from database)" },
+  department_id: { ar: "الإدارة (من قاعدة البيانات)", en: "Department (from database)" },
+  manager_id: { ar: "المدير (من قاعدة البيانات)", en: "Manager (from database)" },
+};
+const isReferenceField = (f: { key: string; is_system: boolean | null } | null | undefined) =>
+  !!f && !!f.is_system && f.key in REFERENCE_FIELDS;
+
 const ENTITIES = [
   { key: "customers", ar: "شاشة العميل", en: "Customer" },
   { key: "department", ar: "شاشة الإدارات", en: "Departments" },
@@ -901,6 +910,24 @@ function FieldEditor({
     if (!editing && existingKeys.includes(finalKey)) { toast.error(ar ? "المفتاح مستخدم" : "Key already used"); return; }
     if (needsOptions(fieldType) && localOptions.length === 0) { toast.error(ar ? "أضف قيمة واحدة على الأقل" : "Add at least one option"); return; }
 
+    // Duplicate-option guard (value / AR label / EN label must all be unique within the field).
+    if (needsOptions(fieldType)) {
+      const filled = localOptions.filter((o) => o.value.trim() || o.label_ar.trim() || o.label_en.trim());
+      const incomplete = filled.find((o) => !o.value.trim() || !o.label_ar.trim() || !o.label_en.trim());
+      if (incomplete) { toast.error(ar ? "املأ القيمة والاسم العربي والإنجليزي لكل خيار" : "Fill value + AR + EN for every option"); return; }
+      const seen = { v: new Set<string>(), ar: new Set<string>(), en: new Set<string>() };
+      for (const o of filled) {
+        const v = o.value.trim().toLowerCase();
+        const la = o.label_ar.trim();
+        const le = o.label_en.trim().toLowerCase();
+        if (seen.v.has(v)) { toast.error(ar ? `القيمة "${o.value}" مكررة` : `Value "${o.value}" is duplicated`); return; }
+        if (seen.ar.has(la)) { toast.error(ar ? `الاسم العربي "${o.label_ar}" مكرر` : `Arabic label "${o.label_ar}" is duplicated`); return; }
+        if (seen.en.has(le)) { toast.error(ar ? `الاسم الإنجليزي "${o.label_en}" مكرر` : `English label "${o.label_en}" is duplicated`); return; }
+        seen.v.add(v); seen.ar.add(la); seen.en.add(le);
+      }
+    }
+
+
     setSaving(true);
     const rules: Record<string, string | number> = {};
     if (validation.minLength) rules.minLength = Number(validation.minLength);
@@ -989,13 +1016,21 @@ function FieldEditor({
 
           <div>
             <Label>{ar ? "نوع الحقل" : "Field Type"}</Label>
-            <Select value={fieldType} onValueChange={(v) => setFieldType(v as FieldType)} disabled={isSystem}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {FIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{ar ? t.ar : t.en}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {isReferenceField(editing) ? (
+              <div className="flex items-center gap-2 rounded border bg-muted/50 px-3 py-2 text-sm">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{ar ? REFERENCE_FIELDS[editing!.key].ar : REFERENCE_FIELDS[editing!.key].en}</span>
+              </div>
+            ) : (
+              <Select value={fieldType} onValueChange={(v) => setFieldType(v as FieldType)} disabled={isSystem}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{ar ? t.ar : t.en}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
+
 
           <div>
             <Label>{ar ? "العرض (بالأعمدة من 12)" : "Width (columns of 12)"}</Label>
