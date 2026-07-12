@@ -146,8 +146,32 @@ function NotificationSettings() {
               <Switch checked={prefs.sound_enabled} onCheckedChange={(v) => setPrefs({ ...prefs, sound_enabled: v })} />
             </Row>
             <Row label={ar ? "إشعارات المتصفح" : "Browser push"} desc={ar ? "إشعار حتى لو التبويب مقفول" : "Notify even when tab is closed"}>
-              <Switch checked={prefs.browser_push_enabled} onCheckedChange={requestBrowserPermission} />
+              <Switch
+                checked={prefs.browser_push_enabled && pushPerm === "granted"}
+                onCheckedChange={requestBrowserPermission}
+                disabled={pushPerm === "unsupported"}
+              />
             </Row>
+            {pushPerm === "denied" && (
+              <div className="flex gap-2 items-start rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+                <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-amber-700 dark:text-amber-400">
+                    {ar ? "الإشعارات محظورة فى المتصفح" : "Notifications are blocked in your browser"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {ar
+                      ? "افتح إعدادات الموقع من شريط العنوان (رمز 🔒 أو ⓘ)، غيّر «الإشعارات» إلى «سماح»، ثم أعد تحميل الصفحة."
+                      : "Open site settings from the address bar (🔒 or ⓘ icon), set Notifications to Allow, then reload this page."}
+                  </p>
+                </div>
+              </div>
+            )}
+            {pushPerm === "unsupported" && (
+              <p className="text-xs text-muted-foreground">
+                {ar ? "متصفحك لا يدعم إشعارات المتصفح." : "Your browser doesn't support browser notifications."}
+              </p>
+            )}
           </CardContent>
         </Card>
 
