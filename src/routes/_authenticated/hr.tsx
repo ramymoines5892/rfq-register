@@ -15,6 +15,7 @@ import {
   Search, ArrowUpDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -115,8 +116,9 @@ function HrPage() {
     ?? roles.find((r) => r.user_id === uid)?.role
     ?? null;
 
-  const deptName = (id: string | null) => id ? departments.find((d) => d.id === id)?.name ?? "—" : "—";
-  const jobName = (id: string | null) => id ? jobTitles.find((j) => j.id === id)?.name ?? "—" : "—";
+  const deptName = (id: string | null) => id ? (pickLangValue(departments.find((d) => d.id === id) as any, "name", lang).value || departments.find((d) => d.id === id)?.name || "—") : "—";
+  const jobName = (id: string | null) => id ? (pickLangValue(jobTitles.find((j) => j.id === id) as any, "name", lang).value || jobTitles.find((j) => j.id === id)?.name || "—") : "—";
+
 
   const pendingCount = useMemo(() => profiles.filter((p) => p.status === "pending").length, [profiles]);
 
@@ -240,7 +242,7 @@ function HrPage() {
                     <SelectContent>
                       <SelectItem value="all">{lang === "ar" ? "كل الإدارات" : "All departments"}</SelectItem>
                       <SelectItem value="none">{t("none")}</SelectItem>
-                      {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </CardContent>
@@ -439,7 +441,7 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("none")}</SelectItem>
-                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FieldRow>
@@ -448,7 +450,7 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("none")}</SelectItem>
-                    {jobTitles.map((j) => <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>)}
+                    {jobTitles.map((j) => <SelectItem key={j.id} value={j.id}>{pickLangValue(j as any, "name", lang).value || j.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FieldRow>
@@ -512,15 +514,24 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function DepartmentsTab({ departments, profiles, onChanged }: { departments: Department[]; profiles: Profile[]; onChanged: () => void }) {
-  const { t } = useI18n();
-  const [name, setName] = useState("");
+  const { t, lang } = useI18n();
+  const [nameAr, setNameAr] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [managerId, setManagerId] = useState<string>("none");
 
   async function add() {
-    if (!name.trim()) return;
-    const { error } = await supabase.from("departments").insert({ name: name.trim(), manager_id: managerId === "none" ? null : managerId });
+    const ar = nameAr.trim();
+    const en = nameEn.trim();
+    if (!ar && !en) return;
+    const legacy = ar || en;
+    const { error } = await supabase.from("departments").insert({
+      name: legacy,
+      name_ar: ar || null,
+      name_en: en || null,
+      manager_id: managerId === "none" ? null : managerId,
+    });
     if (error) { toast.error(error.message); return; }
-    setName(""); setManagerId("none");
+    setNameAr(""); setNameEn(""); setManagerId("none");
     toast.success(t("saved"));
     onChanged();
   }
@@ -534,37 +545,67 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
     await supabase.from("departments").update({ manager_id: mid === "none" ? null : mid }).eq("id", id);
     onChanged();
   }
+  async function renameDept(id: string, ar: string, en: string) {
+    const legacy = ar.trim() || en.trim();
+    if (!legacy) return;
+    await supabase.from("departments").update({
+      name: legacy,
+      name_ar: ar.trim() || null,
+      name_en: en.trim() || null,
+    }).eq("id", id);
+    onChanged();
+  }
 
   return (
     <div className="space-y-3">
       <Card>
-        <CardContent className="p-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-          <Input placeholder={t("departmentName")} value={name} onChange={(e) => setName(e.target.value)} />
-          <Select value={managerId} onValueChange={setManagerId}>
-            <SelectTrigger><SelectValue placeholder={t("departmentManager")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("none")}</SelectItem>
-              {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addDepartment")}</Button>
+        <CardContent className="p-4 space-y-3">
+          <BilingualInputs
+            label={t("departmentName")}
+            valueAr={nameAr}
+            valueEn={nameEn}
+            onChangeAr={setNameAr}
+            onChangeEn={setNameEn}
+            maxLength={120}
+          />
+          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+            <Select value={managerId} onValueChange={setManagerId}>
+              <SelectTrigger><SelectValue placeholder={t("departmentManager")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("none")}</SelectItem>
+                {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addDepartment")}</Button>
+          </div>
         </CardContent>
       </Card>
       <div className="grid gap-2">
         {departments.map((d) => (
           <Card key={d.id}>
-            <CardContent className="p-3 flex items-center justify-between gap-3">
-              <div className="font-medium">{d.name}</div>
-              <div className="flex items-center gap-2">
-                <Select value={d.manager_id ?? "none"} onValueChange={(v) => updateManager(d.id, v)}>
-                  <SelectTrigger className="h-8 text-xs w-48"><SelectValue placeholder={t("departmentManager")} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t("none")}</SelectItem>
-                    {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button variant="ghost" size="icon" onClick={() => remove(d.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-medium flex-1">
+                  <BilingualText row={d as any} base="name" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={d.manager_id ?? "none"} onValueChange={(v) => updateManager(d.id, v)}>
+                    <SelectTrigger className="h-8 text-xs w-48"><SelectValue placeholder={t("departmentManager")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t("none")}</SelectItem>
+                      {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name || p.email}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="icon" onClick={() => remove(d.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
+                </div>
               </div>
+              <BilingualInputs
+                valueAr={(d as any).name_ar ?? ""}
+                valueEn={(d as any).name_en ?? ""}
+                onChangeAr={(v) => renameDept(d.id, v, (d as any).name_en ?? "")}
+                onChangeEn={(v) => renameDept(d.id, (d as any).name_ar ?? "", v)}
+                maxLength={120}
+              />
             </CardContent>
           </Card>
         ))}
@@ -574,15 +615,24 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
 }
 
 function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTitle[]; departments: Department[]; onChanged: () => void }) {
-  const { t } = useI18n();
-  const [name, setName] = useState("");
+  const { t, lang } = useI18n();
+  const [nameAr, setNameAr] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [depId, setDepId] = useState<string>("none");
 
   async function add() {
-    if (!name.trim()) return;
-    const { error } = await supabase.from("job_titles").insert({ name: name.trim(), department_id: depId === "none" ? null : depId });
+    const ar = nameAr.trim();
+    const en = nameEn.trim();
+    if (!ar && !en) return;
+    const legacy = ar || en;
+    const { error } = await supabase.from("job_titles").insert({
+      name: legacy,
+      name_ar: ar || null,
+      name_en: en || null,
+      department_id: depId === "none" ? null : depId,
+    });
     if (error) { toast.error(error.message); return; }
-    setName(""); setDepId("none");
+    setNameAr(""); setNameEn(""); setDepId("none");
     toast.success(t("saved"));
     onChanged();
   }
@@ -592,35 +642,69 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
     if (error) { toast.error(error.message); return; }
     onChanged();
   }
+  async function renameJob(id: string, ar: string, en: string) {
+    const legacy = ar.trim() || en.trim();
+    if (!legacy) return;
+    await supabase.from("job_titles").update({
+      name: legacy,
+      name_ar: ar.trim() || null,
+      name_en: en.trim() || null,
+    }).eq("id", id);
+    onChanged();
+  }
 
   return (
     <div className="space-y-3">
       <Card>
-        <CardContent className="p-4 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-          <Input placeholder={t("jobTitleName")} value={name} onChange={(e) => setName(e.target.value)} />
-          <Select value={depId} onValueChange={setDepId}>
-            <SelectTrigger><SelectValue placeholder={t("department")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("none")}</SelectItem>
-              {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addJobTitle")}</Button>
+        <CardContent className="p-4 space-y-3">
+          <BilingualInputs
+            label={t("jobTitleName")}
+            valueAr={nameAr}
+            valueEn={nameEn}
+            onChangeAr={setNameAr}
+            onChangeEn={setNameEn}
+            maxLength={120}
+          />
+          <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+            <Select value={depId} onValueChange={setDepId}>
+              <SelectTrigger><SelectValue placeholder={t("department")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("none")}</SelectItem>
+                {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addJobTitle")}</Button>
+          </div>
         </CardContent>
       </Card>
       <div className="grid gap-2">
-        {jobTitles.map((j) => (
-          <Card key={j.id}>
-            <CardContent className="p-3 flex items-center justify-between gap-3">
-              <div>
-                <div className="font-medium">{j.name}</div>
-                <div className="text-xs text-muted-foreground">{departments.find((d) => d.id === j.department_id)?.name ?? "—"}</div>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => remove(j.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
-            </CardContent>
-          </Card>
-        ))}
+        {jobTitles.map((j) => {
+          const dept = departments.find((d) => d.id === j.department_id);
+          return (
+            <Card key={j.id}>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="font-medium"><BilingualText row={j as any} base="name" /></div>
+                    <div className="text-xs text-muted-foreground">
+                      {dept ? <BilingualText row={dept as any} base="name" /> : "—"}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => remove(j.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
+                </div>
+                <BilingualInputs
+                  valueAr={(j as any).name_ar ?? ""}
+                  valueEn={(j as any).name_en ?? ""}
+                  onChangeAr={(v) => renameJob(j.id, v, (j as any).name_en ?? "")}
+                  onChangeEn={(v) => renameJob(j.id, (j as any).name_ar ?? "", v)}
+                  maxLength={120}
+                />
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
 }
+

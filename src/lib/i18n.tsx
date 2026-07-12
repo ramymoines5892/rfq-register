@@ -189,7 +189,13 @@ const dict = {
   noPendingUsers: { ar: "لا يوجد طلبات جديدة", en: "No pending users" },
   none: { ar: "بدون", en: "None" },
   optional: { ar: "اختياري", en: "Optional" },
+  // Bilingual UI
+  arabic: { ar: "عربي", en: "Arabic" },
+  english: { ar: "إنجليزي", en: "English" },
+  bilingualHint: { ar: "املأ الاثنين للتقارير بلغتين", en: "Fill both for bilingual reports" },
+  fallbackMissing: { ar: "غير مسجّل بهذه اللغة", en: "Not filled in this language" },
 } satisfies Dict;
+
 
 export type TKey = keyof typeof dict;
 
