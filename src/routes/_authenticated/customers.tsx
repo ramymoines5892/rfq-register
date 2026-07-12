@@ -66,6 +66,7 @@ import {
   Upload,
   Download,
   File as FileIcon,
+  Settings2,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import {
