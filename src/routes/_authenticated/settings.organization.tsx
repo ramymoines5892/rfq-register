@@ -11,12 +11,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
 import { OrgChartImage } from "@/components/organization/OrgChartImage";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon,
+  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye,
 } from "lucide-react";
 
 import type { Database } from "@/integrations/supabase/types";
