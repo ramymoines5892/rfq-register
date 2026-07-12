@@ -107,12 +107,10 @@ function AuthenticatedLayout() {
       <aside
         onMouseEnter={() => !pinned && setHovered(true)}
         onMouseLeave={() => !pinned && setHovered(false)}
-        className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width,transform] duration-200 ease-out ${
+        className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out ${
           pinned
             ? `sticky top-0 h-screen ${expanded ? "md:w-64 lg:w-72" : "md:w-16"}`
-            : `fixed top-0 ${dir === "rtl" ? "right-0" : "left-0"} h-screen z-40 shadow-xl ${
-                expanded ? "md:w-64 lg:w-72" : "w-0 -translate-x-full rtl:translate-x-full overflow-hidden"
-              }`
+            : `sticky top-0 h-screen ${expanded ? "md:w-64 lg:w-72 shadow-xl z-40" : "md:w-16"}`
         }`}
       >
         {/* Pin toggle (floats on the edge) */}
