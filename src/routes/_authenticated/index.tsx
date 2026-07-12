@@ -192,7 +192,7 @@ function Dashboard() {
                   leftIcon={<Search />}
                   placeholder={t("search")}
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
                   clearable
                   onClear={() => setSearch("")}
                 />
