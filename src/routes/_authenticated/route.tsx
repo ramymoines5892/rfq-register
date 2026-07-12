@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2 } from "lucide-react";
+import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -42,6 +42,7 @@ function AuthenticatedLayout() {
   const adminNav = isAdmin ? [
     { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
     { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
+    { to: "/settings", label: lang === "ar" ? "الإعدادات" : "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
   ] : [];
 
   async function signOut() {
