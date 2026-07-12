@@ -82,11 +82,34 @@ function NotificationSettings() {
   }
 
   async function requestBrowserPermission(v: boolean) {
-    if (v && "Notification" in window && Notification.permission !== "granted") {
-      const p = await Notification.requestPermission();
-      if (p !== "granted") { toast.error(ar ? "تم رفض الإذن" : "Permission denied"); return; }
+    if (!v) {
+      setPrefs((p) => ({ ...p, browser_push_enabled: false }));
+      return;
     }
-    setPrefs((p) => ({ ...p, browser_push_enabled: v }));
+    if (!("Notification" in window)) {
+      toast.error(ar ? "المتصفح لا يدعم إشعارات المتصفح" : "This browser doesn't support notifications");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      toast.error(
+        ar ? "الإشعارات محظورة فى إعدادات المتصفح" : "Notifications are blocked in your browser",
+        {
+          description: ar
+            ? "افتح إعدادات الموقع من شريط العنوان (🔒 أو ⓘ)، غيّر «الإشعارات» إلى «سماح»، ثم أعد تحميل الصفحة."
+            : "Open Site settings from the address bar (🔒 or ⓘ), set Notifications to Allow, then reload.",
+          duration: 8000,
+        },
+      );
+      return;
+    }
+    const p = await Notification.requestPermission();
+    setPushPerm(p);
+    if (p !== "granted") {
+      toast.message(ar ? "لم يتم منح الإذن" : "Permission not granted");
+      return;
+    }
+    setPrefs((prev) => ({ ...prev, browser_push_enabled: true }));
+    toast.success(ar ? "تم تفعيل إشعارات المتصفح" : "Browser notifications enabled");
   }
 
   if (loading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
