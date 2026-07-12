@@ -41,11 +41,16 @@ function AuthenticatedLayout() {
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
   ];
-  const adminNav = isAdmin ? [
-    { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
-    { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
+  const adminNav = [
+    ...(isAdmin ? [
+      { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
+      { to: "/team", label: t("team"), icon: UsersRound, match: (p: string) => p.startsWith("/team") },
+    ] : []),
+    // Settings is available to every signed-in user (personal notification prefs).
+    // Individual tabs inside gate themselves by permission.
     { to: "/settings", label: lang === "ar" ? "الإعدادات" : "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
-  ] : [];
+  ];
+
 
   async function signOut() {
     await supabase.auth.signOut();
