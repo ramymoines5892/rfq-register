@@ -34,7 +34,7 @@ const ALL_PERMISSIONS: AppPermission[] = [
   "users.manage_roles", "templates.manage",
   "notifications.view",
   "reports.view",
-  "manage_customer_fields",
+  "manage_customer_fields", "manage_form_fields",
 ];
 
 const permLabelAr: Record<AppPermission, string> = {
@@ -62,6 +62,7 @@ const permLabelAr: Record<AppPermission, string> = {
   "notifications.view": "عرض الإشعارات",
   "reports.view": "عرض التقارير",
   "manage_customer_fields": "إدارة حقول العميل",
+  "manage_form_fields": "إدارة حقول النظام (كل الشاشات)",
 };
 
 export const Route = createFileRoute("/_authenticated/hr")({
