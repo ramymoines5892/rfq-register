@@ -62,6 +62,10 @@ import {
   Wallet,
   Contact as ContactIcon,
   Info,
+  Paperclip,
+  Upload,
+  Download,
+  File as FileIcon,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { parseTerms, stringifyTerms, parseList, stringifyList, type TermItem } from "@/lib/terms";
