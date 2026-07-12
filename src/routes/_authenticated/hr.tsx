@@ -353,13 +353,8 @@ function HrPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="departments" className="mt-4">
-              <DepartmentsTab departments={departments} profiles={profiles.filter(p => p.status !== "pending")} onChanged={load} />
-            </TabsContent>
+            {/* Departments and Job Titles moved to /settings/organization */}
 
-            <TabsContent value="jobs" className="mt-4">
-              <JobTitlesTab jobTitles={jobTitles} departments={departments} onChanged={load} />
-            </TabsContent>
           </Tabs>
         )}
       </main>
