@@ -10,8 +10,9 @@ export const PasswordInput = forwardRef<HTMLInputElement, Props>(function Passwo
   ref,
 ) {
   const [visible, setVisible] = useState(false);
+  const dir = (props.dir as "ltr" | "rtl" | undefined) ?? "ltr";
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" dir={dir}>
       <Input
         ref={ref}
         {...props}
