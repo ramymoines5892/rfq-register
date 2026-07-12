@@ -497,7 +497,7 @@ function DeptCard({
             <span className="max-w-24 text-center text-xs font-semibold leading-tight line-clamp-2">{label}</span>
           </button>
         </TooltipTrigger>
-        <TooltipContent side="top" align="center" className="max-w-72 text-start">
+        <TooltipContent side="top" align="center" className="max-w-72 text-start bg-popover text-popover-foreground border border-border shadow-md">
           <div className="space-y-2">
             <div>
               <div className="font-bold text-sm">{label}</div>
