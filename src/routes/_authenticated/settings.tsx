@@ -19,12 +19,14 @@ type TabDef = {
   labelEn: string;
   icon: typeof Settings2;
   perm?: string; // permission required (checked at runtime)
+  ownerOnly?: boolean;
   disabled?: boolean;
 };
 
 const TABS: TabDef[] = [
   { to: "/settings", labelAr: "نظرة عامة", labelEn: "Overview", icon: Sliders },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", icon: LayoutGrid, perm: "manage_form_fields" },
+  { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", icon: Trash2, ownerOnly: true },
   { to: "/settings/language", labelAr: "اللغة والتوطين", labelEn: "Language & Locale", icon: Languages, disabled: true },
   { to: "/settings/reports", labelAr: "التقارير", labelEn: "Reports", icon: FileText, disabled: true },
   { to: "/settings/permissions", labelAr: "الصلاحيات", labelEn: "Permissions", icon: ShieldCheck, disabled: true },
