@@ -34,21 +34,28 @@ function DeptNode({ data, selected }: NodeProps) {
   const Icon = d.kind === "department" ? Building2 : Briefcase;
   return (
     <div
-      className={`group relative rounded-md bg-card shadow-sm border transition-all hover:shadow-md hover:z-10 ${
-        selected ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""
-      }`}
-      style={{ borderColor: color, borderLeftWidth: 3, width: 96, height: 32 }}
+      className="group relative transition-all hover:z-10"
+      style={{ width: 56, height: 72 }}
       title={d.label}
     >
       <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
-      <div className="h-full px-1.5 flex items-center gap-1 rounded-md" style={{ backgroundColor: `${color}12` }}>
-        <Icon className="h-3 w-3 shrink-0" style={{ color }} />
-        <div className="text-[10px] font-medium truncate flex-1 leading-tight">{d.label}</div>
+      <div className="flex flex-col items-center gap-1">
+        <div
+          className={`h-10 w-10 rounded-full flex items-center justify-center border-2 bg-card shadow-sm transition-transform group-hover:scale-110 ${
+            selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+          }`}
+          style={{ borderColor: color, backgroundColor: `${color}18` }}
+        >
+          <Icon className="h-5 w-5" style={{ color }} />
+        </div>
+        <div className="text-center text-[10px] font-medium leading-tight max-w-[72px] truncate">
+          {d.label}
+        </div>
       </div>
 
       {/* Hover details popover */}
       <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-52 rounded-lg border bg-popover text-popover-foreground shadow-lg"
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-52 rounded-lg border bg-popover text-popover-foreground shadow-lg"
         style={{ borderColor: color }}
       >
         <div className="px-2.5 py-1.5 border-b flex items-center gap-2" style={{ backgroundColor: `${color}15` }}>
