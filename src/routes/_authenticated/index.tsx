@@ -332,6 +332,38 @@ function Dashboard() {
   );
 }
 
+function KpiCard({ id, editing, title, children }: { id: string; editing: boolean; title: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !editing });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className={editing ? "ring-1 ring-dashed ring-primary/40" : ""}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            {editing && (
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground -ms-1"
+                aria-label="Drag"
+                type="button"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+            )}
+            <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function ApprovalTimeline({ stages, approvals, currentStageId, profiles }: { stages: Stage[]; approvals: Approval[]; currentStageId: string | null; profiles: Profile[] }) {
   if (!stages.length) return null;
   return (
