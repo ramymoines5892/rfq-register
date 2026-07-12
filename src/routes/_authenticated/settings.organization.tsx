@@ -54,7 +54,6 @@ function OrganizationPage() {
   const [jobs, setJobs] = useState<JobTitle[]>([]);
   const [customFields, setCustomFields] = useState<FieldDef[]>([]);
   const [profiles, setProfiles] = useState<Pick<Profile, "id" | "full_name" | "email" | "department_id">[]>([]);
-  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ id: string; kind: "department" | "job_title" } | null>(null);
   const [draft, setDraft] = useState<
