@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,57 +10,51 @@ import { toast } from "sonner";
 import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, ArrowLeft, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
+import {
+  useTemplates,
+  useStageCount,
+  useTemplateDetail,
+  useTeamProfiles,
+  useCreateTemplate,
+  useDeleteTemplate,
+  useRenameTemplate,
+  useTemplateMutations,
+} from "@/features/workflows/queries";
+import type { Template } from "@/features/workflows/api";
 
 export const Route = createFileRoute("/_authenticated/workflows")({
   component: WorkflowsPage,
   head: () => ({ meta: [{ title: "قوالب الموافقات" }] }),
 });
 
-type Profile = { id: string; email: string; full_name: string | null };
-type Template = { id: string; name: string; owner_id: string };
-type Stage = { id: string; template_id: string; position: number; name: string };
-type StageApprover = { id: string; stage_id: string; approver_id: string; position: number };
-
 function WorkflowsPage() {
   const { t, lang } = useI18n();
   const confirm = useConfirm();
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: templates = [], isLoading: loading } = useTemplates();
+  const createMut = useCreateTemplate();
+  const deleteMut = useDeleteTemplate();
   const [editing, setEditing] = useState<Template | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase.from("workflow_templates").select("*").is("deleted_at", null).order("created_at", { ascending: false });
-    setTemplates((data ?? []) as Template[]);
-    setLoading(false);
-  }
-
   async function createTemplate() {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
-    const { data, error } = await supabase.from("workflow_templates")
-      .insert({ owner_id: userData.user.id, name: lang === "ar" ? "قالب جديد" : "New workflow" })
-      .select("*").single();
-    if (error) { toast.error(error.message); return; }
-    setEditing(data as Template);
-    setDialogOpen(true);
-    load();
+    try {
+      const tpl = await createMut.mutateAsync(lang === "ar" ? "قالب جديد" : "New workflow");
+      setEditing(tpl);
+      setDialogOpen(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   async function deleteTemplate(id: string) {
     const ok = await confirm({ description: t("confirmDelete"), confirmText: t("delete") ?? undefined, variant: "destructive" });
     if (!ok) return;
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("workflow_templates").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("saved"));
-    load();
+    try {
+      await deleteMut.mutateAsync(id);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   return (
@@ -90,17 +83,19 @@ function WorkflowsPage() {
           </div>
         )}
       </main>
-      {editing && <TemplateEditor open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) { setEditing(null); load(); } }} template={editing} />}
+      {editing && (
+        <TemplateEditor
+          open={dialogOpen}
+          onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditing(null); }}
+          template={editing}
+        />
+      )}
     </div>
   );
 }
 
 function TemplateRow({ template, onEdit, onDelete }: { template: Template; onEdit: () => void; onDelete: () => void }) {
-  const [stageCount, setStageCount] = useState(0);
-  useEffect(() => {
-    supabase.from("workflow_stages").select("id", { count: "exact", head: true }).eq("template_id", template.id)
-      .then(({ count }) => setStageCount(count ?? 0));
-  }, [template.id]);
+  const { data: stageCount = 0 } = useStageCount(template.id);
   return (
     <Card>
       <CardContent className="p-4 flex items-center justify-between gap-3">
@@ -120,93 +115,85 @@ function TemplateRow({ template, onEdit, onDelete }: { template: Template; onEdi
 function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpenChange: (v: boolean) => void; template: Template }) {
   const { t } = useI18n();
   const [name, setName] = useState(template.name);
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [approvers, setApprovers] = useState<Record<string, StageApprover[]>>({});
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [addingStage, setAddingStage] = useState(false);
+  const { data: detail } = useTemplateDetail(template.id, open);
+  const { data: profiles = [] } = useTeamProfiles(open);
+  const stages = detail?.stages ?? [];
+  const approvers = detail?.approversByStage ?? {};
+  const mut = useTemplateMutations(template.id);
+  const renameMut = useRenameTemplate();
+  // Local overlay for the currently-editing stage name so typing feels responsive.
+  const [stageNameDraft, setStageNameDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!open) return;
-    setName(template.name);
-    // Only list users who are part of the team (have a role assigned)
-    supabase.from("user_roles").select("user_id, profiles!inner(id, email, full_name)").then(({ data }) => {
-      const seen = new Set<string>();
-      const list: Profile[] = [];
-      (data ?? []).forEach((row: any) => {
-        const p = row.profiles;
-        if (p && !seen.has(p.id)) { seen.add(p.id); list.push(p as Profile); }
-      });
-      setProfiles(list);
-    });
-    reloadStages();
-  }, [open, template.id]);
-
-  async function reloadStages() {
-    const { data: st } = await supabase.from("workflow_stages").select("*").eq("template_id", template.id).is("deleted_at", null).order("position");
-    const stagesList = (st ?? []) as Stage[];
-    setStages(stagesList);
-    if (stagesList.length) {
-      const { data: ap } = await supabase.from("workflow_stage_approvers").select("*").in("stage_id", stagesList.map(s => s.id)).order("position");
-      const grouped: Record<string, StageApprover[]> = {};
-      (ap ?? []).forEach(a => { (grouped[(a as StageApprover).stage_id] ??= []).push(a as StageApprover); });
-      setApprovers(grouped);
-    } else {
-      setApprovers({});
+    if (open) {
+      setName(template.name);
+      setStageNameDraft({});
     }
-  }
+  }, [open, template.id, template.name]);
 
   async function saveName() {
     if (name.trim() && name !== template.name) {
-      await supabase.from("workflow_templates").update({ name: name.trim() }).eq("id", template.id);
+      try {
+        await renameMut.mutateAsync({ id: template.id, name: name.trim() });
+      } catch (e) {
+        toast.error((e as Error).message);
+      }
     }
   }
 
-  async function addStage() {
-    if (addingStage) return;
-    setAddingStage(true);
-    const { error } = await supabase.rpc("add_workflow_stage", { _template_id: template.id });
-    setAddingStage(false);
-    if (error) { toast.error(error.message); return; }
-    reloadStages();
+  async function onAddStage() {
+    if (mut.addStage.isPending) return;
+    try {
+      await mut.addStage.mutateAsync();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
-  async function updateStageName(id: string, newName: string) {
-    await supabase.from("workflow_stages").update({ name: newName }).eq("id", id);
-    setStages(prev => prev.map(s => s.id === id ? { ...s, name: newName } : s));
+  async function onUpdateStageName(id: string, newName: string) {
+    try {
+      await mut.renameStage.mutateAsync({ id, name: newName });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
-  async function deleteStage(id: string) {
-    const { data: u } = await supabase.auth.getUser();
-    await supabase.from("workflow_stages").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    reloadStages();
+  async function onDeleteStage(id: string) {
+    try {
+      await mut.deleteStage.mutateAsync(id);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
-  async function moveStage(idx: number, dir: -1 | 1) {
+  async function onMoveStage(idx: number, dir: -1 | 1) {
     const other = stages[idx + dir];
-    if (!other) return;
     const cur = stages[idx];
-    // Use temp position to avoid unique conflict
-    await supabase.from("workflow_stages").update({ position: -1 }).eq("id", cur.id);
-    await supabase.from("workflow_stages").update({ position: cur.position }).eq("id", other.id);
-    await supabase.from("workflow_stages").update({ position: other.position }).eq("id", cur.id);
-    reloadStages();
+    if (!other || !cur) return;
+    try {
+      await mut.swapStages.mutateAsync({ a: cur, b: other });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
-  async function addApprover(stageId: string, approverId: string) {
+  async function onAddApprover(stageId: string, approverId: string) {
     if (!approverId) return;
     const current = approvers[stageId] ?? [];
-    const nextPos = (current.reduce((m, a) => Math.max(m, (a as any).position ?? 0), 0)) + 1;
-    const { error } = await supabase.from("workflow_stage_approvers").insert({ stage_id: stageId, approver_id: approverId, position: nextPos });
-    if (error && !error.message.includes("duplicate")) { toast.error(error.message); return; }
-    reloadStages();
+    const nextPos = current.reduce((m, a) => Math.max(m, a.position ?? 0), 0) + 1;
+    try {
+      await mut.addApprover.mutateAsync({ stageId, approverId, position: nextPos });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
-  async function removeApprover(id: string) {
-    await supabase.from("workflow_stage_approvers").delete().eq("id", id);
-    reloadStages();
+  async function onRemoveApprover(id: string) {
+    try {
+      await mut.removeApprover.mutateAsync(id);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   return (
@@ -221,7 +208,9 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>{t("stages")}</Label>
-              <Button size="sm" variant="outline" onClick={addStage} disabled={addingStage}><Plus className="h-4 w-4 me-1" />{t("addStage")}</Button>
+              <Button size="sm" variant="outline" onClick={onAddStage} disabled={mut.addStage.isPending}>
+                <Plus className="h-4 w-4 me-1" />{t("addStage")}
+              </Button>
             </div>
             {stages.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">{t("addStagesFirst")}</p>
@@ -232,10 +221,14 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
                     <CardContent className="p-3 space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-mono text-muted-foreground w-6 text-center">{idx + 1}</span>
-                        <Input value={s.name} onChange={(e) => setStages(prev => prev.map(x => x.id === s.id ? { ...x, name: e.target.value } : x))} onBlur={(e) => updateStageName(s.id, e.target.value)} />
-                        <Button size="icon" variant="ghost" onClick={() => moveStage(idx, -1)} disabled={idx === 0}><ChevronUp className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => moveStage(idx, 1)} disabled={idx === stages.length - 1}><ChevronDown className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => deleteStage(s.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
+                        <Input
+                          value={stageNameDraft[s.id] ?? s.name}
+                          onChange={(e) => setStageNameDraft((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                          onBlur={(e) => onUpdateStageName(s.id, e.target.value)}
+                        />
+                        <Button size="icon" variant="ghost" onClick={() => onMoveStage(idx, -1)} disabled={idx === 0}><ChevronUp className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => onMoveStage(idx, 1)} disabled={idx === stages.length - 1}><ChevronDown className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => onDeleteStage(s.id)}><Trash2 className="h-4 w-4 text-rose-600" /></Button>
                       </div>
                       <div className="ps-8 space-y-1.5">
                         <div className="text-xs text-muted-foreground">{t("approvers")} <span className="opacity-70">({t("primaryApprover")} → {t("backupApprover")})</span>:</div>
@@ -246,12 +239,12 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
                               <div key={a.id} className="inline-flex items-center gap-1 bg-muted rounded px-2 py-0.5 text-xs">
                                 <span className="text-[10px] font-mono opacity-60">{i + 1}.</span>
                                 {p?.full_name || p?.email || a.approver_id}
-                                <button onClick={() => removeApprover(a.id)}><X className="h-3 w-3" /></button>
+                                <button onClick={() => onRemoveApprover(a.id)}><X className="h-3 w-3" /></button>
                               </div>
                             );
                           })}
                         </div>
-                        <Select value="" onValueChange={(v) => addApprover(s.id, v)}>
+                        <Select value="" onValueChange={(v) => onAddApprover(s.id, v)}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("addApprover")} /></SelectTrigger>
                           <SelectContent>
                             {profiles.filter(p => !(approvers[s.id] ?? []).some(a => a.approver_id === p.id)).map(p => (
