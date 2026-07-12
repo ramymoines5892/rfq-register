@@ -910,6 +910,24 @@ function FieldEditor({
     if (!editing && existingKeys.includes(finalKey)) { toast.error(ar ? "المفتاح مستخدم" : "Key already used"); return; }
     if (needsOptions(fieldType) && localOptions.length === 0) { toast.error(ar ? "أضف قيمة واحدة على الأقل" : "Add at least one option"); return; }
 
+    // Duplicate-option guard (value / AR label / EN label must all be unique within the field).
+    if (needsOptions(fieldType)) {
+      const filled = localOptions.filter((o) => o.value.trim() || o.label_ar.trim() || o.label_en.trim());
+      const incomplete = filled.find((o) => !o.value.trim() || !o.label_ar.trim() || !o.label_en.trim());
+      if (incomplete) { toast.error(ar ? "املأ القيمة والاسم العربي والإنجليزي لكل خيار" : "Fill value + AR + EN for every option"); return; }
+      const seen = { v: new Set<string>(), ar: new Set<string>(), en: new Set<string>() };
+      for (const o of filled) {
+        const v = o.value.trim().toLowerCase();
+        const la = o.label_ar.trim();
+        const le = o.label_en.trim().toLowerCase();
+        if (seen.v.has(v)) { toast.error(ar ? `القيمة "${o.value}" مكررة` : `Value "${o.value}" is duplicated`); return; }
+        if (seen.ar.has(la)) { toast.error(ar ? `الاسم العربي "${o.label_ar}" مكرر` : `Arabic label "${o.label_ar}" is duplicated`); return; }
+        if (seen.en.has(le)) { toast.error(ar ? `الاسم الإنجليزي "${o.label_en}" مكرر` : `English label "${o.label_en}" is duplicated`); return; }
+        seen.v.add(v); seen.ar.add(la); seen.en.add(le);
+      }
+    }
+
+
     setSaving(true);
     const rules: Record<string, string | number> = {};
     if (validation.minLength) rules.minLength = Number(validation.minLength);
