@@ -313,8 +313,8 @@ function FormBuilderPage() {
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           {ar
-            ? "اسحب الحقل من المقبض علشان تغيّر ترتيبه. غيّر العرض من 3 إلى 12 عمود، والحقول اللي مجموع عرضها 12 هتظهر جنب بعض في نفس السطر."
-            : "Drag the handle to reorder. Set each field's width from 3 to 12 columns — fields whose widths sum to 12 sit side-by-side on one row."}
+            ? "اسحب الحقل من المقبض لأي مكان — نفس القسم أو قسم تاني. عدّل عرض الحقل من 3 لـ 12، ولو مجموع العرض في السطر عدّى 12 هيلف تلقائياً لسطر جديد. اضغط علامة القلم جنب اسم القسم عشان تغيّره."
+            : "Drag any field anywhere — same section or another. Widths 3–12; when a row fills past 12, fields wrap to a new row automatically. Click the pencil next to a section title to rename it."}
         </div>
       </div>
 
