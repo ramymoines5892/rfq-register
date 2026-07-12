@@ -45,4 +45,9 @@ export const qk = {
     fieldDefinitions: () => ["settings", "field_definitions"] as const,
     fieldOptions: (fieldId: string) => ["settings", "field_options", fieldId] as const,
   },
+  trash: {
+    all: ["trash"] as const,
+    list: (tableKey: string) => ["trash", "list", tableKey] as const,
+    ownerCheck: () => ["trash", "owner"] as const,
+  },
 } as const;

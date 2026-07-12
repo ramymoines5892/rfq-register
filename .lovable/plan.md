@@ -27,12 +27,16 @@
 - `team.tsx` اتحوّل بالكامل للـ hooks
 - `hr.tsx` قراءة القوائم (profiles/roles/departments/job_titles) بقت من الـ cache؛ الـ mutations لسه بتنادى `load()` اللى بقى `refetch()` — شغال بس مش React-Query-native بالكامل
 
+### المرحلة 1.6 — Trash (Settings) ✅
+- `src/features/trash/api.ts` + `queries.ts`
+- `useOwnerCheck`, `useDeletedRows`, `useRestoreRow`, `usePurgeRow`
+- `settings.trash.tsx`: صفر `supabase.from` مباشر؛ التحديث بعد restore/purge عن طريق invalidateQueries
+
 ## ⏳ اللى لسه (نطاق كبير — يحتاج جلسات مخصّصة)
 
 - **`hr.tsx` mutations** (~30 استدعاء `supabase.from` للـ writes: departments/job_titles/permissions) — تحويلها لـ `useMutation` مستقلة.
 - **`settings.form-builder.tsx`** (1348 سطر) — feature module لـ `customer_field_definitions` + `customer_field_options`.
 - **`settings.organization.tsx`** (1111 سطر) — feature module للـ org fields + مخطط الشركة.
-- **`settings.trash.tsx`** — قراءة الـ soft-deleted rows؛ فيها dynamic table typing معقّد شوية.
 
 ## 🧪 التحقق
 
