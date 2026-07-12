@@ -1,78 +1,103 @@
+# خطة: منشئ الشاشات العام + صفحة الإعدادات المركزية
 
-# خطة: نظام موافقات العروض متعدد المراحل
+## 1) تعميم منشئ الحقول على أي شاشة (مش بس العملاء)
 
-## نظرة عامة
-- **قوالب workflow** يعمل المستخدم قوالب متعددة (مثلاً "عروض كبيرة"، "عروض صغيرة") فيها مراحل مرتّبة وكل مرحلة ليها مسؤول واحد أو أكتر من مستخدمي التطبيق.
-- **ربط عرض بقالب** عند إنشاء/تعديل العرض يختار المستخدم القالب المناسب فيبدأ العرض من أول مرحلة.
-- **موافقة/رفض داخل التطبيق** المسؤول عن المرحلة الحالية بيشوف العرض في تاب "بانتظار موافقتي" ويقدر يوافق أو يرفض مع ملاحظات.
-- **إرسال يدوي بالإيميل** زرار "إرسال للمسؤول" على العرض بيبعث للمسؤولين إيميل فيه ملخص العرض + **لينكات تحميل مؤقتة (7 أيام)** لكل المرفقات.
+بدل ما يكون فيه جداول خاصة بالعملاء، نعمل نظام عام:
 
-## قاعدة البيانات
+**جداول DB جديدة (تحل محل الحالية الخاصة بالعملاء):**
+- `form_entities` — يعرّف كل شاشة قابلة للتخصيص (customers, quotes, workflows, …). فيه `key`, `label_ar`, `label_en`, `is_system`.
+- `form_fields` — كل الحقول لكل الشاشات (يحل محل `customer_field_definitions`). زيادة على الحالي:
+  - `entity_key` (FK لـ form_entities)
+  - `row_index` (int) + `col_span` (1..12) → للتحكم في الـ layout grid
+  - `position` داخل الصف (order)
+- `form_field_options` — نفس الفكرة لكن عام.
+- `form_field_values` — القيم الفعلية، مرتبطة بـ `entity_key` + `record_id` (uuid) بدل ما تكون مربوطة بجدول واحد.
 
-### جداول جديدة
-- `profiles` — بيانات المستخدمين المسجلين (id مربوط بـ auth.users, email, full_name) عشان نقدر نختار المسؤولين من قائمة. يتعمل تلقائي عند التسجيل عبر trigger.
-- `workflow_templates` — قوالب المستخدم (name, owner_id).
-- `workflow_stages` — مراحل داخل قالب (template_id, position, name).
-- `workflow_stage_approvers` — المسؤولين عن كل مرحلة (stage_id, approver_id → profiles).
-- `quote_approvals` — قرارات الموافقة لكل عرض (quote_id, stage_id, approver_id, decision: pending/approved/rejected, comment, decided_at).
-- `quote_email_log` — سجل الإيميلات المرسلة (quote_id, stage_id, recipients, sent_at).
+**Migration path:** نرحّل بيانات `customer_field_*` الحالية للجداول الجديدة ثم نحذف القديمة.
 
-### تعديل جدول quotes
-- `workflow_template_id` (nullable) — القالب المرتبط.
-- `current_stage_id` (nullable) — المرحلة الحالية.
-- `approval_state` — حالة workflow (`in_progress` / `approved` / `rejected` / `none`).
+## 2) صلاحيات مرنة (مش الأدمن بس)
 
-### الصلاحيات (RLS)
-- المستخدم يشوف/يعدل قوالبه بس.
-- المستخدم يشوف عروضه + العروض اللي هو مسؤول عن مرحلة فيها.
-- المسؤول يقدر يحدث قراره في quote_approvals للمرحلة الحالية بس.
+- الصلاحية الحالية `manage_customer_fields` نغيّرها لـ `manage_form_fields` (تشمل كل الشاشات).
+- كل إدخال في `form_entities` ممكن يشير لـ permission مخصصة (مثلاً `manage_customer_fields`, `manage_quote_fields`) → المستخدم يقدر يعدّل شاشة معينة بس.
+- إدارة الصلاحيات نفسها تتم من صفحة Settings > Permissions.
 
-## الواجهة
+## 3) صفحة الإعدادات المركزية `/settings`
 
-### صفحة "قوالب Workflow" `/workflows`
-- قائمة القوالب + زرار إنشاء.
-- Dialog لتعديل: اسم القالب، قائمة المراحل مرتّبة (drag لتغيير الترتيب لاحقاً، حالياً بأزرار ↑↓)، لكل مرحلة قائمة المسؤولين (multi-select من `profiles`).
+route واحد بتبويبات جانبية:
 
-### تعديلات صفحة العروض
-- في form العرض: dropdown لاختيار workflow template.
-- في card العرض: 
-  - Badge بحالة الـ approval (in_progress/approved/rejected) واسم المرحلة الحالية.
-  - عمود Timeline مصغّر بيوضح المراحل والحالة.
-  - زرار "إرسال للمسؤول" (يظهر لصاحب العرض في المرحلة الحالية بس).
-  - زرار "موافقة/رفض" (يظهر للمسؤول لو هو approver للمرحلة الحالية).
+```
+/settings
+├── /settings/general       — اللغة الافتراضية، اسم الشركة، الشعار
+├── /settings/form-builder  — منشئ الحقول لكل الشاشات (اختيار الشاشة من dropdown)
+├── /settings/permissions   — إدارة الأدوار والصلاحيات لكل مستخدم
+├── /settings/reports       — إعدادات التقارير (لاحقاً)
+├── /settings:الخ…
+```
 
-### تاب "بانتظار موافقتي"
-- قائمة العروض اللي المستخدم الحالي approver لمرحلتها الحالية.
+كل تبويب يظهر بس لو المستخدم عنده الصلاحية المناسبة.  
+البنود القديمة (admin/customer-fields, hr, team) نقلها تحت `/settings/*` تدريجياً.
 
-## الإيميل
-- Template: `quote-approval-request` (React Email) فيه:
-  - اسم المورد، رقم مرجعي، المبلغ، تاريخ الاستلام/الصلاحية، الوصف، الملاحظات.
-  - اسم المرحلة الحالية.
-  - قائمة **لينكات تحميل مؤقتة** لكل مرفق (Signed URLs صلاحية 7 أيام).
-  - زرار "افتح العرض في التطبيق".
-- زرار الإرسال بينادي server function `sendQuoteForApproval` (createServerFn + requireSupabaseAuth):
-  1. يتحقق إن المستخدم يملك العرض.
-  2. يجيب المسؤولين للمرحلة الحالية.
-  3. يعمل signed URLs للمرفقات.
-  4. يستدعي `sendTemplateEmail` لكل مسؤول.
-  5. يسجل في `quote_email_log`.
+## 4) منشئ الحقول التفاعلي (Drag & Drop حقيقي)
 
-## المتطلبات المسبقة
-- تفعيل نطاق إيميل (dialog ظاهر فوق).
-- بعد التفعيل نستخدم `scaffold_transactional_email_templates`.
+استخدام `@dnd-kit` (خفيف ومتوافق مع RTL):
 
-## الترتيب
-1. Migration: profiles + trigger + workflow tables + تعديل quotes + RLS.
-2. صفحة القوالب (`/workflows`) + إدارة المراحل والمسؤولين.
-3. تعديل form العرض لاختيار القالب.
-4. Timeline + تاب "بانتظار موافقتي" + أزرار الموافقة/الرفض.
-5. Scaffold email templates + template العرض.
-6. Server function للإرسال + زرار "إرسال للمسؤول".
+**واجهة الـ builder — عمودين:**
+- **يسار (Sidebar):** أنواع الحقول (text, number, dropdown, file, bilingual…) — تسحبها للـ canvas.
+- **يمين (Canvas — grid 12-column):**
+  - كل صف يقدر يحتوي أكتر من حقل جنب بعض حسب `col_span`.
+  - تسحب الحقل يمين/شمال داخل الصف = تغيير الترتيب.
+  - تسحبه لصف تاني = نقله.
+  - مقبض على حافة الحقل لتغيير العرض (col_span: 3/4/6/8/12).
+  - كليك على الحقل يفتح لوحة إعدادات على اليمين (label, required, validation, options).
+- **معاينة Live:** زرار "Preview" يعرض الشاشة بنفس الشكل اللى هيشوفه المستخدم النهائى.
 
-## ملاحظة عن الملفات المرفقة
-Lovable Emails ما بيسمحش بإرفاق ملفات مباشرة في الإيميل. الحل: نبعت **لينكات تحميل موقّعة (Signed URLs)** بصلاحية 7 أيام. المسؤول بيضغط على اللينك فيحمل الملف من التخزين الآمن مباشرة — تجربة قريبة جداً من الإرفاق العادي وأأمن.
+## 5) عرض الشاشة النهائية للمستخدم
 
-## المرحلة الجاية (مش دلوقتي)
-البنود التفصيلية للطلب، إنشاء عرض السعر من الأبلكيشن نفسه، النسخ المتعددة، ومقارنة مواصفة العميل مع مواصفتنا — هنعملها في المرحلة اللي بعد ما ده يخلص.
+`<DynamicForm entityKey="customers" recordId={...} />`:
+- يجيب `form_fields` مرتبة حسب `row_index` ثم `position`.
+- يرسمها في CSS Grid (`grid-cols-12`) وكل حقل يأخذ `col-span-{col_span}`.
+- يقرأ/يكتب في `form_field_values` تلقائياً.
+- RTL/LTR يشتغل تلقائى من `dir`.
 
-هل الخطة دي كويسة نبدأ التنفيذ؟
+## 6) UX التفاصيل
+
+- Undo/Redo داخل الـ builder (Ctrl+Z).
+- Auto-save كل تغيير + مؤشر "Saved ✓".
+- Duplicate field, hide field (soft), archive.
+- Sections/Tabs داخل الشاشة الواحدة (accordion groups).
+- Keyboard: Enter لتحرير label، Delete للحذف، Arrow keys للتنقل.
+- Mobile: الـ grid ينهار لعمود واحد تلقائى (`md:col-span-*`).
+
+## Technical details
+
+- **DB:** migration واحدة تنشئ الجداول الجديدة + ترحيل + drop للقديم.
+- **Component tree:**
+  - `src/routes/_authenticated/settings/route.tsx` — layout بتبويبات
+  - `src/routes/_authenticated/settings/form-builder.tsx`
+  - `src/components/form-builder/{FieldPalette, FormCanvas, FieldEditor, DynamicForm}.tsx`
+- **DnD lib:** `@dnd-kit/core` + `@dnd-kit/sortable`.
+- **إزالة:** صفحة `/admin/customer-fields` القديمة (redirect لـ `/settings/form-builder?entity=customers`).
+- **Existing customer form:** الحقول الأساسية (اسم/عنوان/تليفون…) تتحوّل لـ system-seeded rows في `form_fields` بحيث الأدمن يقدر يخفيها/يعيد ترتيبها بس مش يمسحها.
+
+## نطاق التنفيذ
+
+كبير — هعمله على مرحلتين:
+
+**Phase 1 (الآن):**
+- DB الجديد + الترحيل
+- `/settings` shell + التنقل
+- Form Builder بالـ DnD الحقيقى لشاشة العملاء بس
+- `DynamicForm` component + دمجه فى شاشة العملاء
+
+**Phase 2 (بعد ما تراجع):**
+- تعميمه على شاشة Quotes وHR
+- Sections/Tabs، Undo/Redo، Preview mode
+- نقل باقى الإعدادات (لغة، تقارير) لـ Settings
+
+## أسئلة قبل ما أبدأ
+
+1. **الحقول الأساسية للعميل** (name, tax_id, address…): تفضل تبقى system-seeded مع إمكانية إخفاء/إعادة ترتيب فقط، ولا مسموح للأدمن يحذفها نهائى؟
+2. **صلاحيات كل شاشة:** permission واحدة `manage_form_fields` تخلى صاحبها يعدل كل الشاشات، ولا permission لكل شاشة (`manage_customer_fields`, `manage_quote_fields`)؟
+3. **الحقول الحالية اللى موجودة فى الكود** (شاشة العملاء الحالية بكل حقولها الـ hardcoded): أستبدلها بالكامل بـ `<DynamicForm />` أم أخليها كما هى وأضيف قسم dynamic تحتها؟
+
+قوللى الإجابات وأبدأ Phase 1 على طول.
