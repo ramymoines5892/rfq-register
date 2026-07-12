@@ -699,8 +699,8 @@ function DeptCard({
                     <div
                       className="absolute top-0 h-px bg-border"
                       style={{
-                        left: isFirst ? "50%" : 0,
-                        right: isLast ? "50%" : 0,
+                        insetInlineStart: isFirst ? "50%" : 0,
+                        insetInlineEnd: isLast ? "50%" : 0,
                       }}
                     />
                   )}
