@@ -92,10 +92,10 @@ function Dashboard() {
   async function load() {
     setLoading(true);
     const [{ data: qs }, { data: tpls }, { data: profs }, { data: cus }] = await Promise.all([
-      supabase.from("quotes").select("*").order("received_date", { ascending: false }),
-      supabase.from("workflow_templates").select("id, name"),
+      supabase.from("quotes").select("*").is("deleted_at", null).order("received_date", { ascending: false }),
+      supabase.from("workflow_templates").select("id, name").is("deleted_at", null),
       supabase.from("profiles").select("id, email, full_name"),
-      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").order("name"),
+      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").is("deleted_at", null).order("name"),
     ]);
     setCustomers((cus ?? []) as Customer[]);
     const allQuotes = (qs ?? []) as Quote[];
