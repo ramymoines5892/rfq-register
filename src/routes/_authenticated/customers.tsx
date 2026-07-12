@@ -458,6 +458,13 @@ function CustomerSheet({
   const [draftContacts, setDraftContacts] = useState<DraftContact[]>([]);
   const [draftBanks, setDraftBanks] = useState<DraftBank[]>([]);
 
+  // Attachments
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [draftAttachments, setDraftAttachments] = useState<DraftAttachment[]>([]);
+  const [uploadingAttach, setUploadingAttach] = useState(false);
+  const [newAttachCategory, setNewAttachCategory] = useState<AttachmentCategory>("company_profile");
+  const [newAttachLabel, setNewAttachLabel] = useState("");
+
   const [openSection, setOpenSection] = useState<string>("identity");
 
   useEffect(() => {
