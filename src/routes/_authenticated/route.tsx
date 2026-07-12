@@ -95,20 +95,38 @@ function AuthenticatedLayout() {
 
   return (
     <div className="min-h-screen flex bg-background" dir={dir}>
-      {/* Sidebar */}
+      {/* Hover edge strip (only when unpinned) — brings the sidebar back on approach */}
+      {!pinned && (
+        <div
+          className={`hidden md:block fixed top-0 ${dir === "rtl" ? "right-0" : "left-0"} h-screen w-2 z-30`}
+          onMouseEnter={() => setHovered(true)}
+        />
+      )}
+
+      {/* Sidebar — sticky when pinned (in-flow), overlay when unpinned */}
       <aside
-        className={`hidden md:flex ${collapsed ? "md:w-16" : "md:w-64 lg:w-72"} flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out relative`}
+        onMouseEnter={() => !pinned && setHovered(true)}
+        onMouseLeave={() => !pinned && setHovered(false)}
+        className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width,transform] duration-200 ease-out ${
+          pinned
+            ? `sticky top-0 h-screen ${expanded ? "md:w-64 lg:w-72" : "md:w-16"}`
+            : `fixed top-0 ${dir === "rtl" ? "right-0" : "left-0"} h-screen z-40 shadow-xl ${
+                expanded ? "md:w-64 lg:w-72" : "w-0 -translate-x-full rtl:translate-x-full overflow-hidden"
+              }`
+        }`}
       >
-        {/* Toggle button (floats on the edge) */}
+        {/* Pin toggle (floats on the edge) */}
         <button
           type="button"
-          onClick={() => setCollapsed((v) => !v)}
-          title={collapsed ? (lang === "ar" ? "توسيع" : "Expand") : (lang === "ar" ? "طي" : "Collapse")}
-          className={`absolute top-4 ${dir === "rtl" ? "-start-3" : "-end-3"} z-10 h-6 w-6 rounded-full bg-background border shadow-sm grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors`}
+          onClick={() => { setPinned((v) => !v); setHovered(false); }}
+          title={pinned ? (lang === "ar" ? "إلغاء التثبيت" : "Unpin") : (lang === "ar" ? "تثبيت" : "Pin")}
+          className={`absolute top-4 ${dir === "rtl" ? "-start-3" : "-end-3"} z-10 h-6 w-6 rounded-full bg-background border shadow-sm grid place-items-center transition-colors ${
+            pinned ? "text-primary hover:bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
         >
-          {collapsed
-            ? <PanelLeftOpen className="h-3.5 w-3.5" />
-            : <PanelLeftClose className="h-3.5 w-3.5" />}
+          {pinned
+            ? <Pin className="h-3.5 w-3.5" />
+            : <PinOff className="h-3.5 w-3.5" />}
         </button>
 
         <div className={`${collapsed ? "px-3" : "px-6"} pt-7 pb-4`}>
