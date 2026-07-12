@@ -118,7 +118,7 @@ function AuthenticatedLayout() {
           type="button"
           onClick={() => { setPinned((v) => !v); setHovered(false); }}
           title={pinned ? (lang === "ar" ? "إلغاء التثبيت" : "Unpin") : (lang === "ar" ? "تثبيت" : "Pin")}
-          className={`absolute top-4 ${dir === "rtl" ? "-start-3" : "-end-3"} z-10 h-6 w-6 rounded-full bg-background border shadow-sm grid place-items-center transition-colors ${
+          className={`absolute top-4 ${dir === "rtl" ? "-end-3" : "-start-3"} z-10 h-6 w-6 rounded-full bg-background border shadow-sm grid place-items-center transition-colors ${
             pinned ? "text-primary hover:bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
