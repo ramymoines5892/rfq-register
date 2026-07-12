@@ -1,43 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-
-type Notif = {
-  id: string;
-  title: string;
-  body: string | null;
-  link: string | null;
-  kind: string;
-  category: string;
-  priority: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  read_at: string | null;
-  created_at: string;
-};
-
-type Prefs = {
-  enabled: boolean;
-  reminder_enabled: boolean;
-  reminder_interval_minutes: number;
-  sound_enabled: boolean;
-};
-
-const DEFAULT_PREFS: Prefs = {
-  enabled: true,
-  reminder_enabled: true,
-  reminder_interval_minutes: 15,
-  sound_enabled: true,
-};
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotificationPrefs,
+  useNotifications,
+  useNotificationsRealtime,
+} from "@/features/notifications/queries";
+import type { Notif, NotifPrefs } from "@/features/notifications/api";
 
 function playPing() {
   try {
-    const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    const AudioCtx = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+      || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const o = ctx.createOscillator();
@@ -63,98 +43,32 @@ function timeAgo(iso: string, ar: boolean) {
 export function NotificationBell() {
   const { lang } = useI18n();
   const ar = lang === "ar";
-  const [items, setItems] = useState<Notif[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [open, setOpen] = useState(false);
-  const userIdRef = useRef<string | null>(null);
-  const lastReminderCountRef = useRef<number>(-1);
-  // Realtime handlers read the latest prefs via ref so we don't re-subscribe on prefs change.
-  const prefsRef = useRef<Prefs>(DEFAULT_PREFS);
+
+  const { data: items = [], isLoading } = useNotifications();
+  const { data: prefs } = useNotificationPrefs();
+  const markOne = useMarkNotificationRead();
+  const markAll = useMarkAllNotificationsRead();
+
+  // Latest prefs via ref so realtime handler doesn't need re-registration.
+  const prefsRef = useRef<NotifPrefs | undefined>(prefs);
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
+  const onIncoming = useCallback((n: Notif) => {
+    const p = prefsRef.current;
+    if (!p?.enabled) return;
+    if (p.sound_enabled) playPing();
+    toast(n.title, { description: n.body ?? undefined });
+  }, []);
 
+  useNotificationsRealtime(onIncoming);
 
   const unreadCount = items.filter((n) => !n.read_at).length;
 
-  const load = useCallback(async () => {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
-    userIdRef.current = user.user.id;
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.user.id)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    setItems((data ?? []) as Notif[]);
-    setLoading(false);
-  }, []);
-
-  const loadPrefs = useCallback(async () => {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) return;
-    const { data } = await supabase
-      .from("notification_preferences")
-      .select("enabled,reminder_enabled,reminder_interval_minutes,sound_enabled")
-      .eq("user_id", user.user.id)
-      .maybeSingle();
-    if (data) setPrefs(data as Prefs);
-  }, []);
-
-  // Initial load + prefs
-  useEffect(() => {
-    load();
-    loadPrefs();
-  }, [load, loadPrefs]);
-
-  // Realtime subscription — mount-once. Do NOT depend on prefs (handlers use prefsRef).
-  useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    let cancelled = false;
-    (async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user || cancelled) return;
-      // Unique topic per mount to sidestep supabase-js channel caching, which
-      // otherwise reuses a channel and throws "cannot add postgres_changes
-      // callbacks after subscribe()" on the second effect run (StrictMode).
-      const topic = `notif_${user.user.id}_${Math.random().toString(36).slice(2, 10)}`;
-      channel = supabase
-        .channel(topic)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.user.id}` },
-          (payload) => {
-            const n = payload.new as Notif;
-            setItems((prev) => [n, ...prev].slice(0, 30));
-            const p = prefsRef.current;
-            if (p.enabled) {
-              if (p.sound_enabled) playPing();
-              toast(n.title, { description: n.body ?? undefined });
-            }
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.user.id}` },
-          (payload) => {
-            const n = payload.new as Notif;
-            setItems((prev) => prev.map((x) => (x.id === n.id ? n : x)));
-          },
-        )
-        .subscribe();
-    })();
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, []);
-
-
-
   // Periodic reminder about pending items
+  const lastReminderCountRef = useRef<number>(-1);
   useEffect(() => {
-    if (!prefs.enabled || !prefs.reminder_enabled) return;
+    if (!prefs?.enabled || !prefs.reminder_enabled) return;
     const minutes = Math.max(1, prefs.reminder_interval_minutes);
     const interval = setInterval(() => {
       const pending = items.filter((n) => !n.read_at).length;
@@ -169,18 +83,10 @@ export function NotificationBell() {
     return () => clearInterval(interval);
   }, [prefs, items, ar]);
 
-  async function markAllRead() {
-    const uid = userIdRef.current;
-    if (!uid) return;
+  function markAllRead() {
     const ids = items.filter((n) => !n.read_at).map((n) => n.id);
     if (!ids.length) return;
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
-    setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
-  }
-
-  async function markOne(id: string) {
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
+    markAll.mutate(ids);
   }
 
   return (
@@ -214,7 +120,7 @@ export function NotificationBell() {
           </div>
         </div>
         <div className="max-h-[400px] overflow-y-auto">
-          {loading ? (
+          {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin inline" />
             </div>
@@ -226,7 +132,7 @@ export function NotificationBell() {
             items.map((n) => {
               const inner = (
                 <div
-                  onClick={() => { if (!n.read_at) markOne(n.id); if (n.link) setOpen(false); }}
+                  onClick={() => { if (!n.read_at) markOne.mutate(n.id); if (n.link) setOpen(false); }}
                   className={`p-3 border-b hover:bg-muted/50 cursor-pointer transition-colors ${!n.read_at ? "bg-primary/5" : ""}`}
                 >
                   <div className="flex items-start gap-2">
