@@ -141,50 +141,42 @@ function Dashboard() {
   );
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); });
+    getCurrentUserId().then((uid) => setUserId(uid));
     load();
   }, []);
 
   async function load() {
     setLoading(true);
-    const [{ data: qs }, { data: tpls }, { data: profs }, { data: cus }] = await Promise.all([
-      supabase.from("quotes").select("*").is("deleted_at", null).order("received_date", { ascending: false }),
-      supabase.from("workflow_templates").select("id, name").is("deleted_at", null),
-      supabase.from("profiles").select("id, email, full_name"),
-      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").is("deleted_at", null).order("name"),
-    ]);
-    setCustomers((cus ?? []) as Customer[]);
-    const allQuotes = (qs ?? []) as Quote[];
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id ?? "";
+    const base = await fetchDashboardBase();
+    setCustomers(base.customers as Customer[]);
+    const allQuotes = base.quotes as Quote[];
+    const uid = base.userId;
     setQuotes(allQuotes.filter(q => q.user_id === uid));
     setPendingQuotes(allQuotes.filter(q => q.user_id !== uid && q.approval_state === "in_progress"));
-    setTemplates((tpls ?? []) as Template[]);
-    setProfiles((profs ?? []) as Profile[]);
+    setTemplates(base.templates as Template[]);
+    setProfiles(base.profiles as Profile[]);
 
     if (allQuotes.length) {
       const ids = allQuotes.map(q => q.id);
-      const [{ data: atts }, { data: apps }] = await Promise.all([
-        supabase.from("quote_attachments").select("*").in("quote_id", ids).is("deleted_at", null),
-        supabase.from("quote_approvals").select("*").in("quote_id", ids),
-      ]);
+      const { attachments: atts, approvals: apps } = await fetchAttachmentsAndApprovals(ids);
       const ag: Record<string, Attachment[]> = {};
-      (atts ?? []).forEach(a => { (ag[a.quote_id] ??= []).push(a as Attachment); });
+      (atts as Attachment[]).forEach(a => { (ag[a.quote_id] ??= []).push(a); });
       setAttachments(ag);
       const apg: Record<string, Approval[]> = {};
-      (apps ?? []).forEach(a => { (apg[(a as Approval).quote_id] ??= []).push(a as Approval); });
+      (apps as Approval[]).forEach(a => { (apg[a.quote_id] ??= []).push(a); });
       setApprovalsByQuote(apg);
     }
 
     const tplIds = Array.from(new Set(allQuotes.map(q => q.workflow_template_id).filter(Boolean))) as string[];
     if (tplIds.length) {
-      const { data: stages } = await supabase.from("workflow_stages").select("*").in("template_id", tplIds).is("deleted_at", null).order("position");
+      const stages = await fetchStagesForTemplates(tplIds);
       const sg: Record<string, Stage[]> = {};
-      (stages ?? []).forEach(s => { (sg[(s as Stage).template_id] ??= []).push(s as Stage); });
+      (stages as Stage[]).forEach(s => { (sg[s.template_id] ??= []).push(s); });
       setStagesByTemplate(sg);
     }
     setLoading(false);
   }
+
 
 
 
