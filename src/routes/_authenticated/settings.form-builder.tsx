@@ -61,6 +61,7 @@ const ENTITIES = [
 function FormBuilderPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
+  const confirm = useConfirm();
   const [canManage, setCanManage] = useState<boolean | null>(null);
   const [entity, setEntity] = useState<string>("customers");
   const [fields, setFields] = useState<FieldDef[]>([]);
