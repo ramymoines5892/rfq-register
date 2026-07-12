@@ -153,35 +153,38 @@ function HrPage() {
     sortKey !== k ? <ArrowUpDown className="h-3 w-3 opacity-40" /> :
     sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
 
+  const approveM = useApproveUser();
+  const setStatusM = useSetProfileStatus();
+  const bulkApproveM = useBulkApproveUsers();
+  const bulkStatusM = useBulkSetProfileStatus();
+
   async function approve(userId: string) {
-    const { error: e1 } = await supabase.from("profiles").update({ status: "active" }).eq("id", userId);
-    if (e1) { toast.error(e1.message); return; }
-    await supabase.from("user_roles").insert({ user_id: userId, role: "member" as AppRole });
-    toast.success(t("saved"));
-    load();
+    try { await approveM.mutateAsync(userId); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
+    setSelected(new Set());
   }
   async function setStatus(userId: string, status: "active" | "suspended") {
-    const { error } = await supabase.from("profiles").update({ status }).eq("id", userId);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("saved"));
-    load();
+    try { await setStatusM.mutateAsync({ userId, status }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function bulk(action: "approve" | "suspend" | "activate") {
     const ids = Array.from(selected);
     if (!ids.length) return;
     const targets = profiles.filter((p) => ids.includes(p.id) && p.id !== me && roleOf(p.id) !== "owner");
-    if (action === "approve") {
-      const pendingIds = targets.filter((p) => p.status === "pending").map((p) => p.id);
-      if (!pendingIds.length) { toast.error(lang === "ar" ? "لا يوجد طلبات جديدة ضمن المحدد" : "No pending users selected"); return; }
-      await supabase.from("profiles").update({ status: "active" }).in("id", pendingIds);
-      await supabase.from("user_roles").insert(pendingIds.map((id) => ({ user_id: id, role: "member" as AppRole })));
-    } else {
-      const status = action === "suspend" ? "suspended" : "active";
-      await supabase.from("profiles").update({ status }).in("id", targets.map((p) => p.id));
-    }
-    toast.success(t("saved"));
-    load();
+    try {
+      if (action === "approve") {
+        const pendingIds = targets.filter((p) => p.status === "pending").map((p) => p.id);
+        if (!pendingIds.length) { toast.error(lang === "ar" ? "لا يوجد طلبات جديدة ضمن المحدد" : "No pending users selected"); return; }
+        await bulkApproveM.mutateAsync(pendingIds);
+      } else {
+        const status = action === "suspend" ? "suspended" : "active";
+        await bulkStatusM.mutateAsync({ userIds: targets.map((p) => p.id), status });
+      }
+      toast.success(t("saved"));
+    } catch (e) { toast.error((e as Error).message); }
+    setSelected(new Set());
   }
+
 
   const allChecked = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
   const someChecked = filtered.some((p) => selected.has(p.id));
