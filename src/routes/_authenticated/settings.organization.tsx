@@ -42,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/settings/organization")({
 function OrganizationPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
-  const { confirm } = useConfirm();
+  const confirm = useConfirm();
 
   const [tab, setTab] = useState<"departments" | "jobs">("departments");
   const [depts, setDepts] = useState<Department[]>([]);
@@ -565,7 +565,7 @@ function FieldTemplatesDialog({
 }) {
   const { lang } = useI18n();
   const ar = lang === "ar";
-  const { confirm } = useConfirm();
+  const confirm = useConfirm();
   const [entity, setEntity] = useState<"department" | "job_title">("department");
   const [labelAr, setLabelAr] = useState("");
   const [labelEn, setLabelEn] = useState("");
