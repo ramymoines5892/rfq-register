@@ -1,14 +1,24 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/features/_shared/queryKeys";
 import {
+  approveUser,
+  bulkApproveUsers,
+  bulkSetProfileStatus,
   fetchCurrentUserId,
   fetchHrDashboard,
   fetchProfiles,
+  fetchUserPermissions,
   fetchUserRoles,
+  grantUserPermission,
   removeUserFromTeam,
+  revokeUserPermission,
+  setProfileStatus,
   setUserRole,
+  updateProfileFields,
+  type AppPermission,
   type AppRole,
 } from "./api";
+import type { Database } from "@/integrations/supabase/types";
 
 export function useHrDashboard() {
   return useQuery({
