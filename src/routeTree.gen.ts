@@ -21,6 +21,7 @@ import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
+import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authenticated/settings.search'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
@@ -86,6 +87,12 @@ const AuthenticatedSettingsTrashRoute =
     path: '/trash',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsSearchRoute =
+  AuthenticatedSettingsSearchRouteImport.update({
+    id: '/search',
+    path: '/search',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -118,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
@@ -133,6 +141,7 @@ export interface FileRoutesByTo {
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
 }
@@ -151,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/_authenticated/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/admin/customer-fields'
     | '/settings/form-builder'
     | '/settings/notifications'
+    | '/settings/search'
     | '/settings/trash'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/admin/customer-fields'
     | '/settings/form-builder'
     | '/settings/notifications'
+    | '/settings/search'
     | '/settings/trash'
     | '/settings'
   id:
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/customer-fields'
     | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/settings/search'
     | '/_authenticated/settings/trash'
     | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
@@ -298,6 +311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsTrashRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/search': {
+      id: '/_authenticated/settings/search'
+      path: '/search'
+      fullPath: '/settings/search'
+      preLoaderRoute: typeof AuthenticatedSettingsSearchRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
       path: '/notifications'
@@ -325,6 +345,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
+  AuthenticatedSettingsSearchRoute: typeof AuthenticatedSettingsSearchRoute
   AuthenticatedSettingsTrashRoute: typeof AuthenticatedSettingsTrashRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
@@ -333,6 +354,7 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
+  AuthenticatedSettingsSearchRoute: AuthenticatedSettingsSearchRoute,
   AuthenticatedSettingsTrashRoute: AuthenticatedSettingsTrashRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
 }
