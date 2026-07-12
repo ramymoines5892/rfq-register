@@ -230,6 +230,7 @@ function CustomersPage() {
     const { data, error } = await supabase
       .from("customers")
       .select("*")
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     setCustomers((data ?? []) as Customer[]);
