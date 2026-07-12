@@ -959,10 +959,19 @@ function FieldEditor({
 
     if (fieldId && needsOptions(fieldType) && !isReferenceField(editing)) {
       await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
+      const usedValues = new Set<string>();
+      const genValue = (labelEn: string, labelAr: string) => {
+        const base = slugify(labelEn) || slugify(labelAr) || "option";
+        let v = base;
+        let n = 2;
+        while (usedValues.has(v)) v = `${base}_${n++}`;
+        usedValues.add(v);
+        return v;
+      };
       const rows = localOptions
-        .filter((o) => o.value.trim() && o.label_ar.trim() && o.label_en.trim())
+        .filter((o) => o.label_ar.trim() && o.label_en.trim())
         .map((o, i) => ({
-          field_id: fieldId!, value: o.value.trim(),
+          field_id: fieldId!, value: genValue(o.label_en, o.label_ar),
           label_ar: o.label_ar.trim(), label_en: o.label_en.trim(),
           position: (i + 1) * 10, is_active: o.is_active,
         }));
