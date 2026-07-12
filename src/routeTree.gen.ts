@@ -22,6 +22,7 @@ import { Route as AuthenticatedCustomersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
 import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authenticated/settings.search'
+import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings.organization'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
@@ -93,6 +94,12 @@ const AuthenticatedSettingsSearchRoute =
     path: '/search',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsOrganizationRoute =
+  AuthenticatedSettingsOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
@@ -141,6 +149,7 @@ export interface FileRoutesByTo {
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
@@ -160,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/_authenticated/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/_authenticated/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/admin/customer-fields'
     | '/settings/form-builder'
     | '/settings/notifications'
+    | '/settings/organization'
     | '/settings/search'
     | '/settings/trash'
     | '/settings/'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/admin/customer-fields'
     | '/settings/form-builder'
     | '/settings/notifications'
+    | '/settings/organization'
     | '/settings/search'
     | '/settings/trash'
     | '/settings'
@@ -213,6 +225,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/customer-fields'
     | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/settings/organization'
     | '/_authenticated/settings/search'
     | '/_authenticated/settings/trash'
     | '/_authenticated/settings/'
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsSearchRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/organization': {
+      id: '/_authenticated/settings/organization'
+      path: '/organization'
+      fullPath: '/settings/organization'
+      preLoaderRoute: typeof AuthenticatedSettingsOrganizationRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
       path: '/notifications'
@@ -345,6 +365,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
+  AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
   AuthenticatedSettingsSearchRoute: typeof AuthenticatedSettingsSearchRoute
   AuthenticatedSettingsTrashRoute: typeof AuthenticatedSettingsTrashRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -354,6 +375,8 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
+  AuthenticatedSettingsOrganizationRoute:
+    AuthenticatedSettingsOrganizationRoute,
   AuthenticatedSettingsSearchRoute: AuthenticatedSettingsSearchRoute,
   AuthenticatedSettingsTrashRoute: AuthenticatedSettingsTrashRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
@@ -396,13 +419,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, redirect } from "@tansta
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders, Trash2 } from "lucide-react";
+import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders, Trash2, Network } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsLayout,
@@ -27,7 +27,9 @@ type TabDef = {
 
 const TABS: TabDef[] = [
   { to: "/settings", labelAr: "نظرة عامة", labelEn: "Overview", icon: Sliders },
+  { to: "/settings/organization", labelAr: "الهيكل التنظيمي", labelEn: "Organization", icon: Network },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", icon: LayoutGrid, perm: "manage_form_fields" },
+
   { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", icon: Trash2, ownerOnly: true },
   { to: "/settings/language", labelAr: "اللغة والتوطين", labelEn: "Language & Locale", icon: Languages, disabled: true },
   { to: "/settings/reports", labelAr: "التقارير", labelEn: "Reports", icon: FileText, disabled: true },
