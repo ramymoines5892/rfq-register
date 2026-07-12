@@ -1,8 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,6 +12,13 @@ import {
 import { toast } from "sonner";
 import { Trash2, RotateCcw, ShieldAlert, ArrowLeft, Info, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import {
+  useDeletedRows,
+  useOwnerCheck,
+  usePurgeRow,
+  useRestoreRow,
+} from "@/features/trash/queries";
+import type { DeletedRow } from "@/features/trash/api";
 
 export const Route = createFileRoute("/_authenticated/settings/trash")({
   component: TrashPage,
@@ -37,98 +42,54 @@ const TABLES = [
 
 type TableKey = (typeof TABLES)[number]["key"];
 
-type DeletedRow = {
-  id: string;
-  deleted_at: string;
-  deleted_by: string | null;
-  [k: string]: unknown;
-};
-
-type ProfileLite = { id: string; full_name: string | null; email: string };
-
 function TrashPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
 
-  const [isOwner, setIsOwner] = useState<boolean | null>(null);
-  const [ownerEmail, setOwnerEmail] = useState<string>("");
   const [tableKey, setTableKey] = useState<TableKey>("customer_field_definitions");
-  const [rows, setRows] = useState<DeletedRow[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
-  const [loading, setLoading] = useState(false);
   const [purging, setPurging] = useState<{ id: string; label: string } | null>(null);
   const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
+
+  const ownerQ = useOwnerCheck();
+  const isOwner = ownerQ.data?.isOwner ?? null;
+  const ownerEmail = ownerQ.data?.email ?? "";
+
+  const listQ = useDeletedRows(tableKey, !!isOwner);
+  const rows = listQ.data?.rows ?? [];
+  const profiles = listQ.data?.profiles ?? {};
+  const loading = listQ.isLoading || listQ.isFetching;
+
+  const restoreM = useRestoreRow(tableKey);
+  const purgeM = usePurgeRow(tableKey);
+  const busy = purgeM.isPending;
 
   const currentTable = useMemo(() => TABLES.find((t) => t.key === tableKey)!, [tableKey]);
 
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { setIsOwner(false); return; }
-      setOwnerEmail(u.user.email ?? "");
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-      setIsOwner(!!roles?.some((r) => r.role === "owner"));
-    })();
-  }, []);
-
-  async function load() {
-    setLoading(true);
-    setRows([]);
-    const { data, error } = await supabase
-      .from(tableKey)
-      .select("*")
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false });
-    if (error) { toast.error(error.message); setLoading(false); return; }
-    const list = (data ?? []) as DeletedRow[];
-    setRows(list);
-    // Fetch profile info for actors
-    const actorIds = Array.from(new Set(list.map((r) => r.deleted_by).filter(Boolean))) as string[];
-    if (actorIds.length) {
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", actorIds);
-      const map: Record<string, ProfileLite> = {};
-      for (const p of profs ?? []) map[p.id] = p;
-      setProfiles(map);
-    } else {
-      setProfiles({});
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => { if (isOwner) load(); }, [isOwner, tableKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
   async function restore(row: DeletedRow) {
-    const { error } = await supabase.from(tableKey).update({
-      deleted_at: null, deleted_by: null,
-    }).eq("id", row.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(ar ? "تم الاسترجاع (الحقل مخفى — فعّله من الشاشة الأصلية)" : "Restored (item is hidden — enable it from its screen)");
-    load();
+    try {
+      await restoreM.mutateAsync(row.id);
+      toast.success(ar ? "تم الاسترجاع (الحقل مخفى — فعّله من الشاشة الأصلية)" : "Restored (item is hidden — enable it from its screen)");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   async function confirmPurge() {
     if (!purging) return;
     if (!password) { toast.error(ar ? "أدخل كلمة السر" : "Enter password"); return; }
-    setBusy(true);
-
-    // Verify password by attempting to sign in the same user
-    const { error: verifyErr } = await supabase.auth.signInWithPassword({
-      email: ownerEmail, password,
-    });
-    if (verifyErr) {
-      setBusy(false);
-      toast.error(ar ? "كلمة السر غير صحيحة" : "Incorrect password");
-      return;
+    try {
+      await purgeM.mutateAsync({ id: purging.id, email: ownerEmail, password });
+      toast.success(ar ? "تم الحذف النهائي" : "Permanently deleted");
+      setPurging(null);
+      setPassword("");
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (msg === "BAD_PASSWORD") {
+        toast.error(ar ? "كلمة السر غير صحيحة" : "Incorrect password");
+      } else {
+        toast.error(msg);
+      }
     }
-
-    const { error } = await supabase.from(tableKey).delete().eq("id", purging.id);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(ar ? "تم الحذف النهائي" : "Permanently deleted");
-    setPurging(null);
-    setPassword("");
-    load();
   }
 
   function labelFor(row: DeletedRow): string {
@@ -148,6 +109,7 @@ function TrashPage() {
   }
 
   if (isOwner === null) return <div className="text-center py-8 text-muted-foreground">{ar ? "جاري التحقق..." : "Checking..."}</div>;
+
   if (!isOwner) {
     return (
       <Card className="max-w-md mx-auto mt-8">
