@@ -86,7 +86,7 @@ function FormBuilderPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const confirm = useConfirm();
-  const [canManage, setCanManage] = useState<boolean | null>(null);
+  
   const search = useSearch({ from: "/_authenticated/settings/form-builder" });
   const [entity, setEntity] = useState<string>(
     search.entity && ENTITIES.some((e) => e.key === search.entity) ? search.entity : "customers"
