@@ -182,6 +182,37 @@ function OrganizationPage() {
     }
   }, [depts, isDescendant, ar, load]);
 
+  // Promote a department to the top: it becomes the only root and adopts all
+  // other current roots as its children.
+  const promoteToTop = useCallback(async (sourceId: string) => {
+    const source = depts.find((d) => d.id === sourceId);
+    if (!source) return;
+    const otherRoots = depts
+      .filter((d) => !d.parent_id && d.id !== sourceId)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    if (otherRoots.length === 0 && !source.parent_id) return;
+
+    const updates = [
+      { id: sourceId, parent_id: null as string | null, position: 1 },
+      ...otherRoots.map((d, idx) => ({ id: d.id, parent_id: sourceId, position: idx + 1 })),
+    ];
+    setDepts((prev) => prev.map((d) => {
+      const u = updates.find((x) => x.id === d.id);
+      return u ? { ...d, parent_id: u.parent_id, position: u.position } : d;
+    }));
+    const results = await Promise.all(
+      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
+    );
+    const err = results.find((r) => r.error)?.error;
+    if (err) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
+      await load();
+    } else {
+      toast.success(ar ? "تم الرفع للأعلى" : "Promoted to top");
+    }
+  }, [depts, ar, load]);
+
+
 
   const chartRef = useRef<HTMLDivElement | null>(null);
   const downloadChart = async () => {
@@ -391,7 +422,9 @@ function OrganizationPage() {
             </div>
           ) : (
             <TooltipProvider delayDuration={120}>
+              <TopDropZone ar={ar} onPromote={promoteToTop} />
               <div className="flex flex-nowrap items-start justify-center gap-2 sm:gap-3 py-4 max-w-full">
+
               {rootDepts
                 .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                 .map((d) => (
@@ -500,6 +533,38 @@ function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string
     </Card>
   );
 }
+
+/* -------------------------------- TOP DROP ZONE ----------------------------- */
+
+function TopDropZone({ ar, onPromote }: { ar: boolean; onPromote: (id: string) => void }) {
+  const [over, setOver] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("text/dept-id")) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        const id = e.dataTransfer.getData("text/dept-id");
+        setOver(false);
+        if (!id) return;
+        e.preventDefault();
+        onPromote(id);
+      }}
+      className={`mb-2 rounded-lg border-2 border-dashed py-2 text-center text-[11px] transition-colors ${
+        over ? "border-primary bg-primary/10 text-primary" : "border-border/60 text-muted-foreground"
+      }`}
+    >
+      {ar
+        ? "اسحب إدارة هنا لجعلها في الأعلى وتصبح باقي الإدارات فرعية منها"
+        : "Drop a department here to make it the top-level parent of all others"}
+    </div>
+  );
+}
+
 
 /* --------------------------------- DEPT CARD -------------------------------- */
 
