@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -89,6 +90,11 @@ function AuthenticatedLayout() {
           </div>
         </div>
 
+        <div className="px-4 pb-2">
+          <GlobalSearchTrigger className="w-full justify-start" />
+        </div>
+
+
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-4 pb-2 text-sidebar-primary/70">
             {t("mainMenu") ?? "القائمة الرئيسية"}
@@ -145,6 +151,7 @@ function AuthenticatedLayout() {
               </Link>
             );
           })}
+          <button onClick={() => window.dispatchEvent(new Event("open-global-search"))} className="p-2 rounded-lg text-sidebar-foreground/70" title="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
           <NotificationBell />
           <Button variant="ghost" size="sm" className="text-sidebar-foreground" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </div>
@@ -153,6 +160,7 @@ function AuthenticatedLayout() {
       <main className="flex-1 min-w-0 pt-14 md:pt-0">
         <Outlet />
       </main>
+      <GlobalSearch />
     </div>
   );
 }
