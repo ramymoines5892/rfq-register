@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2, UserPlus } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -23,6 +24,7 @@ type UserRole = { id: string; user_id: string; role: AppRole };
 
 function TeamPage() {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [me, setMe] = useState<string>("");
   const [myRole, setMyRole] = useState<AppRole | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -72,7 +74,8 @@ function TeamPage() {
   }
 
   async function removeFromTeam(userId: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
+    if (!ok) return;
     const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
     if (error) { toast.error(error.message); return; }
     load();

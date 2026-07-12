@@ -16,6 +16,7 @@ import {
   Search, ArrowUpDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -526,6 +527,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 
 function DepartmentsTab({ departments, profiles, onChanged }: { departments: Department[]; profiles: Profile[]; onChanged: () => void }) {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [nameAr, setNameAr] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [managerId, setManagerId] = useState<string>("none");
@@ -547,7 +549,8 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
     onChanged();
   }
   async function remove(id: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("departments").update({
       deleted_at: new Date().toISOString(),
@@ -631,6 +634,7 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
 
 function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTitle[]; departments: Department[]; onChanged: () => void }) {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [nameAr, setNameAr] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [depId, setDepId] = useState<string>("none");
@@ -652,7 +656,8 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
     onChanged();
   }
   async function remove(id: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("job_titles").update({
       deleted_at: new Date().toISOString(),

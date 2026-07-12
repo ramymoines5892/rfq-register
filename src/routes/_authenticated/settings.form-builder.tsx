@@ -18,6 +18,7 @@ import {
   LayoutGrid, Save, Info, Check, X, Undo2, Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 import type { Database } from "@/integrations/supabase/types";
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
@@ -61,6 +62,7 @@ const ENTITIES = [
 function FormBuilderPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
+  const confirm = useConfirm();
   const [canManage, setCanManage] = useState<boolean | null>(null);
   const [entity, setEntity] = useState<string>("customers");
   const [fields, setFields] = useState<FieldDef[]>([]);
@@ -188,9 +190,15 @@ function FormBuilderPage() {
 
   async function removeField(f: FieldDef) {
     if (f.is_system) { toast.error(ar ? "لا يمكن حذف حقل نظام" : "System fields cannot be deleted"); return; }
-    if (!confirm(ar
-      ? `حذف الحقل "${f.label_ar}"؟ (الـ Owner بس هيقدر يشوفه أو يرجّعه من سلة المحذوفات)`
-      : `Delete field "${f.label_en}"? (Only the Owner can see or restore it from Trash)`)) return;
+    const ok = await confirm({
+      title: ar ? "حذف الحقل" : "Delete field",
+      description: ar
+        ? `حذف الحقل "${f.label_ar}"؟\nالـ Owner بس هيقدر يشوفه أو يرجّعه من سلة المحذوفات.`
+        : `Delete field "${f.label_en}"?\nOnly the Owner can see or restore it from Trash.`,
+      confirmText: ar ? "حذف" : "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("customer_field_definitions").update({
       deleted_at: new Date().toISOString(),
@@ -253,13 +261,17 @@ function FormBuilderPage() {
       return;
     }
     const label = sec.label;
-    if (!confirm(
-      sec.items.length === 0
+    const ok = await confirm({
+      title: ar ? "حذف القسم" : "Delete section",
+      description: sec.items.length === 0
         ? (ar ? `حذف القسم "${label}"؟` : `Delete section "${label}"?`)
         : (ar
-            ? `حذف القسم "${label}" مع ${sec.items.length} حقل جواه؟ (الحقول هتروح سلة المحذوفات)`
-            : `Delete section "${label}" and its ${sec.items.length} field(s)? (Fields go to Trash)`)
-    )) return;
+            ? `حذف القسم "${label}" مع ${sec.items.length} حقل جواه؟\nالحقول هتروح سلة المحذوفات.`
+            : `Delete section "${label}" and its ${sec.items.length} field(s)?\nFields will go to Trash.`),
+      confirmText: ar ? "حذف" : "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     if (sec.items.length > 0) {
       const { data: u } = await supabase.auth.getUser();
@@ -397,8 +409,14 @@ function FormBuilderPage() {
     setDirty(false);
   }
 
-  function discardChanges() {
-    if (!confirm(ar ? "التراجع عن كل التغييرات؟" : "Discard all changes?")) return;
+  async function discardChanges() {
+    const ok = await confirm({
+      title: ar ? "تراجع" : "Discard",
+      description: ar ? "التراجع عن كل التغييرات؟" : "Discard all changes?",
+      confirmText: ar ? "تراجع" : "Discard",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setFields(originalFieldsRef.current.map((f) => ({ ...f })));
     setDirty(false);
   }
@@ -436,8 +454,16 @@ function FormBuilderPage() {
           </Badge>
         )}
         <div className="ms-auto flex items-center gap-2">
-          <Select value={entity} onValueChange={(v) => {
-            if (dirty && !confirm(ar ? "فيه تغييرات غير محفوظة. متأكد؟" : "You have unsaved changes. Continue?")) return;
+          <Select value={entity} onValueChange={async (v) => {
+            if (dirty) {
+              const ok = await confirm({
+                title: ar ? "تغييرات غير محفوظة" : "Unsaved changes",
+                description: ar ? "فيه تغييرات غير محفوظة. متأكد؟" : "You have unsaved changes. Continue?",
+                confirmText: ar ? "متابعة" : "Continue",
+                variant: "destructive",
+              });
+              if (!ok) return;
+            }
             setEntity(v);
           }}>
             <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>

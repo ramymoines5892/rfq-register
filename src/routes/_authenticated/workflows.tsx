@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, ArrowLeft, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 
 export const Route = createFileRoute("/_authenticated/workflows")({
   component: WorkflowsPage,
@@ -23,6 +24,7 @@ type StageApprover = { id: string; stage_id: string; approver_id: string; positi
 
 function WorkflowsPage() {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Template | null>(null);
@@ -50,7 +52,8 @@ function WorkflowsPage() {
   }
 
   async function deleteTemplate(id: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), confirmText: t("delete") ?? undefined, variant: "destructive" });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("workflow_templates").update({
       deleted_at: new Date().toISOString(),
