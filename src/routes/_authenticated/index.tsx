@@ -662,7 +662,7 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
           terms_override: quote.terms_override ?? "",
           override_enabled: quote.terms_override !== null,
         });
-        supabase.from("quote_attachments").select("*").eq("quote_id", quote.id).then(({ data }) => setExistingAttachments((data ?? []) as Attachment[]));
+        fetchQuoteAttachments(quote.id).then((data) => setExistingAttachments(data as Attachment[]));
       } else {
         setForm({ supplier_name: "", reference_no: "", description: "", amount: "", currency: "EGP", status: "new", received_date: new Date().toISOString().slice(0, 10), expiry_date: "", notes: "", workflow_template_id: "", customer_id: "", terms_override: "", override_enabled: false });
         setExistingAttachments([]);
