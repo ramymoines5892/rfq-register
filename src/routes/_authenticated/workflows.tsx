@@ -32,7 +32,7 @@ function WorkflowsPage() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("workflow_templates").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("workflow_templates").select("*").is("deleted_at", null).order("created_at", { ascending: false });
     setTemplates((data ?? []) as Template[]);
     setLoading(false);
   }

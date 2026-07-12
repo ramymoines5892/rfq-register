@@ -109,7 +109,7 @@ function Dashboard() {
     if (allQuotes.length) {
       const ids = allQuotes.map(q => q.id);
       const [{ data: atts }, { data: apps }] = await Promise.all([
-        supabase.from("quote_attachments").select("*").in("quote_id", ids),
+        supabase.from("quote_attachments").select("*").in("quote_id", ids).is("deleted_at", null),
         supabase.from("quote_approvals").select("*").in("quote_id", ids),
       ]);
       const ag: Record<string, Attachment[]> = {};
@@ -122,7 +122,7 @@ function Dashboard() {
 
     const tplIds = Array.from(new Set(allQuotes.map(q => q.workflow_template_id).filter(Boolean))) as string[];
     if (tplIds.length) {
-      const { data: stages } = await supabase.from("workflow_stages").select("*").in("template_id", tplIds).order("position");
+      const { data: stages } = await supabase.from("workflow_stages").select("*").in("template_id", tplIds).is("deleted_at", null).order("position");
       const sg: Record<string, Stage[]> = {};
       (stages ?? []).forEach(s => { (sg[(s as Stage).template_id] ??= []).push(s as Stage); });
       setStagesByTemplate(sg);
