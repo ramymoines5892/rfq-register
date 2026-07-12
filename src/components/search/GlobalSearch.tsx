@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { semanticSearch } from "@/lib/semantic-search.functions";
 import {
   Users,
   FileText,
@@ -23,6 +25,7 @@ import {
   Search,
   Building2,
   Clock,
+  Sparkles,
 } from "lucide-react";
 
 type Hit = {
