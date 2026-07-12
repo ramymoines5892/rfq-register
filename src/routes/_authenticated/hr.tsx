@@ -388,49 +388,35 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
   onClose: () => void;
 }) {
   const { t, lang } = useI18n();
-  const [granted, setGranted] = useState<Set<AppPermission>>(new Set());
-  const [permLoading, setPermLoading] = useState(false);
+  const permsQ = useUserPermissions(user?.id);
+  const granted = useMemo(() => new Set(permsQ.data ?? []), [permsQ.data]);
+  const permLoading = permsQ.isLoading || permsQ.isFetching;
   const isSelf = user?.id === me;
   const isOwner = role === "owner";
 
-  useEffect(() => {
-    if (!user) return;
-    setPermLoading(true);
-    supabase.from("user_permissions").select("permission").eq("user_id", user.id).then(({ data }) => {
-      setGranted(new Set((data ?? []).map((r) => r.permission as AppPermission)));
-      setPermLoading(false);
-    });
-  }, [user?.id]);
+  const updateProfile = useUpdateProfile();
+  const setRoleM = useSetUserRole();
+  const grantM = useGrantPermission();
+  const revokeM = useRevokePermission();
 
   async function updateField(patch: Partial<Profile>) {
     if (!user) return;
-    const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("saved"));
+    try { await updateProfile.mutateAsync({ userId: user.id, patch }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function changeRole(newRole: AppRole) {
     if (!user) return;
-    const { data: existing } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-    for (const r of existing ?? []) {
-      if (r.role !== newRole) await supabase.from("user_roles").delete().eq("user_id", user.id).eq("role", r.role);
-    }
-    if (!(existing ?? []).some((r) => r.role === newRole)) {
-      await supabase.from("user_roles").insert({ user_id: user.id, role: newRole });
-    }
-    toast.success(t("saved"));
+    try { await setRoleM.mutateAsync({ userId: user.id, role: newRole }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function togglePerm(p: AppPermission, checked: boolean) {
     if (!user) return;
-    if (checked) {
-      const { error } = await supabase.from("user_permissions").insert({ user_id: user.id, permission: p });
-      if (error) { toast.error(error.message); return; }
-      setGranted((s) => new Set(s).add(p));
-    } else {
-      const { error } = await supabase.from("user_permissions").delete().eq("user_id", user.id).eq("permission", p);
-      if (error) { toast.error(error.message); return; }
-      setGranted((s) => { const n = new Set(s); n.delete(p); return n; });
-    }
+    try {
+      if (checked) await grantM.mutateAsync({ userId: user.id, permission: p });
+      else await revokeM.mutateAsync({ userId: user.id, permission: p });
+    } catch (e) { toast.error((e as Error).message); }
   }
+
 
   return (
     <Sheet open={!!user} onOpenChange={(o) => !o && onClose()}>
