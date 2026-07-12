@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAccess } from "@/hooks/useAccess";
+import { useCustomers, useSoftDeleteCustomer } from "@/features/customers/queries";
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -218,29 +219,16 @@ const CURRENCIES = ["EGP", "USD", "EUR", "SAR", "AED", "GBP"];
 function CustomersPage() {
   const { t, lang } = useI18n();
   const access = useAccess();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const { data: customers = [], isLoading: loading, refetch } = useCustomers();
+  const deleteCustomer = useSoftDeleteCustomer();
 
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    setCustomers((data ?? []) as Customer[]);
-    setLoading(false);
-  }
+  // Backwards-compat helper: child forms call `onSaved={load}` after save.
+  const load = () => { void refetch(); };
 
   const filtered = useMemo(() => {
     return customers.filter((c) => {
@@ -263,15 +251,14 @@ function CustomersPage() {
   }, [customers, search, currencyFilter]);
 
   async function handleDelete(c: Customer) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customers").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", c.id);
-    if (error) return toast.error(error.message);
-    toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات (الـ Owner يقدر يرجّعه)" : "Moved to trash (Owner can restore)");
-    load();
+    try {
+      await deleteCustomer.mutateAsync(c.id);
+      toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات (الـ Owner يقدر يرجّعه)" : "Moved to trash (Owner can restore)");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
   }
+
 
   function openNew() {
     setEditing(null);
