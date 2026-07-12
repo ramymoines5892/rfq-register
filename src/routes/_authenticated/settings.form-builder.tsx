@@ -23,7 +23,7 @@ import {
   type DragEndEvent, type CollisionDetection, closestCenter, pointerWithin, useDroppable,
 } from "@dnd-kit/core";
 import {
-  SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates,
+  SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -198,12 +198,87 @@ function FormBuilderPage() {
     setDirty(true);
   }
 
+  function reorderSections(activeKey: string, overKey: string) {
+    if (activeKey === overKey) return;
+    const orderedKeys = sections.map((s) => s.key);
+    const from = orderedKeys.indexOf(activeKey);
+    const to = orderedKeys.indexOf(overKey);
+    if (from < 0 || to < 0) return;
+    const newOrder = arrayMove(orderedKeys, from, to);
+    // Rebuild extraSections order + renumber every field's position so
+    // sections persist in the new order after save/reload.
+    const byKey = new Map(sections.map((s) => [s.key, s]));
+    let pos = 0;
+    const updatedById = new Map<string, FieldDef>();
+    for (const k of newOrder) {
+      const sec = byKey.get(k);
+      if (!sec) continue;
+      for (const f of sec.items) {
+        pos += 10;
+        updatedById.set(f.id, { ...f, position: pos });
+      }
+    }
+    setFields((prev) => prev.map((f) => updatedById.get(f.id) ?? f));
+    setExtraSections((prev) => {
+      const secByKey = new Map(sections.map((s) => [s.key, s]));
+      return newOrder
+        .filter((k) => (secByKey.get(k)?.items.length ?? 0) === 0)
+        .map((k) => ({ sectionAr: secByKey.get(k)!.sectionAr, sectionEn: secByKey.get(k)!.sectionEn }));
+    });
+    setDirty(true);
+  }
+
+  async function deleteSection(secKey: string) {
+    const sec = sections.find((s) => s.key === secKey);
+    if (!sec) return;
+    if (sec.items.some((f) => f.is_system)) {
+      toast.error(ar ? "القسم يحتوي على حقول نظام لا يمكن حذفها" : "Section contains system fields that cannot be deleted");
+      return;
+    }
+    const label = sec.label;
+    if (!confirm(
+      sec.items.length === 0
+        ? (ar ? `حذف القسم "${label}"؟` : `Delete section "${label}"?`)
+        : (ar
+            ? `حذف القسم "${label}" مع ${sec.items.length} حقل جواه؟ (الحقول هتروح سلة المحذوفات)`
+            : `Delete section "${label}" and its ${sec.items.length} field(s)? (Fields go to Trash)`)
+    )) return;
+
+    if (sec.items.length > 0) {
+      const { data: u } = await supabase.auth.getUser();
+      const now = new Date().toISOString();
+      const uid = u.user?.id ?? null;
+      const results = await Promise.all(
+        sec.items.map((f) =>
+          supabase.from("customer_field_definitions").update({
+            deleted_at: now, deleted_by: uid, is_active: false,
+          }).eq("id", f.id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) { toast.error(failed.error.message); return; }
+    }
+    setExtraSections((prev) =>
+      prev.filter((es) => ((ar ? es.sectionAr : es.sectionEn) || es.sectionAr || es.sectionEn || "") !== secKey),
+    );
+    toast.success(ar ? "تم حذف القسم" : "Section deleted");
+    if (sec.items.length > 0) loadAll();
+  }
+
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over) return;
     const activeId = String(active.id);
     const overId = String(over.id);
     if (activeId === overId) return;
+
+    // Section-level reorder
+    if (activeId.startsWith("SEC::") && overId.startsWith("SEC::")) {
+      reorderSections(activeId.slice(5), overId.slice(5));
+      return;
+    }
+    // Ignore mixed section/field drags (e.g. dragging a field over a section header handle)
+    if (activeId.startsWith("SEC::") || overId.startsWith("SEC::")) return;
 
     const activeField = fields.find((f) => f.id === activeId);
     if (!activeField) return;
@@ -258,6 +333,7 @@ function FormBuilderPage() {
     }
     setDirty(true);
   }
+
 
   async function saveAll() {
     setSaving(true);
@@ -400,6 +476,7 @@ function FormBuilderPage() {
               onToggleActive={toggleActive}
               onDelete={removeField}
               onRenameSection={renameSection}
+              onDeleteSection={deleteSection}
             />
           )}
         </div>
@@ -435,7 +512,7 @@ type Section = {
 };
 
 function BuilderCanvas({
-  sections, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+  sections, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection, onDeleteSection,
 }: {
   sections: Section[];
   optionsByField: Record<string, FieldOption[]>;
@@ -446,37 +523,43 @@ function BuilderCanvas({
   onToggleActive: (f: FieldDef) => void;
   onDelete: (f: FieldDef) => void;
   onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
+  onDeleteSection: (secKey: string) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const allIds = sections.flatMap((s) => s.items.map((f) => f.id));
+  const fieldIds = sections.flatMap((s) => s.items.map((f) => f.id));
+  const sectionIds = sections.map((s) => `SEC::${s.key}`);
   return (
     <DndContext sensors={sensors} collisionDetection={sectionAwareCollision} onDragEnd={onDragEnd}>
-      <SortableContext items={allIds} strategy={rectSortingStrategy}>
-        <div className="space-y-4">
-          {sections.map((sec) => (
-            <SectionGrid
-              key={sec.key}
-              section={sec}
-              optionsByField={optionsByField}
-              ar={ar}
-              onEdit={onEdit}
-              onColSpan={onColSpan}
-              onToggleActive={onToggleActive}
-              onDelete={onDelete}
-              onRenameSection={onRenameSection}
-            />
-          ))}
-        </div>
+      <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+        <SortableContext items={fieldIds} strategy={rectSortingStrategy}>
+          <div className="space-y-4">
+            {sections.map((sec) => (
+              <SectionGrid
+                key={sec.key}
+                section={sec}
+                optionsByField={optionsByField}
+                ar={ar}
+                onEdit={onEdit}
+                onColSpan={onColSpan}
+                onToggleActive={onToggleActive}
+                onDelete={onDelete}
+                onRenameSection={onRenameSection}
+                onDeleteSection={onDeleteSection}
+              />
+            ))}
+          </div>
+        </SortableContext>
       </SortableContext>
     </DndContext>
   );
 }
 
+
 function SectionGrid({
-  section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+  section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection, onDeleteSection,
 }: {
   section: Section;
   optionsByField: Record<string, FieldOption[]>;
@@ -486,18 +569,39 @@ function SectionGrid({
   onToggleActive: (f: FieldDef) => void;
   onDelete: (f: FieldDef) => void;
   onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
+  onDeleteSection: (secKey: string) => void;
 }) {
   const { items, sectionAr, sectionEn, label } = section;
-  const { setNodeRef, isOver } = useDroppable({ id: `__sec:${section.key}` });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `__sec:${section.key}` });
+  const {
+    attributes, listeners, setNodeRef: setSortRef, transform, transition, isDragging,
+  } = useSortable({ id: `SEC::${section.key}` });
   const [renaming, setRenaming] = useState(false);
   const [nAr, setNAr] = useState(sectionAr);
   const [nEn, setNEn] = useState(sectionEn);
 
   useEffect(() => { setNAr(sectionAr); setNEn(sectionEn); }, [sectionAr, sectionEn]);
 
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  const hasSystem = items.some((f) => f.is_system);
+
   return (
-    <div className="space-y-2">
+    <div ref={setSortRef} style={style} className="space-y-2">
       <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          type="button"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+          aria-label={ar ? "اسحب القسم" : "Drag section"}
+          title={ar ? "اسحب لإعادة ترتيب الأقسام" : "Drag to reorder sections"}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
         {renaming ? (
           <>
             <Input value={nAr} onChange={(e) => setNAr(e.target.value)} placeholder={ar ? "عربي" : "AR"} className="h-7 text-xs w-40" />
@@ -515,11 +619,21 @@ function SectionGrid({
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
               <Pencil className="h-3 w-3" />
             </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 text-destructive disabled:text-muted-foreground"
+              onClick={() => onDeleteSection(section.key)}
+              disabled={hasSystem}
+              title={hasSystem ? (ar ? "يحتوي على حقول نظام" : "Contains system fields") : (ar ? "حذف القسم" : "Delete section")}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
           </>
         )}
       </div>
       <div
-        ref={setNodeRef}
+        ref={setDropRef}
         className={`grid grid-cols-12 gap-2 rounded-lg border bg-background/60 p-2 min-h-[70px] transition-colors ${isOver ? "border-primary bg-primary/5" : ""}`}
       >
         {items.map((f) => (
@@ -542,6 +656,7 @@ function SectionGrid({
       </div>
     </div>
   );
+
 }
 
 function SortableFieldCard({
