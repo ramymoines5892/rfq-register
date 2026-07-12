@@ -435,7 +435,7 @@ function BuilderCanvas({
   );
   const allIds = sections.flatMap((s) => s.items.map((f) => f.id));
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={sectionAwareCollision} onDragEnd={onDragEnd}>
       <SortableContext items={allIds} strategy={rectSortingStrategy}>
         <div className="space-y-4">
           {sections.map((sec) => (
