@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -12,9 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { toPng } from "html-to-image";
+import { OrgChartImage } from "@/components/organization/OrgChartImage";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  LayoutGrid, Users, ChevronRight, Pencil, Info,
+  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon,
 } from "lucide-react";
 
 import type { Database } from "@/integrations/supabase/types";
@@ -127,6 +129,25 @@ function OrganizationPage() {
   };
 
   const closeInspector = () => { setSelected(null); setDraft(null); };
+
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const downloadChart = async () => {
+    if (!chartRef.current) return;
+    try {
+      const dataUrl = await toPng(chartRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+      });
+      const link = document.createElement("a");
+      link.download = `organization-chart-${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success(ar ? "تم تحميل الصورة" : "Image downloaded");
+    } catch (e: any) {
+      toast.error(ar ? "تعذر إنشاء الصورة" : "Failed to export image", { description: e?.message });
+    }
+  };
 
   const remove = async (id: string, kind: "department" | "job_title") => {
     const label =
@@ -261,70 +282,111 @@ function OrganizationPage() {
         </div>
       </div>
 
-      {/* Preview canvas */}
-      <Card>
-        <CardContent className="p-4">
-          {loading ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">{ar ? "جارٍ التحميل..." : "Loading..."}</div>
-          ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
-            <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
-              <Sparkles className="h-8 w-8" />
-              <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
-              <Button size="sm" onClick={() => addDept(null)}>
-                <Plus className="h-4 w-4 me-1" />
-                {ar ? "إضافة إدارة" : "Add Department"}
+      {/* Split: tree editor + chart image */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LEFT — Tree editor */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {ar ? "الشجرة — تعديل مباشر" : "Tree — live editing"}
+              </div>
+              <Badge variant="outline" className="text-[10px]">{ar ? "تعديل" : "Edit"}</Badge>
+            </div>
+            {loading ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">{ar ? "جارٍ التحميل..." : "Loading..."}</div>
+            ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+                <Sparkles className="h-8 w-8" />
+                <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
+                <Button size="sm" onClick={() => addDept(null)}>
+                  <Plus className="h-4 w-4 me-1" />
+                  {ar ? "إضافة إدارة" : "Add Department"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {rootDepts
+                  .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
+                  .map((d) => (
+                    <DeptCard
+                      key={d.id}
+                      dept={d}
+                      depth={0}
+                      depts={depts}
+                      jobs={jobs}
+                      memberCounts={memberCounts}
+                      lang={lang}
+                      query={q}
+                      selected={selected}
+                      onSelect={(id, kind) => setSelected({ id, kind })}
+                      onAddDept={addDept}
+                      onAddJob={addJob}
+                      onDelete={remove}
+                    />
+                  ))}
+
+                {unassignedJobs.length > 0 && (
+                  <div className="rounded-xl border border-dashed p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {unassignedJobs
+                        .filter((j) => !q || jobMatches(j))
+                        .map((j) => (
+                          <JobChip
+                            key={j.id}
+                            job={j}
+                            lang={lang}
+                            selected={selected?.id === j.id && selected.kind === "job_title"}
+                            onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
+                            onDelete={() => remove(j.id, "job_title")}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* RIGHT — Chart image + download */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5" />
+                {ar ? "الصورة — للاستخدام في بروفايل الشركة" : "Image — for company profile"}
+              </div>
+              <Button size="sm" variant="outline" onClick={downloadChart} disabled={loading || rootDepts.length === 0}>
+                <Download className="h-4 w-4 me-1" />
+                {ar ? "تحميل PNG" : "Download PNG"}
               </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {rootDepts
-                .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
-                .map((d) => (
-                  <DeptCard
-                    key={d.id}
-                    dept={d}
-                    depth={0}
-                    depts={depts}
-                    jobs={jobs}
-                    memberCounts={memberCounts}
-                    lang={lang}
-                    query={q}
-                    selected={selected}
-                    onSelect={(id, kind) => setSelected({ id, kind })}
-                    onAddDept={addDept}
-                    onAddJob={addJob}
-                    onDelete={remove}
-                  />
-                ))}
-
-              {unassignedJobs.length > 0 && (
-                <div className="rounded-xl border border-dashed p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {unassignedJobs
-                      .filter((j) => !q || jobMatches(j))
-                      .map((j) => (
-                        <JobChip
-                          key={j.id}
-                          job={j}
-                          lang={lang}
-                          selected={selected?.id === j.id && selected.kind === "job_title"}
-                          onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
-                          onDelete={() => remove(j.id, "job_title")}
-                        />
-                      ))}
-                  </div>
+            <div className="rounded-lg border bg-white overflow-auto max-h-[600px]">
+              {rootDepts.length === 0 ? (
+                <div className="py-16 text-center text-sm text-muted-foreground">
+                  {ar ? "أضف إدارة لعرض الرسمة" : "Add a department to see the chart"}
+                </div>
+              ) : (
+                <div ref={chartRef}>
+                  <OrgChartImage departments={depts} jobs={jobs} lang={ar ? "ar" : "en"} />
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              {ar
+                ? "الرسمة تتحدث تلقائيًا مع كل تعديل. اضغط تحميل لحفظها كصورة."
+                : "The chart updates automatically as you edit. Click download to save as image."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Inspector Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && closeInspector()}>
