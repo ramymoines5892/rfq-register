@@ -363,6 +363,9 @@ function FormBuilderPage() {
           <Button size="sm" disabled={!dirty || saving} onClick={saveAll}>
             <Save className="h-4 w-4 me-1" /> {saving ? (ar ? "حفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}
           </Button>
+          <Button size="sm" variant="outline" onClick={addSection}>
+            <Plus className="h-4 w-4 me-1" /> {ar ? "قسم جديد" : "New Section"}
+          </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDrawerOpen(true); }}>
             <Plus className="h-4 w-4 me-1" /> {ar ? "حقل جديد" : "New Field"}
           </Button>
