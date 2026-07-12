@@ -646,9 +646,7 @@ function CustomerSheet({
     }
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
-      if (!uid) throw new Error("Not authenticated");
+      const uid = await requireUserId();
 
       const pt = stringifyBiList(paymentTermsList);
       const payload = {
@@ -676,20 +674,17 @@ function CustomerSheet({
       };
 
       if (customer) {
-        const { error } = await supabase.from("customers").update(payload).eq("id", customer.id);
-        if (error) throw error;
+        await updateCustomer(customer.id, payload);
       } else {
-        const { data: inserted, error } = await supabase
-          .from("customers")
-          .insert({ ...payload, user_id: uid })
-          .select()
-          .single();
-        if (error) {
-          if (error.code === "23505" || /duplicate|unique/i.test(error.message))
+        let inserted: Customer;
+        try {
+          inserted = await insertCustomer({ ...payload, user_id: uid });
+        } catch (e: any) {
+          if (e?.code === "23505" || /duplicate|unique/i.test(e?.message ?? ""))
             throw new Error(t("taxIdInUse"));
-          throw error;
+          throw e;
         }
-        const newId = (inserted as Customer).id;
+        const newId = inserted.id;
         if (draftContacts.length > 0) {
           const rows = draftContacts.map((c) => {
             const name = (c.name_ar ?? "").trim() || (c.name_en ?? "").trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
@@ -709,8 +704,7 @@ function CustomerSheet({
               notes: c.notes,
             };
           });
-          const { error: ce } = await supabase.from("customer_contacts").insert(rows);
-          if (ce) toast.error(ce.message);
+          try { await insertContacts(rows); } catch (e: any) { toast.error(e?.message); }
         }
         if (draftBanks.length > 0) {
           const rows = draftBanks.map((b) => {
@@ -736,31 +730,30 @@ function CustomerSheet({
               notes: b.notes,
             };
           });
-          const { error: be } = await supabase.from("customer_banks").insert(rows);
-          if (be) toast.error(be.message);
+          try { await insertBanks(rows); } catch (e: any) { toast.error(e?.message); }
         }
         if (draftAttachments.length > 0) {
           for (const a of draftAttachments) {
             const safeName = a.file.name.replace(/[^\w.\-]+/g, "_");
             const path = `${uid}/${newId}/${crypto.randomUUID()}_${safeName}`;
-            const { error: upErr } = await supabase.storage
-              .from(ATTACHMENT_BUCKET)
-              .upload(path, a.file, { contentType: a.file.type });
-            if (upErr) {
-              toast.error(upErr.message);
+            try {
+              await uploadAttachmentFile(path, a.file);
+            } catch (e: any) {
+              toast.error(e?.message);
               continue;
             }
-            const { error: insErr } = await supabase.from("customer_attachments").insert({
-              customer_id: newId,
-              user_id: uid,
-              category: a.category,
-              label: a.category === "other" ? a.label : null,
-              file_path: path,
-              file_name: a.file.name,
-              mime_type: a.file.type || null,
-              size_bytes: a.file.size,
-            });
-            if (insErr) toast.error(insErr.message);
+            try {
+              await insertAttachmentSilent({
+                customer_id: newId,
+                user_id: uid,
+                category: a.category,
+                label: a.category === "other" ? a.label : null,
+                file_path: path,
+                file_name: a.file.name,
+                mime_type: a.file.type || null,
+                size_bytes: a.file.size,
+              });
+            } catch (e: any) { toast.error(e?.message); }
           }
         }
       }
