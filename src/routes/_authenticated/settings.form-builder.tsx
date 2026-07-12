@@ -512,7 +512,7 @@ type Section = {
 };
 
 function BuilderCanvas({
-  sections, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+  sections, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection, onDeleteSection,
 }: {
   sections: Section[];
   optionsByField: Record<string, FieldOption[]>;
@@ -523,34 +523,40 @@ function BuilderCanvas({
   onToggleActive: (f: FieldDef) => void;
   onDelete: (f: FieldDef) => void;
   onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
+  onDeleteSection: (secKey: string) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const allIds = sections.flatMap((s) => s.items.map((f) => f.id));
+  const fieldIds = sections.flatMap((s) => s.items.map((f) => f.id));
+  const sectionIds = sections.map((s) => `SEC::${s.key}`);
   return (
     <DndContext sensors={sensors} collisionDetection={sectionAwareCollision} onDragEnd={onDragEnd}>
-      <SortableContext items={allIds} strategy={rectSortingStrategy}>
-        <div className="space-y-4">
-          {sections.map((sec) => (
-            <SectionGrid
-              key={sec.key}
-              section={sec}
-              optionsByField={optionsByField}
-              ar={ar}
-              onEdit={onEdit}
-              onColSpan={onColSpan}
-              onToggleActive={onToggleActive}
-              onDelete={onDelete}
-              onRenameSection={onRenameSection}
-            />
-          ))}
-        </div>
+      <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+        <SortableContext items={fieldIds} strategy={rectSortingStrategy}>
+          <div className="space-y-4">
+            {sections.map((sec) => (
+              <SectionGrid
+                key={sec.key}
+                section={sec}
+                optionsByField={optionsByField}
+                ar={ar}
+                onEdit={onEdit}
+                onColSpan={onColSpan}
+                onToggleActive={onToggleActive}
+                onDelete={onDelete}
+                onRenameSection={onRenameSection}
+                onDeleteSection={onDeleteSection}
+              />
+            ))}
+          </div>
+        </SortableContext>
       </SortableContext>
     </DndContext>
   );
 }
+
 
 function SectionGrid({
   section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
