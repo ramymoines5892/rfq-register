@@ -212,9 +212,8 @@ function HrPage() {
                 <Users className="h-4 w-4" /> {lang === "ar" ? "المستخدمون" : "Users"}
                 {pendingCount > 0 && <Badge variant="destructive" className="ms-1">{pendingCount}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="departments" className="gap-1"><Building2 className="h-4 w-4" /> {t("departments")}</TabsTrigger>
-              <TabsTrigger value="jobs" className="gap-1"><Briefcase className="h-4 w-4" /> {t("jobTitles")}</TabsTrigger>
             </TabsList>
+
 
             <TabsContent value="users" className="mt-4 space-y-3">
               {/* Toolbar */}
