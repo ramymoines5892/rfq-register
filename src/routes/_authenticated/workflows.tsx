@@ -139,7 +139,7 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   }, [open, template.id]);
 
   async function reloadStages() {
-    const { data: st } = await supabase.from("workflow_stages").select("*").eq("template_id", template.id).order("position");
+    const { data: st } = await supabase.from("workflow_stages").select("*").eq("template_id", template.id).is("deleted_at", null).order("position");
     const stagesList = (st ?? []) as Stage[];
     setStages(stagesList);
     if (stagesList.length) {

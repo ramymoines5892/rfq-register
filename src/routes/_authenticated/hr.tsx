@@ -102,8 +102,8 @@ function HrPage() {
     const [{ data: p }, { data: r }, { data: d }, { data: j }] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
-      supabase.from("departments").select("*").order("name"),
-      supabase.from("job_titles").select("*").order("name"),
+      supabase.from("departments").select("*").is("deleted_at", null).order("name"),
+      supabase.from("job_titles").select("*").is("deleted_at", null).order("name"),
     ]);
     setProfiles((p ?? []) as Profile[]);
     setRoles((r ?? []) as { user_id: string; role: AppRole }[]);

@@ -579,9 +579,9 @@ function CustomerSheet({
 
   async function loadRelated(customerId: string) {
     const [{ data: cs }, { data: bs }, { data: as }] = await Promise.all([
-      supabase.from("customer_contacts").select("*").eq("customer_id", customerId).order("created_at"),
-      supabase.from("customer_banks").select("*").eq("customer_id", customerId).order("created_at"),
-      supabase.from("customer_attachments").select("*").eq("customer_id", customerId).order("created_at"),
+      supabase.from("customer_contacts").select("*").eq("customer_id", customerId).is("deleted_at", null).order("created_at"),
+      supabase.from("customer_banks").select("*").eq("customer_id", customerId).is("deleted_at", null).order("created_at"),
+      supabase.from("customer_attachments").select("*").eq("customer_id", customerId).is("deleted_at", null).order("created_at"),
     ]);
     setContacts((cs ?? []) as Contact[]);
     setBanks((bs ?? []) as Bank[]);
