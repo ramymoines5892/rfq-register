@@ -1001,7 +1001,7 @@ function FieldEditor({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>{ar ? "الاسم بالعربي" : "Label (AR)"} *</Label>
-              <Input value={labelAr} onChange={(e) => setLabelAr(e.target.value)} />
+              <Input autoFocus value={labelAr} onChange={(e) => setLabelAr(e.target.value)} />
             </div>
             <div>
               <Label>{ar ? "الاسم بالإنجليزي" : "Label (EN)"} *</Label>
