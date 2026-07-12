@@ -24,6 +24,7 @@ type UserRole = { id: string; user_id: string; role: AppRole };
 
 function TeamPage() {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [me, setMe] = useState<string>("");
   const [myRole, setMyRole] = useState<AppRole | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
