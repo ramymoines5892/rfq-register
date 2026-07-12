@@ -270,12 +270,13 @@ function OrganizationPage() {
       variant: "destructive",
     });
     if (!ok) return;
-    const table = kind === "department" ? "departments" : "job_titles";
-    const { error } = await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-    if (error) return toast.error(ar ? "تعذر الحذف" : "Failed", { description: error.message });
-    toast.success(ar ? "تم الحذف" : "Deleted");
-    if (selected?.id === id) closeInspector();
-    await load();
+    try {
+      await softDeleteMutation.mutateAsync({ id, kind });
+      toast.success(ar ? "تم الحذف" : "Deleted");
+      if (selected?.id === id) closeInspector();
+    } catch (err: any) {
+      toast.error(ar ? "تعذر الحذف" : "Failed", { description: err?.message });
+    }
   };
 
   const q = query.trim().toLowerCase();
