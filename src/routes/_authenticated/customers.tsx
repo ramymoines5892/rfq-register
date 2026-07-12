@@ -529,6 +529,11 @@ function CustomerSheet({
 
   const [openSection, setOpenSection] = useState<string>("identity");
 
+  // Detail relations are fetched via TanStack Query — hydrate local editable state from it.
+  const { data: relations, refetch: refetchRelations } = useCustomerRelations(
+    open && customer ? customer.id : null,
+  );
+
   useEffect(() => {
     if (!open) return;
     if (customer) {
@@ -550,7 +555,6 @@ function CustomerSheet({
       });
       setTerms(parseTerms(customer.terms));
       setPaymentTermsList(parseBiList(customer.payment_terms_ar, customer.payment_terms_en ?? customer.payment_terms));
-      loadRelated(customer.id);
     } else {
       setForm(emptyForm);
       setTerms([]);
@@ -571,15 +575,17 @@ function CustomerSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer]);
 
-  async function loadRelated(customerId: string) {
-    const [{ data: cs }, { data: bs }, { data: as }] = await Promise.all([
-      supabase.from("customer_contacts").select("*").eq("customer_id", customerId).is("deleted_at", null).order("created_at"),
-      supabase.from("customer_banks").select("*").eq("customer_id", customerId).is("deleted_at", null).order("created_at"),
-      supabase.from("customer_attachments").select("*").eq("customer_id", customerId).is("deleted_at", null).order("created_at"),
-    ]);
-    setContacts((cs ?? []) as Contact[]);
-    setBanks((bs ?? []) as Bank[]);
-    setAttachments((as ?? []) as Attachment[]);
+  // Sync query results into editable local state whenever they arrive.
+  useEffect(() => {
+    if (!open || !customer || !relations) return;
+    setContacts(relations.contacts as Contact[]);
+    setBanks(relations.banks as Bank[]);
+    setAttachments(relations.attachments as Attachment[]);
+  }, [open, customer, relations]);
+
+  async function loadRelated(_customerId: string) {
+    // Kept as a compat shim — after writes, re-fetch through the query cache.
+    await refetchRelations();
   }
 
   useEffect(() => {
