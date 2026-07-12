@@ -877,40 +877,47 @@ function RecordEditor({
     ((record as any).metadata as Record<string, any>) || {}
   );
   const [saving, setSaving] = useState(false);
+  const upsertDept = useUpsertDepartment();
+  const upsertJob = useUpsertJobTitle();
 
   const save = async () => {
     if (!nameAr.trim() && !nameEn.trim()) {
       return toast.error(ar ? "الاسم مطلوب" : "Name is required");
     }
     setSaving(true);
-    if (isDept) {
-      const payload: any = {
-        name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
-        code: code || null, color, icon: icon || null, parent_id: parentId, phone: phone || null,
-        extension: extension || null, location: location || null, metadata,
-
-      };
-      if (isNew) payload.position = (record as any).position ?? 0;
-      const { error } = isNew
-        ? await supabase.from("departments").insert(payload)
-        : await supabase.from("departments").update(payload).eq("id", (record as Department).id);
+    try {
+      if (isDept) {
+        const payload: any = {
+          name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
+          code: code || null, color, icon: icon || null, parent_id: parentId, phone: phone || null,
+          extension: extension || null, location: location || null, metadata,
+        };
+        if (isNew) payload.position = (record as any).position ?? 0;
+        await upsertDept.mutateAsync({
+          isNew,
+          id: isNew ? undefined : (record as Department).id,
+          payload,
+        });
+      } else {
+        const payload: any = {
+          name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
+          code: code || null, level, department_id: departmentId, description: description || null, metadata,
+        };
+        if (isNew) payload.position = (record as any).position ?? 0;
+        await upsertJob.mutateAsync({
+          isNew,
+          id: isNew ? undefined : (record as JobTitle).id,
+          payload,
+        });
+      }
+      toast.success(isNew ? (ar ? "تم الإنشاء" : "Created") : (ar ? "تم الحفظ" : "Saved"));
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(ar ? "تعذر الحفظ" : "Failed", { description: err?.message });
+    } finally {
       setSaving(false);
-      if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
-    } else {
-      const payload: any = {
-        name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
-        code: code || null, level, department_id: departmentId, description: description || null, metadata,
-      };
-      if (isNew) payload.position = (record as any).position ?? 0;
-      const { error } = isNew
-        ? await supabase.from("job_titles").insert(payload)
-        : await supabase.from("job_titles").update(payload).eq("id", (record as JobTitle).id);
-      setSaving(false);
-      if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
     }
-    toast.success(isNew ? (ar ? "تم الإنشاء" : "Created") : (ar ? "تم الحفظ" : "Saved"));
-    onSaved();
-    onClose();
   };
 
   return (
