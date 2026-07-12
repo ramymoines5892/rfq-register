@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Building2, Briefcase, Users, Landmark, Crown } from "lucide-react";
+import { getDeptIcon } from "@/lib/deptIcons";
 import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -18,12 +18,6 @@ function pick(row: { name_ar?: string | null; name_en?: string | null; name: str
   return row.name_en || row.name;
 }
 
-function iconFor(depth: number) {
-  if (depth === 0) return Crown;
-  if (depth === 1) return Landmark;
-  if (depth === 2) return Building2;
-  return Briefcase;
-}
 
 export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChartImage(
   { departments, jobs, memberCounts = {}, companyName, lang },
@@ -102,7 +96,7 @@ function TreeNode({
   const size = depth === 0 ? 72 : depth === 1 ? 60 : 48;
   const iconSize = depth === 0 ? 32 : depth === 1 ? 26 : 20;
   const nameSize = depth === 0 ? 13 : depth === 1 ? 12 : 11;
-  const Icon = iconFor(depth);
+  const Icon = getDeptIcon((dept as any).icon, depth);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", flex: "1 1 0", minWidth: 0 }}>

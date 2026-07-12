@@ -23,6 +23,8 @@ import {
 
 
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
+import { DEPT_ICONS, getDeptIcon } from "@/lib/deptIcons";
+
 import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -680,13 +682,17 @@ function DeptCard({
               }`}
               style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
-              <Building2 className={
-                depth === 0
-                  ? "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7"
-                  : depth === 1
-                  ? "h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5"
-                  : "h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4"
-              } />
+              {(() => {
+                const DeptIco = getDeptIcon((dept as any).icon, depth);
+                return <DeptIco className={
+                  depth === 0
+                    ? "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7"
+                    : depth === 1
+                    ? "h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5"
+                    : "h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4"
+                } />;
+              })()}
+
             </span>
             <span className={`text-center font-semibold leading-tight line-clamp-2 ${
               depth === 0
@@ -866,6 +872,8 @@ function RecordEditor({
   const [nameEn, setNameEn] = useState(record.name_en || "");
   const [code, setCode] = useState((record as any).code || "");
   const [color, setColor] = useState(dept?.color || DEPT_COLORS[0]);
+  const [icon, setIcon] = useState<string>(((dept as any)?.icon as string) || "");
+
   const [parentId, setParentId] = useState<string | null>(dept?.parent_id ?? null);
   const [phone, setPhone] = useState(dept?.phone || "");
   const [extension, setExtension] = useState(dept?.extension || "");
@@ -886,8 +894,9 @@ function RecordEditor({
     if (isDept) {
       const payload: any = {
         name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
-        code: code || null, color, parent_id: parentId, phone: phone || null,
+        code: code || null, color, icon: icon || null, parent_id: parentId, phone: phone || null,
         extension: extension || null, location: location || null, metadata,
+
       };
       if (isNew) payload.position = (record as any).position ?? 0;
       const { error } = isNew
@@ -954,6 +963,30 @@ function RecordEditor({
                 ))}
               </div>
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">{ar ? "الأيقونة" : "Icon"}</Label>
+              <div className="grid grid-cols-9 gap-1.5 max-h-40 overflow-y-auto rounded-md border p-2">
+                {DEPT_ICONS.map((it) => {
+                  const IcoC = it.icon;
+                  const active = icon === it.key;
+                  return (
+                    <button
+                      key={it.key}
+                      type="button"
+                      onClick={() => setIcon(active ? "" : it.key)}
+                      title={ar ? it.label_ar : it.label_en}
+                      className={`h-8 w-8 flex items-center justify-center rounded-md border transition-all ${
+                        active ? "ring-2 ring-offset-1 ring-primary" : "hover:bg-muted"
+                      }`}
+                      style={{ color: active ? color : undefined, borderColor: active ? color : undefined }}
+                    >
+                      <IcoC className="h-4 w-4" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-1">
               <Label className="text-xs">{ar ? "الإدارة الأب" : "Parent department"}</Label>
               <Select value={parentId ?? "none"} onValueChange={(v) => setParentId(v === "none" ? null : v)}>
