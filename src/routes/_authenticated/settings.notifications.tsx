@@ -178,8 +178,8 @@ function NotificationSettings() {
 
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
+          <Button onClick={save} disabled={savePrefs.isPending}>
+            {savePrefs.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
             {ar ? "حفظ" : "Save"}
           </Button>
         </div>
