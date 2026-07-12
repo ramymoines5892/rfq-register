@@ -391,30 +391,32 @@ function OrganizationPage() {
             </div>
           ) : (
             <TooltipProvider delayDuration={120}>
-              <div className="flex flex-nowrap items-start justify-center gap-6 py-4 overflow-x-auto max-w-full">
+              <div className="flex flex-nowrap items-start justify-center gap-2 sm:gap-3 py-4 max-w-full">
               {rootDepts
                 .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                 .map((d) => (
-                  <DeptCard
-                    key={d.id}
-                    dept={d}
-                    depth={0}
-                    depts={depts}
-                    jobs={jobs}
-                    memberCounts={memberCounts}
-                    lang={lang}
-                    query={q}
-                    selected={selected}
-                    onSelect={(id, kind) => setSelected({ id, kind })}
-                    onAddDept={addDept}
-                    onAddJob={addJob}
-                    onDelete={remove}
-                    onMove={moveDept}
-                    parentId={null}
-                  />
+                  <div key={d.id} className="flex-1 basis-0 min-w-0 flex flex-col items-center">
+                    <DeptCard
+                      dept={d}
+                      depth={0}
+                      depts={depts}
+                      jobs={jobs}
+                      memberCounts={memberCounts}
+                      lang={lang}
+                      query={q}
+                      selected={selected}
+                      onSelect={(id, kind) => setSelected({ id, kind })}
+                      onAddDept={addDept}
+                      onAddJob={addJob}
+                      onDelete={remove}
+                      onMove={moveDept}
+                      parentId={null}
+                    />
+                  </div>
                 ))}
 
               </div>
+
 
               {unassignedJobs.length > 0 && (
                 <div className="mt-4 rounded-xl border border-dashed p-3">
