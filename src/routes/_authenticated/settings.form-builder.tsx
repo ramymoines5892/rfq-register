@@ -190,9 +190,15 @@ function FormBuilderPage() {
 
   async function removeField(f: FieldDef) {
     if (f.is_system) { toast.error(ar ? "لا يمكن حذف حقل نظام" : "System fields cannot be deleted"); return; }
-    if (!confirm(ar
-      ? `حذف الحقل "${f.label_ar}"؟ (الـ Owner بس هيقدر يشوفه أو يرجّعه من سلة المحذوفات)`
-      : `Delete field "${f.label_en}"? (Only the Owner can see or restore it from Trash)`)) return;
+    const ok = await confirm({
+      title: ar ? "حذف الحقل" : "Delete field",
+      description: ar
+        ? `حذف الحقل "${f.label_ar}"؟\nالـ Owner بس هيقدر يشوفه أو يرجّعه من سلة المحذوفات.`
+        : `Delete field "${f.label_en}"?\nOnly the Owner can see or restore it from Trash.`,
+      confirmText: ar ? "حذف" : "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("customer_field_definitions").update({
       deleted_at: new Date().toISOString(),
