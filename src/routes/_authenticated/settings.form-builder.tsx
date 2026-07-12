@@ -454,8 +454,16 @@ function FormBuilderPage() {
           </Badge>
         )}
         <div className="ms-auto flex items-center gap-2">
-          <Select value={entity} onValueChange={(v) => {
-            if (dirty && !confirm(ar ? "فيه تغييرات غير محفوظة. متأكد؟" : "You have unsaved changes. Continue?")) return;
+          <Select value={entity} onValueChange={async (v) => {
+            if (dirty) {
+              const ok = await confirm({
+                title: ar ? "تغييرات غير محفوظة" : "Unsaved changes",
+                description: ar ? "فيه تغييرات غير محفوظة. متأكد؟" : "You have unsaved changes. Continue?",
+                confirmText: ar ? "متابعة" : "Continue",
+                variant: "destructive",
+              });
+              if (!ok) return;
+            }
             setEntity(v);
           }}>
             <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
