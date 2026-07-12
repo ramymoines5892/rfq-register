@@ -34,6 +34,7 @@ const ALL_PERMISSIONS: AppPermission[] = [
   "users.manage_roles", "templates.manage",
   "notifications.view",
   "reports.view",
+  "manage_customer_fields",
 ];
 
 const permLabelAr: Record<AppPermission, string> = {
