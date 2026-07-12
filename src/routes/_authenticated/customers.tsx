@@ -1641,3 +1641,49 @@ function BankRow({
     </Card>
   );
 }
+
+function AttachmentRow({
+  categoryLabel,
+  fileName,
+  size,
+  pending,
+  onDownload,
+  onDelete,
+}: {
+  categoryLabel: string;
+  fileName: string;
+  size?: number;
+  pending?: boolean;
+  onDownload?: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-md border bg-card px-3 py-2 hover:bg-muted/30 transition-colors">
+      <div className="h-9 w-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <FileIcon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
+          <span className="truncate">{categoryLabel}</span>
+          {pending && (
+            <Badge variant="outline" className="h-4 text-[10px] px-1">
+              pending
+            </Badge>
+          )}
+        </div>
+        <div className="text-[11px] text-muted-foreground truncate">
+          {fileName}
+          {size ? ` · ${formatBytes(size)}` : ""}
+        </div>
+      </div>
+      {onDownload && (
+        <Button type="button" variant="ghost" size="sm" onClick={onDownload}>
+          <Download className="h-4 w-4" />
+        </Button>
+      )}
+      <Button type="button" variant="ghost" size="sm" onClick={onDelete}>
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
+}
