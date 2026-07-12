@@ -18,7 +18,7 @@ import { useI18n } from "@/lib/i18n";
 import type { Database } from "@/integrations/supabase/types";
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
-  type DragEndEvent, closestCenter,
+  type DragEndEvent, closestCenter, useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates,
