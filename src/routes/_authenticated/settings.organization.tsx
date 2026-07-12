@@ -960,6 +960,30 @@ function RecordEditor({
               </div>
             </div>
             <div className="space-y-1">
+              <Label className="text-xs">{ar ? "الأيقونة" : "Icon"}</Label>
+              <div className="grid grid-cols-9 gap-1.5 max-h-40 overflow-y-auto rounded-md border p-2">
+                {DEPT_ICONS.map((it) => {
+                  const IcoC = it.icon;
+                  const active = icon === it.key;
+                  return (
+                    <button
+                      key={it.key}
+                      type="button"
+                      onClick={() => setIcon(active ? "" : it.key)}
+                      title={ar ? it.label_ar : it.label_en}
+                      className={`h-8 w-8 flex items-center justify-center rounded-md border transition-all ${
+                        active ? "ring-2 ring-offset-1 ring-primary" : "hover:bg-muted"
+                      }`}
+                      style={{ color: active ? color : undefined, borderColor: active ? color : undefined }}
+                    >
+                      <IcoC className="h-4 w-4" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1">
               <Label className="text-xs">{ar ? "الإدارة الأب" : "Parent department"}</Label>
               <Select value={parentId ?? "none"} onValueChange={(v) => setParentId(v === "none" ? null : v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
