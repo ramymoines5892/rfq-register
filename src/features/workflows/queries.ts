@@ -38,9 +38,13 @@ export function useStageCount(templateId: string) {
 }
 
 export function useTemplateDetail(templateId: string | null, enabled: boolean) {
+  const empty: { stages: Stage[]; approversByStage: Record<string, StageApprover[]> } = {
+    stages: [],
+    approversByStage: {},
+  };
   return useQuery({
     queryKey: templateId ? qk.workflows.stages(templateId) : ["workflows", "stages", "none"],
-    queryFn: () => (templateId ? fetchTemplateDetail(templateId) : Promise.resolve({ stages: [] as Stage[], approversByStage: {} })),
+    queryFn: () => (templateId ? fetchTemplateDetail(templateId) : Promise.resolve(empty)),
     enabled: enabled && !!templateId,
     staleTime: 15_000,
   });
