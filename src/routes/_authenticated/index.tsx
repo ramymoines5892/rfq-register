@@ -429,18 +429,14 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
   };
 
   async function handleDelete() {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("quotes").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", quote.id);
+    const { error } = await softDeleteQuote(quote.id);
     if (error) { toast.error(error.message); return; }
     toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات" : "Moved to trash");
     onChanged();
   }
 
   async function downloadFile(a: Attachment) {
-    const { data, error } = await supabase.storage.from("quote-attachments").createSignedUrl(a.storage_path, 60);
+    const { data, error } = await createSignedAttachmentUrl(a.storage_path, 60);
     if (error) { toast.error(error.message); return; }
     window.open(data.signedUrl, "_blank");
   }
@@ -456,16 +452,16 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
       let currentStage = stages.find(s => s.id === quote.current_stage_id) ?? stages[0];
 
       // Get approvers for the current stage
-      const { data: stageApprovers } = await supabase.from("workflow_stage_approvers").select("*").eq("stage_id", currentStage.id);
-      const approverIds = (stageApprovers ?? []).map(a => (a as StageApprover).approver_id);
+      const stageApprovers = await fetchStageApprovers(currentStage.id);
+      const approverIds = (stageApprovers as StageApprover[]).map(a => a.approver_id);
       if (approverIds.length === 0) { toast.error(t("noApprovers")); return; }
 
       // Create pending approvals (upsert)
-      const rows = approverIds.map(aid => ({ quote_id: quote.id, stage_id: currentStage.id, approver_id: aid, decision: "pending" as Decision }));
-      await supabase.from("quote_approvals").upsert(rows, { onConflict: "quote_id,stage_id,approver_id" });
+      const rows = approverIds.map((aid: string) => ({ quote_id: quote.id, stage_id: currentStage.id, approver_id: aid, decision: "pending" as Decision }));
+      await upsertQuoteApprovals(rows);
 
       // Update quote state
-      await supabase.from("quotes").update({ approval_state: "in_progress" as ApprovalState, current_stage_id: currentStage.id }).eq("id", quote.id);
+      await updateQuoteApprovalState(quote.id, { approval_state: "in_progress", current_stage_id: currentStage.id });
 
       // Send email via Gmail connector (server function attaches files from storage)
       try {
@@ -488,18 +484,15 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
 
   async function submitDecision() {
     if (!myPending || !decisionDialog) return;
-    const { error } = await supabase.from("quote_approvals").update({
-      decision: decisionDialog, comment: comment.trim() || null, decided_at: new Date().toISOString(),
-    }).eq("id", myPending.id);
+    const { error } = await updateApprovalDecision(myPending.id, decisionDialog, comment.trim() || null);
     if (error) { toast.error(error.message); return; }
 
-    // Recompute quote approval state: if any stage rejected → rejected;
-    // if all approvers approved in current stage → advance or complete
-    const { data: allApps } = await supabase.from("quote_approvals").select("*").eq("quote_id", quote.id);
-    const apps = (allApps ?? []) as Approval[];
+    // Recompute quote approval state
+    const allApps = await fetchApprovalsForQuote(quote.id);
+    const apps = allApps as Approval[];
     const anyRejected = apps.some(a => a.decision === "rejected");
     if (anyRejected) {
-      await supabase.from("quotes").update({ approval_state: "rejected" as ApprovalState }).eq("id", quote.id);
+      await updateQuoteApprovalState(quote.id, { approval_state: "rejected" });
     } else {
       const currentStageApps = apps.filter(a => a.stage_id === quote.current_stage_id);
       const allApproved = currentStageApps.length > 0 && currentStageApps.every(a => a.decision === "approved");
@@ -507,16 +500,15 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
         const currentIdx = stages.findIndex(s => s.id === quote.current_stage_id);
         const next = stages[currentIdx + 1];
         if (next) {
-          // Advance to next stage; create pending approvals for next stage
-          const { data: nextApprovers } = await supabase.from("workflow_stage_approvers").select("*").eq("stage_id", next.id);
-          const nextIds = (nextApprovers ?? []).map(a => (a as StageApprover).approver_id);
+          const nextApprovers = await fetchStageApprovers(next.id);
+          const nextIds = (nextApprovers as StageApprover[]).map(a => a.approver_id);
           if (nextIds.length) {
-            const rows = nextIds.map(aid => ({ quote_id: quote.id, stage_id: next.id, approver_id: aid, decision: "pending" as Decision }));
-            await supabase.from("quote_approvals").upsert(rows, { onConflict: "quote_id,stage_id,approver_id" });
+            const rows = nextIds.map((aid: string) => ({ quote_id: quote.id, stage_id: next.id, approver_id: aid, decision: "pending" as Decision }));
+            await upsertQuoteApprovals(rows);
           }
-          await supabase.from("quotes").update({ current_stage_id: next.id }).eq("id", quote.id);
+          await updateQuoteApprovalState(quote.id, { current_stage_id: next.id });
         } else {
-          await supabase.from("quotes").update({ approval_state: "approved" as ApprovalState }).eq("id", quote.id);
+          await updateQuoteApprovalState(quote.id, { approval_state: "approved" });
         }
       }
     }
@@ -526,6 +518,7 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
     setComment("");
     onChanged();
   }
+
 
   const currentStage = stages.find(s => s.id === quote.current_stage_id);
   const ownerProfile = profiles.find(p => p.id === quote.user_id);
