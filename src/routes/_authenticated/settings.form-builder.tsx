@@ -12,13 +12,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
-  LayoutGrid, Save, Info,
+  LayoutGrid, Save, Info, Check, X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Database } from "@/integrations/supabase/types";
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
-  type DragEndEvent, closestCenter,
+  type DragEndEvent, closestCenter, useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates,
@@ -101,15 +101,20 @@ function FormBuilderPage() {
   useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = useMemo(() => {
-    const map = new Map<string, FieldDef[]>();
+    const map = new Map<string, { sectionAr: string; sectionEn: string; items: FieldDef[] }>();
     for (const f of fields) {
-      const sec = (ar ? f.section_ar : f.section_en) || (ar ? "بدون قسم" : "No section");
-      if (!map.has(sec)) map.set(sec, []);
-      map.get(sec)!.push(f);
+      const sAr = f.section_ar ?? "";
+      const sEn = f.section_en ?? "";
+      const key = `${sAr}|||${sEn}`;
+      if (!map.has(key)) map.set(key, { sectionAr: sAr, sectionEn: sEn, items: [] });
+      map.get(key)!.items.push(f);
     }
-    return Array.from(map.entries()).map(([name, items]) => ({
-      name,
-      items: items.sort((a, b) => a.position - b.position),
+    return Array.from(map.entries()).map(([key, v]) => ({
+      key,
+      sectionAr: v.sectionAr,
+      sectionEn: v.sectionEn,
+      label: (ar ? v.sectionAr : v.sectionEn) || (ar ? "بدون قسم" : "No section"),
+      items: v.items.sort((a, b) => a.position - b.position),
     }));
   }, [fields, ar]);
 
@@ -122,7 +127,7 @@ function FormBuilderPage() {
   async function toggleActive(f: FieldDef) {
     const { data: u } = await supabase.auth.getUser();
     const uid = u.user?.id ?? null;
-    const hide = f.is_active; // currently active → we're hiding it
+    const hide = f.is_active;
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, is_active: !x.is_active } : x)));
     await supabase.from("customer_field_definitions").update({
       is_active: !f.is_active,
@@ -147,32 +152,116 @@ function FormBuilderPage() {
     loadAll();
   }
 
-
-  async function persistSectionOrder(sectionFields: FieldDef[]) {
-    setSavingLayout(true);
-    // Reassign positions in tens so future inserts have room
-    const updates = sectionFields.map((f, i) => ({ id: f.id, position: (i + 1) * 10 }));
-    // Update in parallel
-    await Promise.all(updates.map((u) =>
-      supabase.from("customer_field_definitions").update({ position: u.position }).eq("id", u.id),
-    ));
-    setSavingLayout(false);
+  async function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
+    const affected = fields.filter(
+      (f) => (f.section_ar ?? "") === oldAr && (f.section_en ?? "") === oldEn,
+    );
+    if (!affected.length) return;
+    const nAr = newAr.trim() || null;
+    const nEn = newEn.trim() || null;
+    setFields((prev) =>
+      prev.map((f) =>
+        (f.section_ar ?? "") === oldAr && (f.section_en ?? "") === oldEn
+          ? { ...f, section_ar: nAr, section_en: nEn }
+          : f,
+      ),
+    );
+    await Promise.all(
+      affected.map((f) =>
+        supabase
+          .from("customer_field_definitions")
+          .update({ section_ar: nAr, section_en: nEn })
+          .eq("id", f.id),
+      ),
+    );
+    toast.success(ar ? "تم تحديث اسم القسم" : "Section renamed");
   }
 
-  function handleDragEnd(sectionName: string, e: DragEndEvent) {
+  async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const secFields = sections.find((s) => s.name === sectionName)?.items ?? [];
-    const oldIdx = secFields.findIndex((f) => f.id === active.id);
-    const newIdx = secFields.findIndex((f) => f.id === over.id);
-    if (oldIdx < 0 || newIdx < 0) return;
-    const reordered = arrayMove(secFields, oldIdx, newIdx);
-    // Optimistic update local state
-    setFields((prev) => {
-      const others = prev.filter((f) => !secFields.includes(f));
-      return [...others, ...reordered.map((f, i) => ({ ...f, position: (i + 1) * 10 }))];
-    });
-    persistSectionOrder(reordered);
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const activeField = fields.find((f) => f.id === activeId);
+    if (!activeField) return;
+
+    let destAr: string | null;
+    let destEn: string | null;
+    let overField: FieldDef | undefined;
+
+    if (overId.startsWith("__sec:")) {
+      const sec = sections.find((s) => `__sec:${s.key}` === overId);
+      if (!sec) return;
+      destAr = sec.sectionAr || null;
+      destEn = sec.sectionEn || null;
+    } else {
+      overField = fields.find((f) => f.id === overId);
+      if (!overField) return;
+      destAr = overField.section_ar;
+      destEn = overField.section_en;
+    }
+
+    const sameSection =
+      (activeField.section_ar ?? "") === (destAr ?? "") &&
+      (activeField.section_en ?? "") === (destEn ?? "");
+
+    setSavingLayout(true);
+    if (sameSection && overField) {
+      const secItems = fields
+        .filter(
+          (f) =>
+            (f.section_ar ?? "") === (destAr ?? "") &&
+            (f.section_en ?? "") === (destEn ?? ""),
+        )
+        .sort((a, b) => a.position - b.position);
+      const oldIdx = secItems.findIndex((f) => f.id === activeId);
+      const newIdx = secItems.findIndex((f) => f.id === overId);
+      if (oldIdx < 0 || newIdx < 0) { setSavingLayout(false); return; }
+      const reordered = arrayMove(secItems, oldIdx, newIdx).map((f, i) => ({ ...f, position: (i + 1) * 10 }));
+      setFields((prev) => {
+        const others = prev.filter((f) => !secItems.some((s) => s.id === f.id));
+        return [...others, ...reordered];
+      });
+      await Promise.all(
+        reordered.map((f) =>
+          supabase.from("customer_field_definitions").update({ position: f.position }).eq("id", f.id),
+        ),
+      );
+    } else {
+      // Move across sections
+      const destItems = fields
+        .filter(
+          (f) =>
+            (f.section_ar ?? "") === (destAr ?? "") &&
+            (f.section_en ?? "") === (destEn ?? "") &&
+            f.id !== activeId,
+        )
+        .sort((a, b) => a.position - b.position);
+      const insertAt = overField ? destItems.findIndex((f) => f.id === overField!.id) : destItems.length;
+      const idx = insertAt < 0 ? destItems.length : insertAt;
+      const movedActive = { ...activeField, section_ar: destAr, section_en: destEn };
+      const newDest = [...destItems.slice(0, idx), movedActive, ...destItems.slice(idx)]
+        .map((f, i) => ({ ...f, position: (i + 1) * 10 }));
+      setFields((prev) => {
+        const untouchedIds = new Set(newDest.map((f) => f.id));
+        return [...prev.filter((f) => !untouchedIds.has(f.id)), ...newDest];
+      });
+      await Promise.all(
+        newDest.map((f) =>
+          supabase
+            .from("customer_field_definitions")
+            .update(
+              f.id === activeField.id
+                ? { section_ar: destAr, section_en: destEn, position: f.position }
+                : { position: f.position },
+            )
+            .eq("id", f.id),
+        ),
+      );
+    }
+    setSavingLayout(false);
   }
 
   if (canManage === null) {
@@ -224,8 +313,8 @@ function FormBuilderPage() {
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           {ar
-            ? "اسحب الحقل من المقبض علشان تغيّر ترتيبه. غيّر العرض من 3 إلى 12 عمود، والحقول اللي مجموع عرضها 12 هتظهر جنب بعض في نفس السطر."
-            : "Drag the handle to reorder. Set each field's width from 3 to 12 columns — fields whose widths sum to 12 sit side-by-side on one row."}
+            ? "اسحب الحقل من المقبض لأي مكان — نفس القسم أو قسم تاني. عدّل عرض الحقل من 3 لـ 12، ولو مجموع العرض في السطر عدّى 12 هيلف تلقائياً لسطر جديد. اضغط علامة القلم جنب اسم القسم عشان تغيّره."
+            : "Drag any field anywhere — same section or another. Widths 3–12; when a row fills past 12, fields wrap to a new row automatically. Click the pencil next to a section title to rename it."}
         </div>
       </div>
 
@@ -236,20 +325,17 @@ function FormBuilderPage() {
           {ar ? "لا توجد حقول بعد. أضف أول حقل." : "No fields yet. Add your first."}
         </CardContent></Card>
       ) : (
-        sections.map((sec) => (
-          <SectionGrid
-            key={sec.name}
-            title={sec.name}
-            items={sec.items}
-            optionsByField={optionsByField}
-            ar={ar}
-            onDragEnd={(e) => handleDragEnd(sec.name, e)}
-            onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
-            onColSpan={updateColSpan}
-            onToggleActive={toggleActive}
-            onDelete={removeField}
-          />
-        ))
+        <BuilderCanvas
+          sections={sections}
+          optionsByField={optionsByField}
+          ar={ar}
+          onDragEnd={handleDragEnd}
+          onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
+          onColSpan={updateColSpan}
+          onToggleActive={toggleActive}
+          onDelete={removeField}
+          onRenameSection={renameSection}
+        />
       )}
 
       <FieldEditor
@@ -267,11 +353,18 @@ function FormBuilderPage() {
   );
 }
 
-function SectionGrid({
-  title, items, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete,
-}: {
-  title: string;
+type Section = {
+  key: string;
+  sectionAr: string;
+  sectionEn: string;
+  label: string;
   items: FieldDef[];
+};
+
+function BuilderCanvas({
+  sections, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+}: {
+  sections: Section[];
   optionsByField: Record<string, FieldOption[]>;
   ar: boolean;
   onDragEnd: (e: DragEndEvent) => void;
@@ -279,33 +372,101 @@ function SectionGrid({
   onColSpan: (f: FieldDef, span: number) => void;
   onToggleActive: (f: FieldDef) => void;
   onDelete: (f: FieldDef) => void;
+  onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const allIds = sections.flatMap((s) => s.items.map((f) => f.id));
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={allIds} strategy={rectSortingStrategy}>
+        <div className="space-y-4">
+          {sections.map((sec) => (
+            <SectionGrid
+              key={sec.key}
+              section={sec}
+              optionsByField={optionsByField}
+              ar={ar}
+              onEdit={onEdit}
+              onColSpan={onColSpan}
+              onToggleActive={onToggleActive}
+              onDelete={onDelete}
+              onRenameSection={onRenameSection}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SectionGrid({
+  section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+}: {
+  section: Section;
+  optionsByField: Record<string, FieldOption[]>;
+  ar: boolean;
+  onEdit: (f: FieldDef) => void;
+  onColSpan: (f: FieldDef, span: number) => void;
+  onToggleActive: (f: FieldDef) => void;
+  onDelete: (f: FieldDef) => void;
+  onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
+}) {
+  const { items, sectionAr, sectionEn, label } = section;
+  const { setNodeRef, isOver } = useDroppable({ id: `__sec:${section.key}` });
+  const [renaming, setRenaming] = useState(false);
+  const [nAr, setNAr] = useState(sectionAr);
+  const [nEn, setNEn] = useState(sectionEn);
+
+  useEffect(() => { setNAr(sectionAr); setNEn(sectionEn); }, [sectionAr, sectionEn]);
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{title}</h3>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={items.map((f) => f.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-12 gap-2 rounded-lg border bg-background/60 p-2">
-            {items.map((f) => (
-              <SortableFieldCard
-                key={f.id}
-                field={f}
-                optionCount={optionsByField[f.id]?.length ?? 0}
-                ar={ar}
-                onEdit={() => onEdit(f)}
-                onColSpan={(s) => onColSpan(f, s)}
-                onToggleActive={() => onToggleActive(f)}
-                onDelete={() => onDelete(f)}
-              />
-            ))}
+      <div className="flex items-center gap-2">
+        {renaming ? (
+          <>
+            <Input value={nAr} onChange={(e) => setNAr(e.target.value)} placeholder={ar ? "عربي" : "AR"} className="h-7 text-xs w-40" />
+            <Input value={nEn} onChange={(e) => setNEn(e.target.value)} placeholder="EN" className="h-7 text-xs w-40" />
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={() => { onRenameSection(sectionAr, sectionEn, nAr, nEn); setRenaming(false); }}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setNAr(sectionAr); setNEn(sectionEn); setRenaming(false); }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{label}</h3>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+      </div>
+      <div
+        ref={setNodeRef}
+        className={`grid grid-cols-12 gap-2 rounded-lg border bg-background/60 p-2 min-h-[70px] transition-colors ${isOver ? "border-primary bg-primary/5" : ""}`}
+      >
+        {items.map((f) => (
+          <SortableFieldCard
+            key={f.id}
+            field={f}
+            optionCount={optionsByField[f.id]?.length ?? 0}
+            ar={ar}
+            onEdit={() => onEdit(f)}
+            onColSpan={(s) => onColSpan(f, s)}
+            onToggleActive={() => onToggleActive(f)}
+            onDelete={() => onDelete(f)}
+          />
+        ))}
+        {items.length === 0 && (
+          <div className="col-span-12 text-center text-xs text-muted-foreground py-4">
+            {ar ? "اسحب حقل هنا" : "Drop a field here"}
           </div>
-        </SortableContext>
-      </DndContext>
+        )}
+      </div>
     </div>
   );
 }
