@@ -18,6 +18,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
 import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
+import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
