@@ -573,6 +573,7 @@ export type Database = {
           extension: string | null
           hidden_at: string | null
           hidden_by: string | null
+          icon: string | null
           id: string
           is_system: boolean
           location: string | null
@@ -596,6 +597,7 @@ export type Database = {
           extension?: string | null
           hidden_at?: string | null
           hidden_by?: string | null
+          icon?: string | null
           id?: string
           is_system?: boolean
           location?: string | null
@@ -619,6 +621,7 @@ export type Database = {
           extension?: string | null
           hidden_at?: string | null
           hidden_by?: string | null
+          icon?: string | null
           id?: string
           is_system?: boolean
           location?: string | null
