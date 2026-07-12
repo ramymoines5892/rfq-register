@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputIcon } from "@/components/ui/input-icon";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -319,11 +320,8 @@ function CustomersPage() {
       <div className="max-w-7xl mx-auto px-6 pt-6">
         <div className="flex flex-col md:flex-row gap-3 mb-4">
           <div className="relative flex-1">
-            <Search
-              className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-              style={{ insetInlineStart: "0.75rem" }}
-            />
-            <Input
+            <InputIcon
+              leftIcon={<Search />}
               placeholder={
                 lang === "ar"
                   ? "ابحث بالاسم (عربي أو إنجليزي) / رقم ضريبي / إيميل / تليفون"
@@ -331,7 +329,8 @@ function CustomersPage() {
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="ps-10"
+              clearable
+              onClear={() => setSearch("")}
             />
           </div>
           <Select value={currencyFilter} onValueChange={setCurrencyFilter}>

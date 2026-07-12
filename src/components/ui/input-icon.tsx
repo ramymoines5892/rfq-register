@@ -28,7 +28,7 @@ export const InputIcon = React.forwardRef<HTMLInputElement, Props>(function Inpu
   return (
     <div className={cn("relative w-full", containerClassName)}>
       {hasLeft && (
-        <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-2.5 text-muted-foreground">
+        <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-muted-foreground">
           <span className="[&_svg]:h-4 [&_svg]:w-4">{leftIcon}</span>
         </span>
       )}
@@ -37,8 +37,8 @@ export const InputIcon = React.forwardRef<HTMLInputElement, Props>(function Inpu
         value={value as string | number | readonly string[] | undefined}
         {...props}
         className={cn(
-          hasLeft && "ps-9",
-          hasRight && (rightSlots > 1 ? "pe-16" : "pe-9"),
+          hasLeft && "ps-10",
+          hasRight && (rightSlots > 1 ? "pe-[4.5rem]" : "pe-10"),
           className,
         )}
       />
