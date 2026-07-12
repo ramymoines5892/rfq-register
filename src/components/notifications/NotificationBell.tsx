@@ -69,6 +69,11 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const lastReminderCountRef = useRef<number>(-1);
+  // Realtime handlers read the latest prefs via ref so we don't re-subscribe on prefs change.
+  const prefsRef = useRef<Prefs>(DEFAULT_PREFS);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
+
+
 
   const unreadCount = items.filter((n) => !n.read_at).length;
 
@@ -103,22 +108,28 @@ export function NotificationBell() {
     loadPrefs();
   }, [load, loadPrefs]);
 
-  // Realtime subscription
+  // Realtime subscription — mount-once. Do NOT depend on prefs (handlers use prefsRef).
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
     (async () => {
       const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      if (!user.user || cancelled) return;
+      // Unique topic per mount to sidestep supabase-js channel caching, which
+      // otherwise reuses a channel and throws "cannot add postgres_changes
+      // callbacks after subscribe()" on the second effect run (StrictMode).
+      const topic = `notif_${user.user.id}_${Math.random().toString(36).slice(2, 10)}`;
       channel = supabase
-        .channel(`notif_${user.user.id}`)
+        .channel(topic)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.user.id}` },
           (payload) => {
             const n = payload.new as Notif;
             setItems((prev) => [n, ...prev].slice(0, 30));
-            if (prefs.enabled) {
-              if (prefs.sound_enabled) playPing();
+            const p = prefsRef.current;
+            if (p.enabled) {
+              if (p.sound_enabled) playPing();
               toast(n.title, { description: n.body ?? undefined });
             }
           },
@@ -134,9 +145,12 @@ export function NotificationBell() {
         .subscribe();
     })();
     return () => {
+      cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [prefs.enabled, prefs.sound_enabled]);
+  }, []);
+
+
 
   // Periodic reminder about pending items
   useEffect(() => {
