@@ -494,21 +494,28 @@ function CustomerSheet({
       setBanks([]);
       setDraftContacts([]);
       setDraftBanks([]);
+      setAttachments([]);
+      setDraftAttachments([]);
     }
     setPaymentInput("");
     setTaxIdConflict(null);
+    setNewAttachCategory("company_profile");
+    setNewAttachLabel("");
     setOpenSection("identity");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer]);
 
   async function loadRelated(customerId: string) {
-    const [{ data: cs }, { data: bs }] = await Promise.all([
+    const [{ data: cs }, { data: bs }, { data: as }] = await Promise.all([
       supabase.from("customer_contacts").select("*").eq("customer_id", customerId).order("created_at"),
       supabase.from("customer_banks").select("*").eq("customer_id", customerId).order("created_at"),
+      supabase.from("customer_attachments").select("*").eq("customer_id", customerId).order("created_at"),
     ]);
     setContacts((cs ?? []) as Contact[]);
     setBanks((bs ?? []) as Bank[]);
+    setAttachments((as ?? []) as Attachment[]);
   }
+
 
   useEffect(() => {
     const tid = form.tax_id.trim();
