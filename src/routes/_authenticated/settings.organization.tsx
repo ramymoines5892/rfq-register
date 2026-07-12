@@ -50,6 +50,11 @@ function OrganizationPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ id: string; kind: "department" | "job_title" } | null>(null);
+  const [draft, setDraft] = useState<
+    | { kind: "department"; data: Partial<Department> }
+    | { kind: "job_title"; data: Partial<JobTitle> }
+    | null
+  >(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,41 +86,64 @@ function OrganizationPage() {
   }, [profiles]);
 
   const selectedRecord = useMemo(() => {
+    if (draft) return draft.data as any;
     if (!selected) return null;
     if (selected.kind === "department") return depts.find((d) => d.id === selected.id) ?? null;
     return jobs.find((j) => j.id === selected.id) ?? null;
-  }, [selected, depts, jobs]);
+  }, [selected, depts, jobs, draft]);
 
-  const addDept = async (parentId: string | null = null) => {
+  const addDept = (parentId: string | null = null) => {
     const siblings = depts.filter((d) => (d.parent_id ?? null) === parentId);
     const nextPos = (siblings.at(-1)?.position ?? 0) + 1;
     const color = parentId
       ? (depts.find((x) => x.id === parentId)?.color || DEPT_COLORS[0])
       : DEPT_COLORS[depts.length % DEPT_COLORS.length];
-    const { data, error } = await supabase.from("departments").insert({
-      name: ar ? "إدارة جديدة" : "New Department",
-      name_ar: "إدارة جديدة", name_en: "New Department",
-      color, position: nextPos, parent_id: parentId,
-    }).select().single();
-    if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    await load();
-    setSelected({ id: data.id, kind: "department" });
+    setDraft({
+      kind: "department",
+      data: {
+        id: "__new__",
+        name: "", name_ar: "", name_en: "",
+        code: null, color, parent_id: parentId, position: nextPos,
+        phone: null, extension: null, location: null,
+        is_system: false, metadata: {} as any,
+      } as Partial<Department>,
+    });
+    setSelected({ id: "__new__", kind: "department" });
   };
 
-  const addJob = async (deptId: string | null = null) => {
+  const addJob = (deptId: string | null = null) => {
     const siblings = jobs.filter((j) => (j.department_id ?? null) === deptId);
     const nextPos = (siblings.at(-1)?.position ?? 0) + 1;
-    const { data, error } = await supabase.from("job_titles").insert({
-      name: ar ? "مسمى جديد" : "New Title",
-      name_ar: "مسمى جديد", name_en: "New Title",
-      level: 3, position: nextPos, department_id: deptId,
-    }).select().single();
-    if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    await load();
-    setSelected({ id: data.id, kind: "job_title" });
+    setDraft({
+      kind: "job_title",
+      data: {
+        id: "__new__",
+        name: "", name_ar: "", name_en: "",
+        code: null, level: 3, department_id: deptId, position: nextPos,
+        description: null, is_system: false, metadata: {} as any,
+      } as Partial<JobTitle>,
+    });
+    setSelected({ id: "__new__", kind: "job_title" });
   };
 
+  const closeInspector = () => { setSelected(null); setDraft(null); };
+
   const remove = async (id: string, kind: "department" | "job_title") => {
+    if (kind === "department") {
+      const memberCount = memberCounts[id] || 0;
+      const childCount = depts.filter((d) => d.parent_id === id).length;
+      const jobCount = jobs.filter((j) => j.department_id === id).length;
+      if (memberCount > 0 || childCount > 0 || jobCount > 0) {
+        const parts: string[] = [];
+        if (memberCount) parts.push(ar ? `${memberCount} موظف` : `${memberCount} member(s)`);
+        if (childCount) parts.push(ar ? `${childCount} قسم فرعي` : `${childCount} sub-dept`);
+        if (jobCount) parts.push(ar ? `${jobCount} مسمى وظيفي` : `${jobCount} job title(s)`);
+        return toast.error(
+          ar ? "لا يمكن حذف الإدارة" : "Cannot delete department",
+          { description: (ar ? "الإدارة تحتوي على: " : "Contains: ") + parts.join("، ") },
+        );
+      }
+    }
     const ok = await confirm({
       title: ar ? "تأكيد الحذف" : "Confirm delete",
       description: ar ? "سيتم نقل السجل إلى سلة المحذوفات." : "The record will be moved to trash.",
@@ -125,7 +153,7 @@ function OrganizationPage() {
     const table = kind === "department" ? "departments" : "job_titles";
     const { error } = await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) return toast.error(ar ? "تعذر الحذف" : "Failed", { description: error.message });
-    if (selected?.id === id) setSelected(null);
+    if (selected?.id === id) closeInspector();
     await load();
   };
 
@@ -278,17 +306,18 @@ function OrganizationPage() {
       </Card>
 
       {/* Inspector Sheet */}
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selected} onOpenChange={(o) => !o && closeInspector()}>
         <SheetContent side={ar ? "left" : "right"} className="w-full sm:max-w-md flex flex-col">
           {selected && selectedRecord && (
             <RecordEditor
               key={selected.id}
               kind={selected.kind}
               record={selectedRecord}
+              isNew={selected.id === "__new__"}
               departments={depts}
               customFields={customFields.filter((f) => f.entity_key === (selected.kind === "department" ? "department" : "job_title"))}
               onSaved={load}
-              onClose={() => setSelected(null)}
+              onClose={closeInspector}
             />
           )}
         </SheetContent>
@@ -542,10 +571,11 @@ function JobChip({
 /* ------------------------------- INSPECTOR ------------------------------- */
 
 function RecordEditor({
-  kind, record, departments, customFields, onSaved, onClose,
+  kind, record, isNew, departments, customFields, onSaved, onClose,
 }: {
   kind: "department" | "job_title";
-  record: Department | JobTitle;
+  record: Department | JobTitle | Partial<Department> | Partial<JobTitle>;
+  isNew: boolean;
   departments: Department[];
   customFields: FieldDef[];
   onSaved: () => void;
@@ -557,7 +587,7 @@ function RecordEditor({
   const dept = isDept ? (record as Department) : null;
   const job = !isDept ? (record as JobTitle) : null;
 
-  const [nameAr, setNameAr] = useState(record.name_ar || record.name);
+  const [nameAr, setNameAr] = useState(record.name_ar || record.name || "");
   const [nameEn, setNameEn] = useState(record.name_en || "");
   const [code, setCode] = useState((record as any).code || "");
   const [color, setColor] = useState(dept?.color || DEPT_COLORS[0]);
@@ -574,26 +604,35 @@ function RecordEditor({
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
+    if (!nameAr.trim() && !nameEn.trim()) {
+      return toast.error(ar ? "الاسم مطلوب" : "Name is required");
+    }
     setSaving(true);
     if (isDept) {
-      const payload = {
+      const payload: any = {
         name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
         code: code || null, color, parent_id: parentId, phone: phone || null,
         extension: extension || null, location: location || null, metadata,
       };
-      const { error } = await supabase.from("departments").update(payload).eq("id", record.id);
+      if (isNew) payload.position = (record as any).position ?? 0;
+      const { error } = isNew
+        ? await supabase.from("departments").insert(payload)
+        : await supabase.from("departments").update(payload).eq("id", (record as Department).id);
       setSaving(false);
       if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
     } else {
-      const payload = {
+      const payload: any = {
         name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
         code: code || null, level, department_id: departmentId, description: description || null, metadata,
       };
-      const { error } = await supabase.from("job_titles").update(payload).eq("id", record.id);
+      if (isNew) payload.position = (record as any).position ?? 0;
+      const { error } = isNew
+        ? await supabase.from("job_titles").insert(payload)
+        : await supabase.from("job_titles").update(payload).eq("id", (record as JobTitle).id);
       setSaving(false);
       if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
     }
-    toast.success(ar ? "تم الحفظ" : "Saved");
+    toast.success(isNew ? (ar ? "تم الإنشاء" : "Created") : (ar ? "تم الحفظ" : "Saved"));
     onSaved();
     onClose();
   };
@@ -602,7 +641,9 @@ function RecordEditor({
     <>
       <SheetHeader>
         <SheetTitle>
-          {isDept ? (ar ? "تعديل الإدارة" : "Edit Department") : (ar ? "تعديل المسمى" : "Edit Job Title")}
+          {isNew
+            ? (isDept ? (ar ? "إدارة جديدة" : "New Department") : (ar ? "مسمى وظيفي جديد" : "New Job Title"))
+            : (isDept ? (ar ? "تعديل الإدارة" : "Edit Department") : (ar ? "تعديل المسمى" : "Edit Job Title"))}
         </SheetTitle>
       </SheetHeader>
       <div className="flex-1 overflow-y-auto space-y-4 py-2">
