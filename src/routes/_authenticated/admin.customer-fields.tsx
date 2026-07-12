@@ -283,7 +283,7 @@ function FieldEditor({
     }
 
     setSaving(true);
-    const rules: Record<string, unknown> = {};
+    const rules: Record<string, string | number> = {};
     if (validation.minLength) rules.minLength = Number(validation.minLength);
     if (validation.maxLength) rules.maxLength = Number(validation.maxLength);
     if (validation.min) rules.min = Number(validation.min);
@@ -301,7 +301,7 @@ function FieldEditor({
       section_en: sectionEn.trim() || null,
       placeholder_ar: placeholderAr.trim() || null,
       placeholder_en: placeholderEn.trim() || null,
-      validation_rules: rules,
+      validation_rules: rules as unknown as import("@/integrations/supabase/types").Json,
     };
 
     let fieldId = editing?.id;
