@@ -403,6 +403,8 @@ function OrganizationPage() {
                     onAddDept={addDept}
                     onAddJob={addJob}
                     onDelete={remove}
+                    onMove={moveDept}
+                    parentId={null}
                   />
                 ))}
 
