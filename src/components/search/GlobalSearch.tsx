@@ -159,7 +159,7 @@ export function GlobalSearch() {
       });
     }
     // internal links: strip origin if any
-    navigate({ to: link });
+    router.history.push(link);
   };
 
   return (
