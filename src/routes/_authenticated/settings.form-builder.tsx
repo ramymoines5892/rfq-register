@@ -667,23 +667,23 @@ function SectionGrid({
           <>
             <Input value={nAr} onChange={(e) => setNAr(e.target.value)} placeholder={ar ? "عربي" : "AR"} className="h-7 text-xs w-40" />
             <Input value={nEn} onChange={(e) => setNEn(e.target.value)} placeholder="EN" className="h-7 text-xs w-40" />
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={() => { onRenameSection(sectionAr, sectionEn, nAr, nEn); setRenaming(false); }}>
+            <Button size="icon" variant="outline" className="h-7 w-7 text-primary" onClick={() => { onRenameSection(sectionAr, sectionEn, nAr, nEn); setRenaming(false); }}>
               <Check className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setNAr(sectionAr); setNEn(sectionEn); setRenaming(false); }}>
+            <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => { setNAr(sectionAr); setNEn(sectionEn); setRenaming(false); }}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </>
         ) : (
           <>
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{label}</h3>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
+            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
               <Pencil className="h-3 w-3" />
             </Button>
             <Button
               size="icon"
-              variant="ghost"
-              className="h-6 w-6 text-destructive disabled:text-muted-foreground"
+              variant="outline"
+              className="h-6 w-6 text-destructive hover:text-destructive disabled:text-muted-foreground"
               onClick={() => onDeleteSection(section.key)}
               disabled={hasSystem}
               title={hasSystem ? (ar ? "يحتوي على حقول نظام" : "Contains system fields") : (ar ? "حذف القسم" : "Delete section")}
@@ -787,15 +787,15 @@ function SortableFieldCard({
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onToggleActive} title={field.is_active ? (ar ? "إخفاء" : "Hide") : (ar ? "إظهار" : "Show")}>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-6 w-6" onClick={onToggleActive} title={field.is_active ? (ar ? "إخفاء" : "Hide") : (ar ? "إظهار" : "Show")}>
             {field.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit} title={ar ? "تعديل" : "Edit"}>
+          <Button variant="outline" size="icon" className="h-6 w-6" onClick={onEdit} title={ar ? "تعديل" : "Edit"}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
           {!field.is_system && (
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={onDelete} title={ar ? "حذف" : "Delete"}>
+            <Button variant="outline" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={onDelete} title={ar ? "حذف" : "Delete"}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
