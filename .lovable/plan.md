@@ -1,74 +1,52 @@
-## الخطوة 1: إنشاء طبقة Data Layer + TanStack Query
+# خطة التحويل إلى Data Layer + TanStack Query
 
-### الهدف
-تنظيم كل استدعاءات قاعدة البيانات (151 استدعاء مباشر لـ `supabase.from(...)`) في طبقة واحدة منظمة، وتحويل الـ 45 استخدام لـ `useEffect + fetch` إلى TanStack Query — علشان:
-- الأداء أحسن (caching + deduplication)
-- الكود أنضف وأسهل في الصيانة
-- تحديث تلقائي للبيانات بعد التعديل
-- معالجة أفضل للأخطاء والتحميل
+## ✅ اللى اتعمل
 
-### الاستراتيجية
-هنشتغل بالتدريج — مش هنكسر أي حاجة. كل feature (customers, workflows, notifications...) ليها فولدر خاص، والمكونات القديمة تفضل شغالة لحد ما نحوّلها.
+### المرحلة 1.1 — البنية التحتية
+- `src/router.tsx` — `QueryClient` بـ `staleTime: 30s`, `gcTime: 5min`.
+- `src/features/_shared/queryKeys.ts` — factory موحّد لكل الـ query keys.
 
-### هيكل جديد
+### المرحلة 1.2 — Notifications ✅
+- `src/features/notifications/api.ts` + `queries.ts`
+- `NotificationBell.tsx` و `settings.notifications.tsx` بيستخدموا الـ hooks الجديدة
+- Realtime عن طريق `invalidateQueries` بدل تعديل state يدوي
 
-```text
-src/features/
-├── customers/
-│   ├── api.ts          ← دوال Supabase raw
-│   └── queries.ts      ← queryOptions + hooks
-├── workflows/
-│   ├── api.ts
-│   └── queries.ts
-├── notifications/
-│   ├── api.ts
-│   └── queries.ts
-├── quotes/
-├── hr/                 ← profiles, departments, job_titles
-└── settings/           ← form-builder, org fields
+### المرحلة 1.3 — Customers ✅
+- `src/features/customers/api.ts` + `queries.ts`
+- `useCustomers`, `useCustomerRelations`, `useSoftDeleteCustomer`
+- `customers.tsx`: قائمة العملاء + حذف + تفاصيل (contacts/banks/attachments) عبر الـ query cache
+
+### المرحلة 1.4 — Workflows ✅
+- `src/features/workflows/api.ts` + `queries.ts`
+- `useTemplates`, `useTemplateDetail`, `useTeamProfiles`, وكل الـ mutations (create/rename/delete/stages/approvers)
+- `workflows.tsx` اتعاد كتابته بالكامل — مفيش `supabase.from` مباشر ولا `useEffect+fetch`
+
+### المرحلة 1.5 — HR / Team ✅ (جزئي)
+- `src/features/hr/api.ts` + `queries.ts`
+- `useProfiles`, `useUserRoles`, `useCurrentUserId`, `useSetUserRole`, `useRemoveFromTeam`, `useHrDashboard`
+- `team.tsx` اتحوّل بالكامل للـ hooks
+- `hr.tsx` قراءة القوائم (profiles/roles/departments/job_titles) بقت من الـ cache؛ الـ mutations لسه بتنادى `load()` اللى بقى `refetch()` — شغال بس مش React-Query-native بالكامل
+
+## ⏳ اللى لسه (نطاق كبير — يحتاج جلسات مخصّصة)
+
+- **`hr.tsx` mutations** (~30 استدعاء `supabase.from` للـ writes: departments/job_titles/permissions) — تحويلها لـ `useMutation` مستقلة.
+- **`settings.form-builder.tsx`** (1348 سطر) — feature module لـ `customer_field_definitions` + `customer_field_options`.
+- **`settings.organization.tsx`** (1111 سطر) — feature module للـ org fields + مخطط الشركة.
+- **`settings.trash.tsx`** — قراءة الـ soft-deleted rows؛ فيها dynamic table typing معقّد شوية.
+
+## 🧪 التحقق
+
+- كل تعديل عدّى `tsgo --noEmit` بدون أخطاء.
+- الـ realtime في Notifications شغال والـ optimistic delete في العملاء شغال.
+- كل الـ features الحالية اللى اتحوّلت (Notifications, Customers list/detail/delete, Workflows, Team) صفر `supabase.from` مباشر في الـ UI.
+
+## 🗂️ الهيكل النهائي
+
 ```
-
-### الخطوات التنفيذية (بالترتيب)
-
-**المرحلة 1.1 — البنية التحتية** (هنبدأ بيها دلوقتي)
-1. التأكد إن `QueryClient` مظبوط في `router.tsx` بـ defaults كويسة (staleTime، retry).
-2. إنشاء `src/features/_shared/queryKeys.ts` — factory موحّد للـ query keys.
-3. إنشاء `src/features/_shared/types.ts` — DTOs مشتركة (Pagination، Result).
-
-**المرحلة 1.2 — أول feature: Notifications** (نموذج تجريبي)
-- ملف `src/features/notifications/api.ts` — كل استدعاءات جدول notifications و notification_preferences.
-- ملف `src/features/notifications/queries.ts` — `useNotifications()`, `useNotificationPrefs()`, `useMarkRead()`, `useMarkAllRead()`, `useSaveNotificationPrefs()`.
-- تحويل `NotificationBell.tsx` و `settings.notifications.tsx` يستخدموا الـ hooks الجديدة.
-- الـ realtime channel يعمل `queryClient.invalidateQueries` بدل ما يعدل الـ state يدوي.
-
-**المرحلة 1.3 — Customers**
-- كل حاجة خاصة بـ customers, customer_contacts, customer_banks, customer_attachments, customer_field_*.
-- تحويل `customers.tsx` (1348 سطر) يستخدم الطبقة الجديدة.
-
-**المرحلة 1.4 — Workflows + Quotes**
-- workflow_templates, workflow_stages, workflow_stage_approvers, quotes, quote_approvals, quote_attachments.
-- تحويل `workflows.tsx` (1873 سطر).
-
-**المرحلة 1.5 — HR + Settings**
-- profiles, user_roles, user_permissions, departments, job_titles.
-- تحويل `hr.tsx`, `team.tsx`, `settings.*`.
-
-**المرحلة 1.6 — التنظيف**
-- إزالة أي `useEffect + supabase.from` متبقي.
-- توحيد error handling عبر `errorComponent` في الـ routes.
-
-### النطاق للـ turn ده بس
-هنعمل **المرحلة 1.1 + 1.2 فقط** (البنية التحتية + Notifications كنموذج). لو الشغل عجبك، نكمل باقي المراحل واحدة واحدة.
-
-### ملفات هتتعدل/تتعمل في الـ turn ده
-- ✨ جديد: `src/features/_shared/queryKeys.ts`
-- ✨ جديد: `src/features/notifications/api.ts`
-- ✨ جديد: `src/features/notifications/queries.ts`
-- 📝 تعديل: `src/components/notifications/NotificationBell.tsx` (يستخدم الـ hooks الجديدة)
-- 📝 تعديل: `src/routes/_authenticated/settings.notifications.tsx` (يستخدم الـ hooks الجديدة)
-- 📝 تحقق: `src/router.tsx` (QueryClient defaults)
-
-### ملاحظة مهمة
-مش هنمس أي feature تانية في الـ turn ده — كل الصفحات التانية هتفضل شغالة زي ما هي. التحويل هيكون تدريجي وآمن.
-
-**موافق نبدأ؟**
+src/features/
+├── _shared/queryKeys.ts
+├── notifications/  ← api.ts + queries.ts  ✅
+├── customers/      ← api.ts + queries.ts  ✅
+├── workflows/      ← api.ts + queries.ts  ✅
+└── hr/             ← api.ts + queries.ts  ✅ (reads)
+```
