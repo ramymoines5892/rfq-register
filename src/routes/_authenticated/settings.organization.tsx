@@ -9,6 +9,7 @@ import { InputIcon } from "@/components/ui/input-icon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -332,7 +333,8 @@ function OrganizationPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <TooltipProvider delayDuration={120}>
+              <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-10 py-4">
               {rootDepts
                 .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                 .map((d) => (
@@ -377,7 +379,8 @@ function OrganizationPage() {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
@@ -472,98 +475,88 @@ function DeptCard({
   if (!matchesDeep) return null;
 
   return (
-    <div
-      className={`rounded-xl border bg-card overflow-hidden transition-all ${
-        isSelected ? "ring-2 ring-primary ring-offset-1" : ""
-      }`}
-      style={{ borderInlineStartWidth: 4, borderInlineStartColor: color }}
-    >
-      {/* Header */}
-      <div
-        className="px-3 py-2 flex items-center gap-2 cursor-pointer hover:bg-muted/50"
-        style={{ backgroundColor: `${color}0d` }}
-        onClick={() => onSelect(dept.id, "department")}
-      >
-        <div className="grid place-items-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${color}22`, color }}>
-          <Building2 className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-sm truncate">{label}</span>
-            {dept.code && (
-              <span className="text-[10px] font-mono uppercase text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-                {dept.code}
-              </span>
-            )}
-            {dept.is_system && <Badge variant="secondary" className="text-[9px] h-4 px-1">{ar ? "نظام" : "Sys"}</Badge>}
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
-            <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{children.length}</span>
-            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{deptJobs.length}</span>
-            <span className="flex items-center gap-1"><Users className="h-3 w-3" />{members}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="icon" variant="ghost" className="h-7 w-7"
-            title={ar ? "قسم فرعي" : "Sub-dept"}
-            onClick={() => onAddDept(dept.id)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="icon" variant="ghost" className="h-7 w-7"
-            title={ar ? "تعديل" : "Edit"}
+    <div className="flex flex-col items-center gap-4">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className={`group relative flex flex-col items-center gap-2 outline-none ${
+              isSelected ? "text-primary" : "text-foreground"
+            }`}
             onClick={() => onSelect(dept.id, "department")}
+            onDoubleClick={() => onSelect(dept.id, "department")}
           >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          {!dept.is_system && (
-            <Button
-              size="icon" variant="ghost" className="h-7 w-7 text-destructive"
-              title={ar ? "حذف" : "Delete"}
-              onClick={() => onDelete(dept.id, "department")}
+            <span
+              className={`grid h-16 w-16 place-items-center rounded-full border-2 bg-background shadow-sm transition-all group-hover:-translate-y-1 group-hover:shadow-md ${
+                isSelected ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
+              style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Job title chips */}
-      {deptJobs.length > 0 && (
-        <div className="px-3 py-2 border-t bg-background/40">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {ar ? "المسميات الوظيفية" : "Job Titles"}
+              <Building2 className="h-7 w-7" />
+            </span>
+            <span className="max-w-24 text-center text-xs font-semibold leading-tight line-clamp-2">{label}</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center" className="max-w-72 text-start">
+          <div className="space-y-2">
+            <div>
+              <div className="font-bold text-sm">{label}</div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {dept.code && <span className="text-[10px] font-mono rounded bg-muted px-1.5 py-0.5">{dept.code}</span>}
+                {dept.is_system && <Badge variant="secondary" className="text-[9px] h-4 px-1">{ar ? "نظام" : "Sys"}</Badge>}
+              </div>
             </div>
-            <button
-              type="button"
-              className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
-              onClick={() => onAddJob(dept.id)}
-            >
-              <Plus className="h-3 w-3" />{ar ? "إضافة" : "Add"}
-            </button>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="rounded-md border p-2 text-center">
+                <Building2 className="mx-auto mb-1 h-3.5 w-3.5" />
+                <div className="font-bold">{children.length}</div>
+                <div className="text-[10px] text-muted-foreground">{ar ? "فرعي" : "Sub"}</div>
+              </div>
+              <div className="rounded-md border p-2 text-center">
+                <Briefcase className="mx-auto mb-1 h-3.5 w-3.5" />
+                <div className="font-bold">{deptJobs.length}</div>
+                <div className="text-[10px] text-muted-foreground">{ar ? "مسميات" : "Jobs"}</div>
+              </div>
+              <div className="rounded-md border p-2 text-center">
+                <Users className="mx-auto mb-1 h-3.5 w-3.5" />
+                <div className="font-bold">{members}</div>
+                <div className="text-[10px] text-muted-foreground">{ar ? "أشخاص" : "People"}</div>
+              </div>
+            </div>
+            {deptJobs.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-[10px] font-semibold text-muted-foreground">{ar ? "المسميات الوظيفية" : "Job titles"}</div>
+                <div className="flex flex-wrap gap-1">
+                  {deptJobs.map((j) => (
+                    <span key={j.id} className="rounded-full bg-muted px-2 py-0.5 text-[10px]">
+                      {pick(j, lang)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2 border-t pt-2">
+              <Button size="icon" variant="ghost" className="h-7 w-7" title={ar ? "إضافة إدارة فرعية" : "Add sub-department"} onClick={() => onAddDept(dept.id)}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" title={ar ? "إضافة مسمى" : "Add job"} onClick={() => onAddJob(dept.id)}>
+                <Briefcase className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7" title={ar ? "تعديل" : "Edit"} onClick={() => onSelect(dept.id, "department")}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              {!dept.is_system && (
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title={ar ? "حذف" : "Delete"} onClick={() => onDelete(dept.id, "department")}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {deptJobs.map((j) => (
-              <JobChip
-                key={j.id}
-                job={j}
-                lang={lang}
-                color={color}
-                selected={selected?.id === j.id && selected.kind === "job_title"}
-                onSelect={() => onSelect(j.id, "job_title")}
-                onDelete={() => onDelete(j.id, "job_title")}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+        </TooltipContent>
+      </Tooltip>
 
-      {/* Nested children */}
       {children.length > 0 && (
-        <div className="px-3 py-2 space-y-2 border-t bg-muted/20">
+        <div className="relative flex flex-wrap items-start justify-center gap-x-6 gap-y-8 border-t pt-6 before:absolute before:left-1/2 before:top-0 before:h-6 before:border-l before:border-border">
           {children.map((c) => (
             <DeptCard
               key={c.id}
@@ -581,26 +574,6 @@ function DeptCard({
               onDelete={onDelete}
             />
           ))}
-        </div>
-      )}
-
-      {deptJobs.length === 0 && children.length === 0 && (
-        <div className="px-3 py-2 border-t bg-background/40 flex items-center gap-2">
-          <button
-            type="button"
-            className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1"
-            onClick={() => onAddJob(dept.id)}
-          >
-            <Plus className="h-3 w-3" />{ar ? "إضافة مسمى وظيفي" : "Add job title"}
-          </button>
-          <span className="text-muted-foreground">·</span>
-          <button
-            type="button"
-            className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1"
-            onClick={() => onAddDept(dept.id)}
-          >
-            <Plus className="h-3 w-3" />{ar ? "إضافة قسم فرعي" : "Add sub-department"}
-          </button>
         </div>
       )}
     </div>
