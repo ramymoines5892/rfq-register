@@ -16,10 +16,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText, GripVertical, LayoutGrid, RotateCcw } from "lucide-react";
 import { useI18n, type TKey } from "@/lib/i18n";
 import { parseTerms, formatTermsPlain } from "@/lib/terms";
 import { pickLangValue, BilingualText } from "@/lib/bilingual";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -84,6 +100,28 @@ function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [tab, setTab] = useState<"mine" | "pending">("mine");
+  const [kpiOrder, setKpiOrder] = useState<string[]>(["count", "value", "expiring"]);
+  const [kpiEditing, setKpiEditing] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("dashboard.kpi.order.v1");
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        const defaults = ["count", "value", "expiring"];
+        const missing = defaults.filter((x) => !arr.includes(x));
+        setKpiOrder([...arr.filter((x) => defaults.includes(x)), ...missing]);
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("dashboard.kpi.order.v1", JSON.stringify(kpiOrder));
+  }, [kpiOrder]);
+
+  const kpiSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); });
@@ -173,11 +211,55 @@ function Dashboard() {
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6 -mt-6">
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("quotesCount")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.count}</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("totalValue")} ({t("accepted")})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("expiringWeek")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-amber-600">{stats.expiringWeek}</div></CardContent></Card>
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            {kpiEditing ? (lang === "ar" ? "اسحب البطاقات لإعادة الترتيب" : "Drag cards to reorder") : ""}
+          </div>
+          <div className="flex items-center gap-1">
+            {kpiEditing && (
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => setKpiOrder(["count", "value", "expiring"])}>
+                <RotateCcw className="h-3.5 w-3.5 me-1" />{lang === "ar" ? "استعادة" : "Reset"}
+              </Button>
+            )}
+            <Button variant={kpiEditing ? "default" : "outline"} size="sm" className="h-8" onClick={() => setKpiEditing(v => !v)}>
+              <LayoutGrid className="h-3.5 w-3.5 me-1" />
+              {kpiEditing ? (lang === "ar" ? "تم" : "Done") : (lang === "ar" ? "تخصيص" : "Customize")}
+            </Button>
+          </div>
         </div>
+
+        <DndContext
+          sensors={kpiSensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e: DragEndEvent) => {
+            const { active, over } = e;
+            if (!over || active.id === over.id) return;
+            setKpiOrder(prev => {
+              const oi = prev.indexOf(String(active.id));
+              const ni = prev.indexOf(String(over.id));
+              if (oi < 0 || ni < 0) return prev;
+              const next = [...prev];
+              next.splice(oi, 1);
+              next.splice(ni, 0, String(active.id));
+              return next;
+            });
+          }}
+        >
+          <SortableContext items={kpiOrder} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {kpiOrder.map((id) => {
+                const map: Record<string, { title: string; value: React.ReactNode }> = {
+                  count: { title: t("quotesCount"), value: <div className="text-2xl font-bold">{stats.count}</div> },
+                  value: { title: `${t("totalValue")} (${t("accepted")})`, value: <div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div> },
+                  expiring: { title: t("expiringWeek"), value: <div className="text-2xl font-bold text-amber-600">{stats.expiringWeek}</div> },
+                };
+                const cfg = map[id];
+                if (!cfg) return null;
+                return <KpiCard key={id} id={id} editing={kpiEditing} title={cfg.title}>{cfg.value}</KpiCard>;
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
@@ -246,6 +328,38 @@ function Dashboard() {
       </main>
 
       <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quote={editing} templates={templates} customers={customers} onSaved={load} />
+    </div>
+  );
+}
+
+function KpiCard({ id, editing, title, children }: { id: string; editing: boolean; title: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !editing });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className={editing ? "ring-1 ring-dashed ring-primary/40" : ""}>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            {editing && (
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground -ms-1"
+                aria-label="Drag"
+                type="button"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+            )}
+            <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
     </div>
   );
 }
