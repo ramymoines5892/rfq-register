@@ -101,15 +101,20 @@ function FormBuilderPage() {
   useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = useMemo(() => {
-    const map = new Map<string, FieldDef[]>();
+    const map = new Map<string, { sectionAr: string; sectionEn: string; items: FieldDef[] }>();
     for (const f of fields) {
-      const sec = (ar ? f.section_ar : f.section_en) || (ar ? "بدون قسم" : "No section");
-      if (!map.has(sec)) map.set(sec, []);
-      map.get(sec)!.push(f);
+      const sAr = f.section_ar ?? "";
+      const sEn = f.section_en ?? "";
+      const key = `${sAr}|||${sEn}`;
+      if (!map.has(key)) map.set(key, { sectionAr: sAr, sectionEn: sEn, items: [] });
+      map.get(key)!.items.push(f);
     }
-    return Array.from(map.entries()).map(([name, items]) => ({
-      name,
-      items: items.sort((a, b) => a.position - b.position),
+    return Array.from(map.entries()).map(([key, v]) => ({
+      key,
+      sectionAr: v.sectionAr,
+      sectionEn: v.sectionEn,
+      label: (ar ? v.sectionAr : v.sectionEn) || (ar ? "بدون قسم" : "No section"),
+      items: v.items.sort((a, b) => a.position - b.position),
     }));
   }, [fields, ar]);
 
@@ -122,7 +127,7 @@ function FormBuilderPage() {
   async function toggleActive(f: FieldDef) {
     const { data: u } = await supabase.auth.getUser();
     const uid = u.user?.id ?? null;
-    const hide = f.is_active; // currently active → we're hiding it
+    const hide = f.is_active;
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, is_active: !x.is_active } : x)));
     await supabase.from("customer_field_definitions").update({
       is_active: !f.is_active,
@@ -147,32 +152,116 @@ function FormBuilderPage() {
     loadAll();
   }
 
-
-  async function persistSectionOrder(sectionFields: FieldDef[]) {
-    setSavingLayout(true);
-    // Reassign positions in tens so future inserts have room
-    const updates = sectionFields.map((f, i) => ({ id: f.id, position: (i + 1) * 10 }));
-    // Update in parallel
-    await Promise.all(updates.map((u) =>
-      supabase.from("customer_field_definitions").update({ position: u.position }).eq("id", u.id),
-    ));
-    setSavingLayout(false);
+  async function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
+    const affected = fields.filter(
+      (f) => (f.section_ar ?? "") === oldAr && (f.section_en ?? "") === oldEn,
+    );
+    if (!affected.length) return;
+    const nAr = newAr.trim() || null;
+    const nEn = newEn.trim() || null;
+    setFields((prev) =>
+      prev.map((f) =>
+        (f.section_ar ?? "") === oldAr && (f.section_en ?? "") === oldEn
+          ? { ...f, section_ar: nAr, section_en: nEn }
+          : f,
+      ),
+    );
+    await Promise.all(
+      affected.map((f) =>
+        supabase
+          .from("customer_field_definitions")
+          .update({ section_ar: nAr, section_en: nEn })
+          .eq("id", f.id),
+      ),
+    );
+    toast.success(ar ? "تم تحديث اسم القسم" : "Section renamed");
   }
 
-  function handleDragEnd(sectionName: string, e: DragEndEvent) {
+  async function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const secFields = sections.find((s) => s.name === sectionName)?.items ?? [];
-    const oldIdx = secFields.findIndex((f) => f.id === active.id);
-    const newIdx = secFields.findIndex((f) => f.id === over.id);
-    if (oldIdx < 0 || newIdx < 0) return;
-    const reordered = arrayMove(secFields, oldIdx, newIdx);
-    // Optimistic update local state
-    setFields((prev) => {
-      const others = prev.filter((f) => !secFields.includes(f));
-      return [...others, ...reordered.map((f, i) => ({ ...f, position: (i + 1) * 10 }))];
-    });
-    persistSectionOrder(reordered);
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const activeField = fields.find((f) => f.id === activeId);
+    if (!activeField) return;
+
+    let destAr: string | null;
+    let destEn: string | null;
+    let overField: FieldDef | undefined;
+
+    if (overId.startsWith("__sec:")) {
+      const sec = sections.find((s) => `__sec:${s.key}` === overId);
+      if (!sec) return;
+      destAr = sec.sectionAr || null;
+      destEn = sec.sectionEn || null;
+    } else {
+      overField = fields.find((f) => f.id === overId);
+      if (!overField) return;
+      destAr = overField.section_ar;
+      destEn = overField.section_en;
+    }
+
+    const sameSection =
+      (activeField.section_ar ?? "") === (destAr ?? "") &&
+      (activeField.section_en ?? "") === (destEn ?? "");
+
+    setSavingLayout(true);
+    if (sameSection && overField) {
+      const secItems = fields
+        .filter(
+          (f) =>
+            (f.section_ar ?? "") === (destAr ?? "") &&
+            (f.section_en ?? "") === (destEn ?? ""),
+        )
+        .sort((a, b) => a.position - b.position);
+      const oldIdx = secItems.findIndex((f) => f.id === activeId);
+      const newIdx = secItems.findIndex((f) => f.id === overId);
+      if (oldIdx < 0 || newIdx < 0) { setSavingLayout(false); return; }
+      const reordered = arrayMove(secItems, oldIdx, newIdx).map((f, i) => ({ ...f, position: (i + 1) * 10 }));
+      setFields((prev) => {
+        const others = prev.filter((f) => !secItems.some((s) => s.id === f.id));
+        return [...others, ...reordered];
+      });
+      await Promise.all(
+        reordered.map((f) =>
+          supabase.from("customer_field_definitions").update({ position: f.position }).eq("id", f.id),
+        ),
+      );
+    } else {
+      // Move across sections
+      const destItems = fields
+        .filter(
+          (f) =>
+            (f.section_ar ?? "") === (destAr ?? "") &&
+            (f.section_en ?? "") === (destEn ?? "") &&
+            f.id !== activeId,
+        )
+        .sort((a, b) => a.position - b.position);
+      const insertAt = overField ? destItems.findIndex((f) => f.id === overField!.id) : destItems.length;
+      const idx = insertAt < 0 ? destItems.length : insertAt;
+      const movedActive = { ...activeField, section_ar: destAr, section_en: destEn };
+      const newDest = [...destItems.slice(0, idx), movedActive, ...destItems.slice(idx)]
+        .map((f, i) => ({ ...f, position: (i + 1) * 10 }));
+      setFields((prev) => {
+        const untouchedIds = new Set(newDest.map((f) => f.id));
+        return [...prev.filter((f) => !untouchedIds.has(f.id)), ...newDest];
+      });
+      await Promise.all(
+        newDest.map((f) =>
+          supabase
+            .from("customer_field_definitions")
+            .update(
+              f.id === activeField.id
+                ? { section_ar: destAr, section_en: destEn, position: f.position }
+                : { position: f.position },
+            )
+            .eq("id", f.id),
+        ),
+      );
+    }
+    setSavingLayout(false);
   }
 
   if (canManage === null) {
