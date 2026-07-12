@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2, ShieldAlert } from "lucide-react";
 import { useAccess, type NotifCategory } from "@/hooks/useAccess";
 
 export const Route = createFileRoute("/_authenticated/settings/notifications")({
