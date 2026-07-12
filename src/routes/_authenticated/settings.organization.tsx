@@ -132,6 +132,57 @@ function OrganizationPage() {
 
   const closeInspector = () => { setSelected(null); setDraft(null); };
 
+  // Check if targetId is a descendant of sourceId (to prevent cycles)
+  const isDescendant = useCallback((sourceId: string, targetId: string): boolean => {
+    if (sourceId === targetId) return true;
+    const target = depts.find((d) => d.id === targetId);
+    if (!target?.parent_id) return false;
+    return isDescendant(sourceId, target.parent_id);
+  }, [depts]);
+
+  // Move a department: reparent and/or reorder within a parent
+  const moveDept = useCallback(async (
+    sourceId: string,
+    newParentId: string | null,
+    insertBeforeId: string | null = null,
+  ) => {
+    const source = depts.find((d) => d.id === sourceId);
+    if (!source) return;
+    if (newParentId && isDescendant(sourceId, newParentId)) {
+      toast.error(ar ? "لا يمكن نقل إدارة داخل إحدى إداراتها الفرعية" : "Cannot move a department into its own descendant");
+      return;
+    }
+    // Build new sibling order for the target parent
+    const siblings = depts
+      .filter((d) => (d.parent_id ?? null) === newParentId && d.id !== sourceId)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const insertIdx = insertBeforeId ? siblings.findIndex((s) => s.id === insertBeforeId) : siblings.length;
+    const ordered = [...siblings];
+    ordered.splice(insertIdx < 0 ? ordered.length : insertIdx, 0, source);
+
+    // Persist: update parent_id + positions in bulk
+    const updates = ordered.map((d, idx) => ({
+      id: d.id,
+      parent_id: d.id === sourceId ? newParentId : d.parent_id,
+      position: idx + 1,
+    }));
+    // Optimistic UI
+    setDepts((prev) => prev.map((d) => {
+      const u = updates.find((x) => x.id === d.id);
+      return u ? { ...d, parent_id: u.parent_id ?? null, position: u.position } : d;
+    }));
+    // Persist row-by-row (small trees, safe & simple)
+    const results = await Promise.all(
+      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
+    );
+    const err = results.find((r) => r.error)?.error;
+    if (err) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
+      await load();
+    }
+  }, [depts, isDescendant, ar, load]);
+
+
   const chartRef = useRef<HTMLDivElement | null>(null);
   const downloadChart = async () => {
     if (!chartRef.current) return;
@@ -318,6 +369,12 @@ function OrganizationPage() {
               {ar ? "مسمى جديد" : "New job title"}
             </Button>
           </div>
+          <p className="mb-2 text-[11px] text-muted-foreground flex items-center gap-1">
+            <Info className="h-3 w-3" />
+            {ar
+              ? "اسحب أي إدارة وأفلتها فوق إدارة أخرى لجعلها فرعية، أو على الحافة اليسرى لإعادة الترتيب."
+              : "Drag a department onto another to nest it, or onto its left edge to reorder."}
+          </p>
 
           {loading ? (
             <div className="py-16 text-center text-sm text-muted-foreground">
@@ -352,6 +409,8 @@ function OrganizationPage() {
                     onAddDept={addDept}
                     onAddJob={addJob}
                     onDelete={remove}
+                    onMove={moveDept}
+                    parentId={null}
                   />
                 ))}
 
@@ -442,7 +501,7 @@ function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string
 /* --------------------------------- DEPT CARD -------------------------------- */
 
 function DeptCard({
-  dept, depth, depts, jobs, memberCounts, lang, query, selected, onSelect, onAddDept, onAddJob, onDelete,
+  dept, depth, depts, jobs, memberCounts, lang, query, selected, onSelect, onAddDept, onAddJob, onDelete, onMove, parentId,
 }: {
   dept: Department;
   depth: number;
@@ -456,14 +515,18 @@ function DeptCard({
   onAddDept: (parentId: string | null) => void;
   onAddJob: (deptId: string | null) => void;
   onDelete: (id: string, kind: "department" | "job_title") => void;
+  onMove: (sourceId: string, newParentId: string | null, insertBeforeId?: string | null) => void;
+  parentId: string | null;
 }) {
   const ar = lang === "ar";
   const color = dept.color || "#3b6fa0";
-  const children = depts.filter((c) => c.parent_id === dept.id);
+  const children = depts.filter((c) => c.parent_id === dept.id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const deptJobs = jobs.filter((j) => j.department_id === dept.id);
   const isSelected = selected?.id === dept.id && selected.kind === "department";
   const label = pick(dept, lang);
   const members = memberCounts[dept.id] || 0;
+  const [dropMode, setDropMode] = useState<null | "child" | "before">(null);
+
 
   const q = query;
   const matchesDeep = !q || (() => {
@@ -475,14 +538,46 @@ function DeptCard({
   if (!matchesDeep) return null;
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div
+      className="relative flex flex-col items-center gap-4"
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("text/dept-id")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "move";
+        const rect = e.currentTarget.getBoundingClientRect();
+        const relX = e.clientX - rect.left;
+        setDropMode(relX < rect.width * 0.25 ? "before" : "child");
+      }}
+      onDragLeave={(e) => { e.stopPropagation(); setDropMode(null); }}
+      onDrop={(e) => {
+        const sourceId = e.dataTransfer.getData("text/dept-id");
+        setDropMode(null);
+        if (!sourceId || sourceId === dept.id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (dropMode === "before") {
+          onMove(sourceId, parentId, dept.id);
+        } else {
+          onMove(sourceId, dept.id, null);
+        }
+      }}
+    >
+      {dropMode === "before" && (
+        <div className="absolute -start-1 top-0 bottom-0 w-1 rounded bg-primary" />
+      )}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            className={`group relative flex flex-col items-center gap-2 outline-none ${
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("text/dept-id", dept.id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            className={`group relative flex flex-col items-center gap-2 outline-none cursor-grab active:cursor-grabbing ${
               isSelected ? "text-primary" : "text-foreground"
-            }`}
+            } ${dropMode === "child" ? "scale-105" : ""}`}
             onClick={() => onSelect(dept.id, "department")}
             onDoubleClick={() => onSelect(dept.id, "department")}
           >
@@ -493,7 +588,9 @@ function DeptCard({
                   : depth === 1
                   ? "h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12"
                   : "h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10"
-              } ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+              } ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""} ${
+                dropMode === "child" ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
               style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
               <Building2 className={
@@ -588,6 +685,8 @@ function DeptCard({
               onAddDept={onAddDept}
               onAddJob={onAddJob}
               onDelete={onDelete}
+              onMove={onMove}
+              parentId={dept.id}
             />
           ))}
         </div>
