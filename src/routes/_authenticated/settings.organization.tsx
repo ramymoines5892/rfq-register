@@ -132,6 +132,57 @@ function OrganizationPage() {
 
   const closeInspector = () => { setSelected(null); setDraft(null); };
 
+  // Check if targetId is a descendant of sourceId (to prevent cycles)
+  const isDescendant = useCallback((sourceId: string, targetId: string): boolean => {
+    if (sourceId === targetId) return true;
+    const target = depts.find((d) => d.id === targetId);
+    if (!target?.parent_id) return false;
+    return isDescendant(sourceId, target.parent_id);
+  }, [depts]);
+
+  // Move a department: reparent and/or reorder within a parent
+  const moveDept = useCallback(async (
+    sourceId: string,
+    newParentId: string | null,
+    insertBeforeId: string | null = null,
+  ) => {
+    const source = depts.find((d) => d.id === sourceId);
+    if (!source) return;
+    if (newParentId && isDescendant(sourceId, newParentId)) {
+      toast.error(ar ? "لا يمكن نقل إدارة داخل إحدى إداراتها الفرعية" : "Cannot move a department into its own descendant");
+      return;
+    }
+    // Build new sibling order for the target parent
+    const siblings = depts
+      .filter((d) => (d.parent_id ?? null) === newParentId && d.id !== sourceId)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const insertIdx = insertBeforeId ? siblings.findIndex((s) => s.id === insertBeforeId) : siblings.length;
+    const ordered = [...siblings];
+    ordered.splice(insertIdx < 0 ? ordered.length : insertIdx, 0, source);
+
+    // Persist: update parent_id + positions in bulk
+    const updates = ordered.map((d, idx) => ({
+      id: d.id,
+      parent_id: d.id === sourceId ? newParentId : d.parent_id,
+      position: idx + 1,
+    }));
+    // Optimistic UI
+    setDepts((prev) => prev.map((d) => {
+      const u = updates.find((x) => x.id === d.id);
+      return u ? { ...d, parent_id: u.parent_id ?? null, position: u.position } : d;
+    }));
+    // Persist row-by-row (small trees, safe & simple)
+    const results = await Promise.all(
+      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
+    );
+    const err = results.find((r) => r.error)?.error;
+    if (err) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
+      await load();
+    }
+  }, [depts, isDescendant, ar, load]);
+
+
   const chartRef = useRef<HTMLDivElement | null>(null);
   const downloadChart = async () => {
     if (!chartRef.current) return;
