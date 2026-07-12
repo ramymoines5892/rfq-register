@@ -527,6 +527,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 
 function DepartmentsTab({ departments, profiles, onChanged }: { departments: Department[]; profiles: Profile[]; onChanged: () => void }) {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [nameAr, setNameAr] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [managerId, setManagerId] = useState<string>("none");
