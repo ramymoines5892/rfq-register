@@ -414,8 +414,10 @@ function OrganizationPage() {
                   />
                 ))}
 
+              </div>
+
               {unassignedJobs.length > 0 && (
-                <div className="rounded-xl border border-dashed p-3 md:col-span-2">
+                <div className="mt-4 rounded-xl border border-dashed p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
@@ -438,7 +440,6 @@ function OrganizationPage() {
                   </div>
                 </div>
               )}
-              </div>
             </TooltipProvider>
           )}
         </CardContent>
