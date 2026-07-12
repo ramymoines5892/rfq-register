@@ -30,36 +30,45 @@ export type OrgNodeData = {
 function DeptNode({ data, selected }: NodeProps) {
   const d = data as unknown as OrgNodeData;
   const color = d.color || "#3b6fa0";
+  const Icon = d.kind === "department" ? Building2 : Briefcase;
   return (
     <div
-      className={`group rounded-xl bg-card shadow-sm border-2 transition-all ${
+      className={`group relative rounded-lg bg-card shadow-sm border-2 transition-all hover:shadow-md hover:-translate-y-0.5 ${
         selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
       }`}
-      style={{ borderColor: color, width: 240 }}
+      style={{ borderColor: color, width: 140 }}
     >
       <Handle type="target" position={Position.Top} className="!w-2 !h-2 !bg-muted-foreground/40 !border-0" />
-      <div className="px-3 py-2 flex items-center gap-2 rounded-t-[10px]" style={{ backgroundColor: `${color}15` }}>
-        {d.kind === "department" ? (
-          <Building2 className="h-4 w-4 shrink-0" style={{ color }} />
-        ) : (
-          <Briefcase className="h-4 w-4 shrink-0" style={{ color }} />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold truncate">{d.label}</div>
-          {d.code && <div className="text-[10px] font-mono uppercase text-muted-foreground truncate">{d.code}</div>}
-        </div>
+      <div className="px-2 py-1.5 flex items-center gap-1.5 rounded-md" style={{ backgroundColor: `${color}15` }}>
+        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
+        <div className="text-xs font-semibold truncate flex-1">{d.label}</div>
       </div>
-      {d.kind === "department" && (
-        <div className="px-3 py-1.5 flex items-center gap-3 text-[11px] text-muted-foreground border-t">
-          <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{d.childCount ?? 0}</span>
-          <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{d.jobCount ?? 0}</span>
-          <span className="flex items-center gap-1"><Users className="h-3 w-3" />{d.memberCount ?? 0}</span>
+
+      {/* Hover details popover */}
+      <div
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-56 rounded-lg border bg-popover text-popover-foreground shadow-lg"
+        style={{ borderColor: color }}
+      >
+        <div className="px-3 py-2 border-b flex items-center gap-2" style={{ backgroundColor: `${color}15` }}>
+          <Icon className="h-4 w-4 shrink-0" style={{ color }} />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold truncate">{d.label}</div>
+            {d.code && <div className="text-[10px] font-mono uppercase text-muted-foreground truncate">{d.code}</div>}
+          </div>
         </div>
-      )}
+        {d.kind === "department" && (
+          <div className="px-3 py-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{d.childCount ?? 0}</span>
+            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{d.jobCount ?? 0}</span>
+            <span className="flex items-center gap-1"><Users className="h-3 w-3" />{d.memberCount ?? 0}</span>
+          </div>
+        )}
+      </div>
       <Handle type="source" position={Position.Bottom} className="!w-2 !h-2 !bg-muted-foreground/40 !border-0" />
     </div>
   );
 }
+
 
 const nodeTypes = { org: DeptNode };
 
