@@ -677,8 +677,7 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
     e.preventDefault();
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
+      const uid = await getCurrentUserId();
       if (!uid) throw new Error("Not authenticated");
 
       const payload = {
@@ -697,23 +696,15 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
 
       let quoteId: string;
       if (quote) {
-        const { error } = await supabase.from("quotes").update(payload).eq("id", quote.id);
+        const { error } = await updateQuote(quote.id, payload);
         if (error) throw error;
         quoteId = quote.id;
       } else {
-        const { data, error } = await supabase.from("quotes").insert({ ...payload, user_id: uid }).select("id").single();
-        if (error) throw error;
-        quoteId = data.id;
+        quoteId = await insertQuote(payload, uid);
       }
 
       for (const f of files) {
-        const path = `${uid}/${quoteId}/${Date.now()}-${f.name}`;
-        const { error: upErr } = await supabase.storage.from("quote-attachments").upload(path, f);
-        if (upErr) throw upErr;
-        const { error: aErr } = await supabase.from("quote_attachments").insert({
-          quote_id: quoteId, user_id: uid, file_name: f.name, storage_path: path, mime_type: f.type, size_bytes: f.size,
-        });
-        if (aErr) throw aErr;
+        await uploadQuoteAttachment(uid, quoteId, f);
       }
 
       toast.success(lang === "ar" ? "تم الحفظ" : "Saved");
@@ -727,13 +718,10 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
   }
 
   async function removeAttachment(a: Attachment) {
-    const { data: u } = await supabase.auth.getUser();
-    await supabase.from("quote_attachments").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", a.id);
+    await softDeleteAttachment(a.id);
     setExistingAttachments(prev => prev.filter(x => x.id !== a.id));
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
