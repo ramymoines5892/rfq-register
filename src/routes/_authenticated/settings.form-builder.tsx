@@ -476,6 +476,7 @@ function FormBuilderPage() {
               onToggleActive={toggleActive}
               onDelete={removeField}
               onRenameSection={renameSection}
+              onDeleteSection={deleteSection}
             />
           )}
         </div>
