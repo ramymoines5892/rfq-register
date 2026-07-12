@@ -506,6 +506,26 @@ function pick(row: { name_ar?: string | null; name_en?: string | null; name: str
   return row.name_en || row.name;
 }
 
+// Flatten departments in hierarchical order (parent → children), sorted by position at each level.
+function flattenDeptsHierarchy(all: Department[]): Array<{ dept: Department; depth: number }> {
+  const byParent = new Map<string | null, Department[]>();
+  all.forEach((d) => {
+    const k = d.parent_id ?? null;
+    if (!byParent.has(k)) byParent.set(k, []);
+    byParent.get(k)!.push(d);
+  });
+  byParent.forEach((arr) => arr.sort((a, b) => (a.position ?? 0) - (b.position ?? 0)));
+  const out: Array<{ dept: Department; depth: number }> = [];
+  const walk = (parent: string | null, depth: number) => {
+    (byParent.get(parent) || []).forEach((d) => {
+      out.push({ dept: d, depth });
+      walk(d.id, depth + 1);
+    });
+  };
+  walk(null, 0);
+  return out;
+}
+
 function deepMatchesDept(
   d: Department,
   allDepts: Department[],
