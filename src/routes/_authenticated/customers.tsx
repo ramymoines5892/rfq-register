@@ -623,6 +623,30 @@ function CustomerSheet({
           const { error: be } = await supabase.from("customer_banks").insert(rows);
           if (be) toast.error(be.message);
         }
+        if (draftAttachments.length > 0) {
+          for (const a of draftAttachments) {
+            const safeName = a.file.name.replace(/[^\w.\-]+/g, "_");
+            const path = `${uid}/${newId}/${crypto.randomUUID()}_${safeName}`;
+            const { error: upErr } = await supabase.storage
+              .from(ATTACHMENT_BUCKET)
+              .upload(path, a.file, { contentType: a.file.type });
+            if (upErr) {
+              toast.error(upErr.message);
+              continue;
+            }
+            const { error: insErr } = await supabase.from("customer_attachments").insert({
+              customer_id: newId,
+              user_id: uid,
+              category: a.category,
+              label: a.category === "other" ? a.label : null,
+              file_path: path,
+              file_name: a.file.name,
+              mime_type: a.file.type || null,
+              size_bytes: a.file.size,
+            });
+            if (insErr) toast.error(insErr.message);
+          }
+        }
       }
       toast.success(t("customerSaved"));
       onOpenChange(false);
