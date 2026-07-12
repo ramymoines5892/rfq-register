@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
@@ -150,12 +151,28 @@ function FormBuilderPage() {
     }));
   }, [fields, ar, extraSections]);
 
-  function addSection() {
-    const nAr = window.prompt(ar ? "اسم القسم بالعربي:" : "Section name (AR):", "")?.trim() ?? "";
-    const nEn = window.prompt(ar ? "اسم القسم بالإنجليزي:" : "Section name (EN):", "")?.trim() ?? "";
-    if (!nAr && !nEn) return;
+  const [newSectionOpen, setNewSectionOpen] = useState(false);
+  const [newSectionAr, setNewSectionAr] = useState("");
+  const [newSectionEn, setNewSectionEn] = useState("");
+
+  function submitNewSection() {
+    const nAr = newSectionAr.trim();
+    const nEn = newSectionEn.trim();
+    if (!nAr && !nEn) {
+      toast.error(ar ? "اكتب اسم واحد على الأقل" : "Enter at least one name");
+      return;
+    }
+    const displayKey = (ar ? nAr : nEn) || nAr || nEn;
+    if (sections.some((s) => s.key === displayKey)) {
+      toast.error(ar ? "فيه قسم بنفس الاسم" : "A section with this name already exists");
+      return;
+    }
     setExtraSections((prev) => [...prev, { sectionAr: nAr, sectionEn: nEn }]);
+    setNewSectionAr("");
+    setNewSectionEn("");
+    setNewSectionOpen(false);
   }
+
 
 
 
@@ -439,7 +456,7 @@ function FormBuilderPage() {
           <Button size="sm" disabled={!dirty || saving} onClick={saveAll}>
             <Save className="h-4 w-4 me-1" /> {saving ? (ar ? "حفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}
           </Button>
-          <Button size="sm" variant="outline" onClick={addSection}>
+          <Button size="sm" variant="outline" onClick={() => setNewSectionOpen(true)}>
             <Plus className="h-4 w-4 me-1" /> {ar ? "قسم جديد" : "New Section"}
           </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDrawerOpen(true); }}>
@@ -487,6 +504,50 @@ function FormBuilderPage() {
         )}
       </div>
 
+
+      <Dialog open={newSectionOpen} onOpenChange={setNewSectionOpen}>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{ar ? "قسم جديد" : "New Section"}</DialogTitle>
+            <DialogDescription className="text-xs">
+              {ar
+                ? "اكتب اسم القسم بالعربي والإنجليزي، وبعدين اسحب الحقول جواه. مش هيتحفظ إلا لما تدوس «حفظ»."
+                : "Enter AR/EN names, then drag fields into it. It's not persisted until you press Save."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div>
+              <Label className="text-xs">{ar ? "الاسم بالعربي" : "Name (AR)"}</Label>
+              <Input
+                dir="rtl"
+                value={newSectionAr}
+                onChange={(e) => setNewSectionAr(e.target.value)}
+                placeholder={ar ? "مثلاً: بيانات الدفع" : "مثلاً: بيانات الدفع"}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") submitNewSection(); }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">{ar ? "الاسم بالإنجليزي" : "Name (EN)"}</Label>
+              <Input
+                dir="ltr"
+                value={newSectionEn}
+                onChange={(e) => setNewSectionEn(e.target.value)}
+                placeholder="e.g. Payment Info"
+                onKeyDown={(e) => { if (e.key === "Enter") submitNewSection(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setNewSectionOpen(false)}>
+              {ar ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button onClick={submitNewSection}>
+              <Plus className="h-4 w-4 me-1" /> {ar ? "إضافة" : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <FieldEditor
         open={drawerOpen}
