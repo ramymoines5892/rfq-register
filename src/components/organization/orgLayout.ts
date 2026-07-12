@@ -1,10 +1,10 @@
 import dagre from "dagre";
-import type { Node, Edge } from "@xyflow/react";
+import { Position, type Node, type Edge } from "@xyflow/react";
 
 const NODE_W = 240;
 const NODE_H = 96;
 
-export function layoutTree(nodes: Node[], edges: Edge[], direction: "TB" | "LR" = "TB") {
+export function layoutTree(nodes: Node[], edges: Edge[], direction: "TB" | "LR" = "TB"): Node[] {
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: direction, nodesep: 40, ranksep: 60, marginx: 20, marginy: 20 });
@@ -19,8 +19,9 @@ export function layoutTree(nodes: Node[], edges: Edge[], direction: "TB" | "LR" 
     return {
       ...n,
       position: { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 },
-      targetPosition: (direction === "TB" ? "top" : "left") as "top" | "left",
-      sourcePosition: (direction === "TB" ? "bottom" : "right") as "bottom" | "right",
+      targetPosition: direction === "TB" ? Position.Top : Position.Left,
+      sourcePosition: direction === "TB" ? Position.Bottom : Position.Right,
     };
   });
 }
+
