@@ -257,7 +257,7 @@ function OrganizationPage() {
   const deptMatches = (d: Department) => matches(pick(d, lang)) || matches(d.code || "");
   const jobMatches = (j: JobTitle) => matches(pick(j, lang)) || matches(j.code || "");
 
-  const rootDepts = depts.filter((d) => !d.parent_id);
+  const rootDepts = depts.filter((d) => !d.parent_id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const unassignedJobs = jobs.filter((j) => !j.department_id);
 
   const totalDepts = depts.length;
