@@ -100,6 +100,28 @@ function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [tab, setTab] = useState<"mine" | "pending">("mine");
+  const [kpiOrder, setKpiOrder] = useState<string[]>(["count", "value", "expiring"]);
+  const [kpiEditing, setKpiEditing] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("dashboard.kpi.order.v1");
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        const defaults = ["count", "value", "expiring"];
+        const missing = defaults.filter((x) => !arr.includes(x));
+        setKpiOrder([...arr.filter((x) => defaults.includes(x)), ...missing]);
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("dashboard.kpi.order.v1", JSON.stringify(kpiOrder));
+  }, [kpiOrder]);
+
+  const kpiSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); });
