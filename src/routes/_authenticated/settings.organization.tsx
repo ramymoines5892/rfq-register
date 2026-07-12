@@ -693,7 +693,7 @@ function DeptCard({
               const isLast = i === children.length - 1;
               const only = children.length === 1;
               return (
-                <div key={c.id} className="relative pt-6">
+                <div key={c.id} className="relative pt-6 flex-1 basis-0 flex flex-col items-center min-w-[80px]">
                   {/* horizontal bus segment (half for edges, full for middle, none if only child) */}
                   {!only && (
                     <div
