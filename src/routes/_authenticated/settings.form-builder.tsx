@@ -321,13 +321,17 @@ function FormBuilderPage() {
       <div className="flex flex-wrap items-center gap-3">
         <LayoutGrid className="h-5 w-5 text-primary" />
         <h2 className="text-xl font-bold">{ar ? "منشئ الحقول" : "Form Builder"}</h2>
-        {savingLayout && (
-          <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-            <Save className="h-3 w-3 animate-pulse" /> {ar ? "حفظ..." : "Saving..."}
-          </span>
+        {dirty && (
+          <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600 gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            {ar ? "تغييرات غير محفوظة" : "Unsaved changes"}
+          </Badge>
         )}
         <div className="ms-auto flex items-center gap-2">
-          <Select value={entity} onValueChange={setEntity}>
+          <Select value={entity} onValueChange={(v) => {
+            if (dirty && !confirm(ar ? "فيه تغييرات غير محفوظة. متأكد؟" : "You have unsaved changes. Continue?")) return;
+            setEntity(v);
+          }}>
             <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {ENTITIES.map((e) => (
@@ -335,6 +339,15 @@ function FormBuilderPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button size="sm" variant="outline" onClick={() => setShowPreview((v) => !v)}>
+            <Sparkles className="h-4 w-4 me-1" /> {showPreview ? (ar ? "إخفاء المعاينة" : "Hide Preview") : (ar ? "معاينة" : "Preview")}
+          </Button>
+          <Button size="sm" variant="outline" disabled={!dirty || saving} onClick={discardChanges}>
+            <Undo2 className="h-4 w-4 me-1" /> {ar ? "تراجع" : "Discard"}
+          </Button>
+          <Button size="sm" disabled={!dirty || saving} onClick={saveAll}>
+            <Save className="h-4 w-4 me-1" /> {saving ? (ar ? "حفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}
+          </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDrawerOpen(true); }}>
             <Plus className="h-4 w-4 me-1" /> {ar ? "حقل جديد" : "New Field"}
           </Button>
@@ -345,30 +358,40 @@ function FormBuilderPage() {
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           {ar
-            ? "اسحب الحقل من المقبض لأي مكان — نفس القسم أو قسم تاني. عدّل عرض الحقل من 3 لـ 12، ولو مجموع العرض في السطر عدّى 12 هيلف تلقائياً لسطر جديد. اضغط علامة القلم جنب اسم القسم عشان تغيّره."
-            : "Drag any field anywhere — same section or another. Widths 3–12; when a row fills past 12, fields wrap to a new row automatically. Click the pencil next to a section title to rename it."}
+            ? "اسحب أي حقل لأي قسم (حتى القسم الفاضي). التعديلات مش بتتحفظ لحد ما تضغط «حفظ». المعاينة اللايف على اليمين بتوريك شكل الشاشة النهائي."
+            : "Drag any field into any section (including empty ones). Changes are NOT saved until you press Save. The live preview on the right shows the final form."}
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center py-16 text-muted-foreground">{ar ? "تحميل..." : "Loading..."}</div>
-      ) : fields.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-muted-foreground">
-          {ar ? "لا توجد حقول بعد. أضف أول حقل." : "No fields yet. Add your first."}
-        </CardContent></Card>
-      ) : (
-        <BuilderCanvas
-          sections={sections}
-          optionsByField={optionsByField}
-          ar={ar}
-          onDragEnd={handleDragEnd}
-          onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
-          onColSpan={updateColSpan}
-          onToggleActive={toggleActive}
-          onDelete={removeField}
-          onRenameSection={renameSection}
-        />
-      )}
+      <div className={`grid gap-4 ${showPreview ? "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : "grid-cols-1"}`}>
+        <div>
+          {loading ? (
+            <div className="text-center py-16 text-muted-foreground">{ar ? "تحميل..." : "Loading..."}</div>
+          ) : fields.length === 0 ? (
+            <Card><CardContent className="p-8 text-center text-muted-foreground">
+              {ar ? "لا توجد حقول بعد. أضف أول حقل." : "No fields yet. Add your first."}
+            </CardContent></Card>
+          ) : (
+            <BuilderCanvas
+              sections={sections}
+              optionsByField={optionsByField}
+              ar={ar}
+              onDragEnd={handleDragEnd}
+              onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
+              onColSpan={updateColSpan}
+              onToggleActive={toggleActive}
+              onDelete={removeField}
+              onRenameSection={renameSection}
+            />
+          )}
+        </div>
+        {showPreview && !loading && fields.length > 0 && (
+          <div className="lg:sticky lg:top-4 lg:self-start">
+            <LivePreview sections={sections} optionsByField={optionsByField} ar={ar} />
+          </div>
+        )}
+      </div>
+
 
       <FieldEditor
         open={drawerOpen}
