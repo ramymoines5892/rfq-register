@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAccess } from "@/hooks/useAccess";
-import { useCustomers, useSoftDeleteCustomer } from "@/features/customers/queries";
+import { useCustomers, useCustomerRelations, useSoftDeleteCustomer } from "@/features/customers/queries";
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
