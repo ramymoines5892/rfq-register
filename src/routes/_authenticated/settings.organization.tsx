@@ -314,7 +314,7 @@ function TreeView({
 
   const matches = (text: string) => !query || text.toLowerCase().includes(query);
 
-  const renderDept = (d: Department, depth: number): JSX.Element | null => {
+  const renderDept = (d: Department, depth: number): React.ReactNode => {
     const label = pick(d, lang);
     const children = depts.filter((c) => c.parent_id === d.id);
     const deptJobs = jobs.filter((j) => j.department_id === d.id);
