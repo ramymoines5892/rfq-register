@@ -247,8 +247,10 @@ export type Database = {
       }
       customer_field_definitions: {
         Row: {
+          col_span: number
           created_at: string
           created_by: string | null
+          entity_key: string
           field_type: Database["public"]["Enums"]["customer_field_type"]
           help_text_ar: string | null
           help_text_en: string | null
@@ -262,14 +264,17 @@ export type Database = {
           placeholder_ar: string | null
           placeholder_en: string | null
           position: number
+          row_index: number
           section_ar: string | null
           section_en: string | null
           updated_at: string
           validation_rules: Json
         }
         Insert: {
+          col_span?: number
           created_at?: string
           created_by?: string | null
+          entity_key?: string
           field_type: Database["public"]["Enums"]["customer_field_type"]
           help_text_ar?: string | null
           help_text_en?: string | null
@@ -283,14 +288,17 @@ export type Database = {
           placeholder_ar?: string | null
           placeholder_en?: string | null
           position?: number
+          row_index?: number
           section_ar?: string | null
           section_en?: string | null
           updated_at?: string
           validation_rules?: Json
         }
         Update: {
+          col_span?: number
           created_at?: string
           created_by?: string | null
+          entity_key?: string
           field_type?: Database["public"]["Enums"]["customer_field_type"]
           help_text_ar?: string | null
           help_text_en?: string | null
@@ -304,6 +312,7 @@ export type Database = {
           placeholder_ar?: string | null
           placeholder_en?: string | null
           position?: number
+          row_index?: number
           section_ar?: string | null
           section_en?: string | null
           updated_at?: string
@@ -1130,6 +1139,7 @@ export type Database = {
         | "templates.manage"
         | "notifications.view"
         | "manage_customer_fields"
+        | "manage_form_fields"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
       customer_attachment_category:
@@ -1308,6 +1318,7 @@ export const Constants = {
         "templates.manage",
         "notifications.view",
         "manage_customer_fields",
+        "manage_form_fields",
       ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
