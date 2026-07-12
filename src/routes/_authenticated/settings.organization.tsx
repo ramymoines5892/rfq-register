@@ -347,7 +347,7 @@ function OrganizationPage() {
                   </div>
                 ) : (
                   <div ref={chartRef}>
-                    <OrgChartImage departments={depts} jobs={jobs} lang={ar ? "ar" : "en"} />
+                    <OrgChartImage departments={depts} jobs={jobs} memberCounts={memberCounts} lang={ar ? "ar" : "en"} />
                   </div>
                 )}
               </div>
