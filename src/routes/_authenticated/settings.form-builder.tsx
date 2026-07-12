@@ -1016,13 +1016,21 @@ function FieldEditor({
 
           <div>
             <Label>{ar ? "نوع الحقل" : "Field Type"}</Label>
-            <Select value={fieldType} onValueChange={(v) => setFieldType(v as FieldType)} disabled={isSystem}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {FIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{ar ? t.ar : t.en}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {isReferenceField(editing) ? (
+              <div className="flex items-center gap-2 rounded border bg-muted/50 px-3 py-2 text-sm">
+                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{ar ? REFERENCE_FIELDS[editing!.key].ar : REFERENCE_FIELDS[editing!.key].en}</span>
+              </div>
+            ) : (
+              <Select value={fieldType} onValueChange={(v) => setFieldType(v as FieldType)} disabled={isSystem}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{ar ? t.ar : t.en}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
+
 
           <div>
             <Label>{ar ? "العرض (بالأعمدة من 12)" : "Width (columns of 12)"}</Label>
