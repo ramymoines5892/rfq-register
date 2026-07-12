@@ -34,28 +34,31 @@ function DeptNode({ data, selected }: NodeProps) {
   const Icon = d.kind === "department" ? Building2 : Briefcase;
   return (
     <div
-      className="group relative transition-all hover:z-10"
-      style={{ width: 56, height: 72 }}
+      className="group relative"
+      style={{ width: 110, height: 78 }}
       title={d.label}
     >
       <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
-      <div className="flex flex-col items-center gap-1">
+      <div
+        className={`h-full w-full rounded-lg border bg-card shadow-sm flex flex-col items-center justify-center gap-1 px-2 transition-shadow hover:shadow-md ${
+          selected ? "ring-2 ring-primary ring-offset-1" : ""
+        }`}
+        style={{ borderTop: `3px solid ${color}` }}
+      >
         <div
-          className={`h-10 w-10 rounded-full flex items-center justify-center border-2 bg-card shadow-sm transition-transform group-hover:scale-110 ${
-            selected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
-          }`}
-          style={{ borderColor: color, backgroundColor: `${color}18` }}
+          className="h-8 w-8 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: `${color}18` }}
         >
-          <Icon className="h-5 w-5" style={{ color }} />
+          <Icon className="h-4 w-4" style={{ color }} />
         </div>
-        <div className="text-center text-[10px] font-medium leading-tight max-w-[72px] truncate">
+        <div className="text-center text-[11px] font-medium leading-tight w-full truncate">
           {d.label}
         </div>
       </div>
 
       {/* Hover details popover */}
       <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-52 rounded-lg border bg-popover text-popover-foreground shadow-lg"
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-56 rounded-lg border bg-popover text-popover-foreground shadow-lg"
         style={{ borderColor: color }}
       >
         <div className="px-2.5 py-1.5 border-b flex items-center gap-2" style={{ backgroundColor: `${color}15` }}>
