@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,75 +9,56 @@ import { toast } from "sonner";
 import { ArrowLeft, Trash2, UserPlus } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import {
+  useProfiles,
+  useUserRoles,
+  useCurrentUserId,
+  useSetUserRole,
+  useRemoveFromTeam,
+} from "@/features/hr/queries";
+import type { AppRole } from "@/features/hr/api";
 
 export const Route = createFileRoute("/_authenticated/team")({
   component: TeamPage,
   head: () => ({ meta: [{ title: "إدارة الفريق" }] }),
 });
 
-type Profile = { id: string; email: string; full_name: string | null };
-type UserRole = { id: string; user_id: string; role: AppRole };
-
 function TeamPage() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const confirm = useConfirm();
-  const [me, setMe] = useState<string>("");
-  const [myRole, setMyRole] = useState<AppRole | null>(null);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: me = "" } = useCurrentUserId();
+  const { data: profiles = [], isLoading: loadingP } = useProfiles();
+  const { data: roles = [], isLoading: loadingR } = useUserRoles();
+  const setRoleMut = useSetUserRole();
+  const removeMut = useRemoveFromTeam();
   const [inviteEmail, setInviteEmail] = useState("");
 
+  const loading = loadingP || loadingR;
+  const mine = roles.find((r) => r.user_id === me);
+  const myRole = mine?.role ?? null;
   const canManage = myRole === "owner" || myRole === "admin";
-
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id ?? "";
-    setMe(uid);
-    const [{ data: rolesData }, { data: profs }] = await Promise.all([
-      supabase.from("user_roles").select("id, user_id, role"),
-      supabase.from("profiles").select("id, email, full_name"),
-    ]);
-    const rs = (rolesData ?? []) as UserRole[];
-    setRoles(rs);
-    setProfiles((profs ?? []) as Profile[]);
-    const mine = rs.find((r) => r.user_id === uid);
-    setMyRole(mine?.role ?? null);
-    setLoading(false);
-  }
 
   function rolesFor(uid: string): AppRole[] {
     return roles.filter((r) => r.user_id === uid).map((r) => r.role);
   }
 
   async function setRole(userId: string, newRole: AppRole) {
-    // Remove existing roles, add new one
-    const existing = roles.filter((r) => r.user_id === userId);
-    for (const r of existing) {
-      if (r.role !== newRole) {
-        await supabase.from("user_roles").delete().eq("id", r.id);
-      }
+    try {
+      await setRoleMut.mutateAsync({ userId, role: newRole });
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
     }
-    if (!existing.some((r) => r.role === newRole)) {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
-      if (error) { toast.error(error.message); return; }
-    }
-    toast.success(t("saved"));
-    load();
   }
 
   async function removeFromTeam(userId: string) {
     const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
     if (!ok) return;
-    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
-    if (error) { toast.error(error.message); return; }
-    load();
+    try {
+      await removeMut.mutateAsync(userId);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   async function addByEmail() {
