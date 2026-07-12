@@ -645,6 +645,8 @@ function DeptCard({
               onAddDept={onAddDept}
               onAddJob={onAddJob}
               onDelete={onDelete}
+              onMove={onMove}
+              parentId={dept.id}
             />
           ))}
         </div>
