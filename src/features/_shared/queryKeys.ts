@@ -50,4 +50,8 @@ export const qk = {
     list: (tableKey: string) => ["trash", "list", tableKey] as const,
     ownerCheck: () => ["trash", "owner"] as const,
   },
+  organization: {
+    all: ["organization"] as const,
+    data: () => ["organization", "data"] as const,
+  },
 } as const;

@@ -1,6 +1,5 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
 import { Button } from "@/components/ui/button";
@@ -25,12 +24,16 @@ import {
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import { DEPT_ICONS, getDeptIcon } from "@/lib/deptIcons";
 
-import type { Database } from "@/integrations/supabase/types";
+import {
+  useOrganizationData,
+  useReorderDepartments,
+  useSoftDeleteOrgRow,
+  useUpsertDepartment,
+  useUpsertJobTitle,
+} from "@/features/organization/queries";
+import type { Department, JobTitle, FieldDef, ProfileLite } from "@/features/organization/api";
 
-type Department = Database["public"]["Tables"]["departments"]["Row"];
-type JobTitle = Database["public"]["Tables"]["job_titles"]["Row"];
-type FieldDef = Database["public"]["Tables"]["customer_field_definitions"]["Row"];
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type Profile = ProfileLite;
 
 const DEPT_COLORS = [
   "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ec4899",
@@ -40,10 +43,6 @@ const DEPT_COLORS = [
 export const Route = createFileRoute("/_authenticated/settings/organization")({
   component: OrganizationPage,
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization" }] }),
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-  },
 });
 
 function OrganizationPage() {
@@ -55,7 +54,6 @@ function OrganizationPage() {
   const [jobs, setJobs] = useState<JobTitle[]>([]);
   const [customFields, setCustomFields] = useState<FieldDef[]>([]);
   const [profiles, setProfiles] = useState<Pick<Profile, "id" | "full_name" | "email" | "department_id">[]>([]);
-  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ id: string; kind: "department" | "job_title" } | null>(null);
   const [draft, setDraft] = useState<
@@ -64,28 +62,27 @@ function OrganizationPage() {
     | null
   >(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [d, j, f, p] = await Promise.all([
-      supabase.from("departments").select("*").is("deleted_at", null).order("position"),
-      supabase.from("job_titles").select("*").is("deleted_at", null).order("position"),
-      supabase
-        .from("customer_field_definitions")
-        .select("*")
-        .in("entity_key", ["department", "job_title"])
-        .is("deleted_at", null)
-        .eq("is_active", true)
-        .order("position"),
-      supabase.from("profiles").select("id, full_name, email, department_id"),
-    ]);
-    setDepts((d.data ?? []) as Department[]);
-    setJobs((j.data ?? []) as JobTitle[]);
-    setCustomFields((f.data ?? []) as FieldDef[]);
-    setProfiles(p.data ?? []);
-    setLoading(false);
-  }, []);
+  const { data: orgData, isLoading, refetch } = useOrganizationData();
+  const loading = isLoading;
 
-  useEffect(() => { load(); }, [load]);
+  // Sync remote data into local state (local state is used for optimistic reorder updates).
+  useEffect(() => {
+    if (!orgData) return;
+    setDepts(orgData.depts);
+    setJobs(orgData.jobs);
+    setCustomFields(orgData.customFields);
+    setProfiles(orgData.profiles);
+  }, [orgData]);
+
+  const load = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  const reorderMutation = useReorderDepartments();
+  const softDeleteMutation = useSoftDeleteOrgRow();
+  const upsertDeptMutation = useUpsertDepartment();
+  const upsertJobMutation = useUpsertJobTitle();
+
 
   const memberCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -175,16 +172,13 @@ function OrganizationPage() {
       const u = updates.find((x) => x.id === d.id);
       return u ? { ...d, parent_id: u.parent_id ?? null, position: u.position } : d;
     }));
-    // Persist row-by-row (small trees, safe & simple)
-    const results = await Promise.all(
-      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
-    );
-    const err = results.find((r) => r.error)?.error;
-    if (err) {
-      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
+    try {
+      await reorderMutation.mutateAsync(updates);
+    } catch (err: any) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err?.message });
       await load();
     }
-  }, [depts, isDescendant, ar, load]);
+  }, [depts, isDescendant, ar, load, reorderMutation]);
 
   // Promote a department to the top: it becomes the only root and adopts all
   // other current roots as its children.
@@ -204,17 +198,14 @@ function OrganizationPage() {
       const u = updates.find((x) => x.id === d.id);
       return u ? { ...d, parent_id: u.parent_id, position: u.position } : d;
     }));
-    const results = await Promise.all(
-      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
-    );
-    const err = results.find((r) => r.error)?.error;
-    if (err) {
-      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
-      await load();
-    } else {
+    try {
+      await reorderMutation.mutateAsync(updates);
       toast.success(ar ? "تم الرفع للأعلى" : "Promoted to top");
+    } catch (err: any) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err?.message });
+      await load();
     }
-  }, [depts, ar, load]);
+  }, [depts, ar, load, reorderMutation]);
 
 
 
@@ -279,12 +270,13 @@ function OrganizationPage() {
       variant: "destructive",
     });
     if (!ok) return;
-    const table = kind === "department" ? "departments" : "job_titles";
-    const { error } = await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq("id", id);
-    if (error) return toast.error(ar ? "تعذر الحذف" : "Failed", { description: error.message });
-    toast.success(ar ? "تم الحذف" : "Deleted");
-    if (selected?.id === id) closeInspector();
-    await load();
+    try {
+      await softDeleteMutation.mutateAsync({ id, kind });
+      toast.success(ar ? "تم الحذف" : "Deleted");
+      if (selected?.id === id) closeInspector();
+    } catch (err: any) {
+      toast.error(ar ? "تعذر الحذف" : "Failed", { description: err?.message });
+    }
   };
 
   const q = query.trim().toLowerCase();
@@ -885,40 +877,47 @@ function RecordEditor({
     ((record as any).metadata as Record<string, any>) || {}
   );
   const [saving, setSaving] = useState(false);
+  const upsertDept = useUpsertDepartment();
+  const upsertJob = useUpsertJobTitle();
 
   const save = async () => {
     if (!nameAr.trim() && !nameEn.trim()) {
       return toast.error(ar ? "الاسم مطلوب" : "Name is required");
     }
     setSaving(true);
-    if (isDept) {
-      const payload: any = {
-        name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
-        code: code || null, color, icon: icon || null, parent_id: parentId, phone: phone || null,
-        extension: extension || null, location: location || null, metadata,
-
-      };
-      if (isNew) payload.position = (record as any).position ?? 0;
-      const { error } = isNew
-        ? await supabase.from("departments").insert(payload)
-        : await supabase.from("departments").update(payload).eq("id", (record as Department).id);
+    try {
+      if (isDept) {
+        const payload: any = {
+          name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
+          code: code || null, color, icon: icon || null, parent_id: parentId, phone: phone || null,
+          extension: extension || null, location: location || null, metadata,
+        };
+        if (isNew) payload.position = (record as any).position ?? 0;
+        await upsertDept.mutateAsync({
+          isNew,
+          id: isNew ? undefined : (record as Department).id,
+          payload,
+        });
+      } else {
+        const payload: any = {
+          name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
+          code: code || null, level, department_id: departmentId, description: description || null, metadata,
+        };
+        if (isNew) payload.position = (record as any).position ?? 0;
+        await upsertJob.mutateAsync({
+          isNew,
+          id: isNew ? undefined : (record as JobTitle).id,
+          payload,
+        });
+      }
+      toast.success(isNew ? (ar ? "تم الإنشاء" : "Created") : (ar ? "تم الحفظ" : "Saved"));
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(ar ? "تعذر الحفظ" : "Failed", { description: err?.message });
+    } finally {
       setSaving(false);
-      if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
-    } else {
-      const payload: any = {
-        name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
-        code: code || null, level, department_id: departmentId, description: description || null, metadata,
-      };
-      if (isNew) payload.position = (record as any).position ?? 0;
-      const { error } = isNew
-        ? await supabase.from("job_titles").insert(payload)
-        : await supabase.from("job_titles").update(payload).eq("id", (record as JobTitle).id);
-      setSaving(false);
-      if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
     }
-    toast.success(isNew ? (ar ? "تم الإنشاء" : "Created") : (ar ? "تم الحفظ" : "Saved"));
-    onSaved();
-    onClose();
   };
 
   return (
