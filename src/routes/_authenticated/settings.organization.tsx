@@ -689,13 +689,14 @@ function DeptCard({
         <div className="relative pt-6">
           {/* vertical trunk from parent down to the horizontal bus */}
           <div className="absolute left-1/2 top-0 h-6 w-px bg-border -translate-x-1/2" />
-          <div className="flex flex-nowrap items-start justify-center gap-6">
+          <div className="flex flex-nowrap items-start justify-center gap-1 sm:gap-2">
             {children.map((c, i) => {
               const isFirst = i === 0;
               const isLast = i === children.length - 1;
               const only = children.length === 1;
               return (
-                <div key={c.id} className="relative pt-6 flex-1 basis-0 flex flex-col items-center min-w-[80px]">
+                <div key={c.id} className="relative pt-6 flex-1 basis-0 min-w-0 flex flex-col items-center">
+
                   {/* horizontal bus segment (half for edges, full for middle, none if only child) */}
                   {!only && (
                     <div
