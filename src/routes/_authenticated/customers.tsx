@@ -128,6 +128,61 @@ type Bank = {
 type DraftContact = Omit<Contact, "id" | "customer_id"> & { _key: string };
 type DraftBank = Omit<Bank, "id" | "customer_id"> & { _key: string };
 
+type AttachmentCategory = "company_profile" | "commercial_register" | "tax_card" | "bank_letter" | "other";
+
+type Attachment = {
+  id: string;
+  customer_id: string;
+  category: AttachmentCategory;
+  label: string | null;
+  file_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+};
+
+type DraftAttachment = {
+  _key: string;
+  file: File;
+  category: AttachmentCategory;
+  label: string | null;
+};
+
+const ATTACHMENT_BUCKET = "customer-attachments";
+const ATTACHMENT_CATEGORIES: AttachmentCategory[] = [
+  "company_profile",
+  "commercial_register",
+  "tax_card",
+  "bank_letter",
+  "other",
+];
+
+function attachmentCategoryLabel(cat: AttachmentCategory, lang: "ar" | "en") {
+  const ar: Record<AttachmentCategory, string> = {
+    company_profile: "بروفيل الشركة",
+    commercial_register: "السجل التجاري",
+    tax_card: "البطاقة الضريبية",
+    bank_letter: "خطاب البنوك",
+    other: "أخرى",
+  };
+  const en: Record<AttachmentCategory, string> = {
+    company_profile: "Company profile",
+    commercial_register: "Commercial register",
+    tax_card: "Tax card",
+    bank_letter: "Bank letter",
+    other: "Other",
+  };
+  return lang === "ar" ? ar[cat] : en[cat];
+}
+
+function formatBytes(n: number | null | undefined) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const CURRENCIES = ["EGP", "USD", "EUR", "SAR", "AED", "GBP"];
 
 function CustomersPage() {
