@@ -82,6 +82,17 @@ export function GlobalSearch() {
   const [hits, setHits] = useState<Hit[]>([]);
   const [recent, setRecent] = useState<{ link: string; title: string; entity: string; hits: number }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [aiMode, setAiMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("search.ai.enabled") === "1";
+  });
+  const runSemantic = useServerFn(semanticSearch);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("search.ai.enabled", aiMode ? "1" : "0");
+    }
+  }, [aiMode]);
 
   // Cmd/Ctrl+K + custom open event
   useEffect(() => {
