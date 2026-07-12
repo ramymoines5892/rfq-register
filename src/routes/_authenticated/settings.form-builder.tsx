@@ -841,7 +841,8 @@ function FieldEditor({
   const [colSpan, setColSpan] = useState<number>(12);
   const [validation, setValidation] = useState<{ minLength?: string; maxLength?: string; min?: string; max?: string; pattern?: string }>({});
   const [localOptions, setLocalOptions] = useState<{ id?: string; value: string; label_ar: string; label_en: string; is_active: boolean }[]>([]);
-  const [saving, setSaving] = useState(false);
+  const saveM = useSaveFieldDefinition(entityKey);
+  const saving = saveM.isPending;
 
   useEffect(() => {
     if (!open) return;
