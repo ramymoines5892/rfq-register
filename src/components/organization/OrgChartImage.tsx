@@ -31,13 +31,13 @@ export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChart
       ref={ref}
       dir={ar ? "rtl" : "ltr"}
       style={{
-        padding: 32,
+        padding: "clamp(16px, 3vw, 32px)",
         background: "#ffffff",
         fontFamily: ar
           ? "'Cairo', 'Tajawal', system-ui, sans-serif"
           : "system-ui, -apple-system, 'Segoe UI', sans-serif",
         color: "#0f172a",
-        minWidth: 640,
+        width: "100%",
       }}
     >
       <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -51,7 +51,7 @@ export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChart
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
         {roots.map((r) => (
           <TreeNode
             key={r.id}
@@ -98,7 +98,7 @@ function TreeNode({
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
       {/* Node card */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 100 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 80, flex: "1 1 0", maxWidth: 180 }}>
         <div
           style={{
             width: size,
@@ -211,7 +211,7 @@ function TreeNode({
               transform: "translateX(-50%)",
             }}
           />
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 8 }}>
             {children.map((c, i) => {
               const isFirst = i === 0;
               const isLast = i === children.length - 1;
@@ -225,6 +225,8 @@ function TreeNode({
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
+                    flex: "1 1 0",
+                    minWidth: 0,
                   }}
                 >
                   {/* Horizontal bus */}
