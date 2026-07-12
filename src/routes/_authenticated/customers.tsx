@@ -663,7 +663,7 @@ function CustomerSheet({
         const newId = (inserted as Customer).id;
         if (draftContacts.length > 0) {
           const rows = draftContacts.map((c) => {
-            const name = c.name_ar.trim() || c.name_en.trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
+            const name = (c.name_ar ?? "").trim() || (c.name_en ?? "").trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
             const title = c.title_ar?.trim() || c.title_en?.trim() || null;
             return {
               customer_id: newId,
