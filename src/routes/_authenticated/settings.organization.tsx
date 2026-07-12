@@ -21,6 +21,8 @@ import {
   LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye,
 } from "lucide-react";
 
+
+import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
