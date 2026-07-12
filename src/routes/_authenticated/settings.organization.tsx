@@ -63,28 +63,27 @@ function OrganizationPage() {
     | null
   >(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [d, j, f, p] = await Promise.all([
-      supabase.from("departments").select("*").is("deleted_at", null).order("position"),
-      supabase.from("job_titles").select("*").is("deleted_at", null).order("position"),
-      supabase
-        .from("customer_field_definitions")
-        .select("*")
-        .in("entity_key", ["department", "job_title"])
-        .is("deleted_at", null)
-        .eq("is_active", true)
-        .order("position"),
-      supabase.from("profiles").select("id, full_name, email, department_id"),
-    ]);
-    setDepts((d.data ?? []) as Department[]);
-    setJobs((j.data ?? []) as JobTitle[]);
-    setCustomFields((f.data ?? []) as FieldDef[]);
-    setProfiles(p.data ?? []);
-    setLoading(false);
-  }, []);
+  const { data: orgData, isLoading, refetch } = useOrganizationData();
+  const loading = isLoading;
 
-  useEffect(() => { load(); }, [load]);
+  // Sync remote data into local state (local state is used for optimistic reorder updates).
+  useEffect(() => {
+    if (!orgData) return;
+    setDepts(orgData.depts);
+    setJobs(orgData.jobs);
+    setCustomFields(orgData.customFields);
+    setProfiles(orgData.profiles);
+  }, [orgData]);
+
+  const load = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  const reorderMutation = useReorderDepartments();
+  const softDeleteMutation = useSoftDeleteOrgRow();
+  const upsertDeptMutation = useUpsertDepartment();
+  const upsertJobMutation = useUpsertJobTitle();
+
 
   const memberCounts = useMemo(() => {
     const m: Record<string, number> = {};
