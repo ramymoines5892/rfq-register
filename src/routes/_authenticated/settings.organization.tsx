@@ -306,17 +306,18 @@ function OrganizationPage() {
       </Card>
 
       {/* Inspector Sheet */}
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selected} onOpenChange={(o) => !o && closeInspector()}>
         <SheetContent side={ar ? "left" : "right"} className="w-full sm:max-w-md flex flex-col">
           {selected && selectedRecord && (
             <RecordEditor
               key={selected.id}
               kind={selected.kind}
               record={selectedRecord}
+              isNew={selected.id === "__new__"}
               departments={depts}
               customFields={customFields.filter((f) => f.entity_key === (selected.kind === "department" ? "department" : "job_title"))}
               onSaved={load}
-              onClose={() => setSelected(null)}
+              onClose={closeInspector}
             />
           )}
         </SheetContent>
