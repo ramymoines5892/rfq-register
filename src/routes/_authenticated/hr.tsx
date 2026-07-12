@@ -61,7 +61,6 @@ const permLabelAr: Record<AppPermission, string> = {
   "templates.manage": "إدارة قوالب الحقول",
   "notifications.view": "عرض الإشعارات",
   "reports.view": "عرض التقارير",
-  "reports.view": "عرض التقارير",
   "manage_customer_fields": "إدارة حقول العميل",
 };
 
