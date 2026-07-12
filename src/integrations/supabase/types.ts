@@ -109,9 +109,15 @@ export type Database = {
       customer_banks: {
         Row: {
           account_name: string | null
+          account_name_ar: string | null
+          account_name_en: string | null
           account_number: string | null
           bank_name: string
+          bank_name_ar: string | null
+          bank_name_en: string | null
           branch: string | null
+          branch_ar: string | null
+          branch_en: string | null
           created_at: string
           currency: string
           customer_id: string
@@ -125,9 +131,15 @@ export type Database = {
         }
         Insert: {
           account_name?: string | null
+          account_name_ar?: string | null
+          account_name_en?: string | null
           account_number?: string | null
           bank_name: string
+          bank_name_ar?: string | null
+          bank_name_en?: string | null
           branch?: string | null
+          branch_ar?: string | null
+          branch_en?: string | null
           created_at?: string
           currency?: string
           customer_id: string
@@ -141,9 +153,15 @@ export type Database = {
         }
         Update: {
           account_name?: string | null
+          account_name_ar?: string | null
+          account_name_en?: string | null
           account_number?: string | null
           bank_name?: string
+          bank_name_ar?: string | null
+          bank_name_en?: string | null
           branch?: string | null
+          branch_ar?: string | null
+          branch_en?: string | null
           created_at?: string
           currency?: string
           customer_id?: string
@@ -173,9 +191,13 @@ export type Database = {
           id: string
           is_primary: boolean
           name: string
+          name_ar: string | null
+          name_en: string | null
           notes: string | null
           phone: string | null
           title: string | null
+          title_ar: string | null
+          title_en: string | null
           updated_at: string
           user_id: string
         }
@@ -186,9 +208,13 @@ export type Database = {
           id?: string
           is_primary?: boolean
           name: string
+          name_ar?: string | null
+          name_en?: string | null
           notes?: string | null
           phone?: string | null
           title?: string | null
+          title_ar?: string | null
+          title_en?: string | null
           updated_at?: string
           user_id: string
         }
@@ -199,9 +225,13 @@ export type Database = {
           id?: string
           is_primary?: boolean
           name?: string
+          name_ar?: string | null
+          name_en?: string | null
           notes?: string | null
           phone?: string | null
           title?: string | null
+          title_ar?: string | null
+          title_en?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -218,6 +248,8 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          address_ar: string | null
+          address_en: string | null
           city: string | null
           country: string | null
           created_at: string
@@ -225,9 +257,15 @@ export type Database = {
           email: string | null
           id: string
           industry: string | null
+          industry_ar: string | null
+          industry_en: string | null
           name: string
+          name_ar: string | null
+          name_en: string | null
           notes: string | null
           payment_terms: string | null
+          payment_terms_ar: string | null
+          payment_terms_en: string | null
           phone: string | null
           tax_id: string | null
           terms: string | null
@@ -237,6 +275,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_ar?: string | null
+          address_en?: string | null
           city?: string | null
           country?: string | null
           created_at?: string
@@ -244,9 +284,15 @@ export type Database = {
           email?: string | null
           id?: string
           industry?: string | null
+          industry_ar?: string | null
+          industry_en?: string | null
           name: string
+          name_ar?: string | null
+          name_en?: string | null
           notes?: string | null
           payment_terms?: string | null
+          payment_terms_ar?: string | null
+          payment_terms_en?: string | null
           phone?: string | null
           tax_id?: string | null
           terms?: string | null
@@ -256,6 +302,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_ar?: string | null
+          address_en?: string | null
           city?: string | null
           country?: string | null
           created_at?: string
@@ -263,9 +311,15 @@ export type Database = {
           email?: string | null
           id?: string
           industry?: string | null
+          industry_ar?: string | null
+          industry_en?: string | null
           name?: string
+          name_ar?: string | null
+          name_en?: string | null
           notes?: string | null
           payment_terms?: string | null
+          payment_terms_ar?: string | null
+          payment_terms_en?: string | null
           phone?: string | null
           tax_id?: string | null
           terms?: string | null
@@ -282,6 +336,8 @@ export type Database = {
           id: string
           manager_id: string | null
           name: string
+          name_ar: string | null
+          name_en: string | null
           updated_at: string
         }
         Insert: {
@@ -290,6 +346,8 @@ export type Database = {
           id?: string
           manager_id?: string | null
           name: string
+          name_ar?: string | null
+          name_en?: string | null
           updated_at?: string
         }
         Update: {
@@ -298,6 +356,8 @@ export type Database = {
           id?: string
           manager_id?: string | null
           name?: string
+          name_ar?: string | null
+          name_en?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -316,6 +376,8 @@ export type Database = {
           department_id: string | null
           id: string
           name: string
+          name_ar: string | null
+          name_en: string | null
           updated_at: string
         }
         Insert: {
@@ -323,6 +385,8 @@ export type Database = {
           department_id?: string | null
           id?: string
           name: string
+          name_ar?: string | null
+          name_en?: string | null
           updated_at?: string
         }
         Update: {
@@ -330,6 +394,8 @@ export type Database = {
           department_id?: string | null
           id?: string
           name?: string
+          name_ar?: string | null
+          name_en?: string | null
           updated_at?: string
         }
         Relationships: [
