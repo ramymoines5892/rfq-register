@@ -4,6 +4,13 @@ import {
   Factory, FlaskConical, HardHat, BookOpen, Shield, Stethoscope, ClipboardList,
   BarChart3, FileText, Handshake, Palette, Code2, Globe, Wallet, Receipt,
   UserCog, Building, Store, PenTool, Send, LifeBuoy, Sparkles,
+  Banknote, CreditCard, PiggyBank, Calculator, LineChart, PieChart, Target,
+  Rocket, Lightbulb, Award, Trophy, Star, Heart, Gem, Anchor, Plane, Ship,
+  Car, Bike, Bus, Train, Warehouse, Boxes, ClipboardCheck, CalendarDays,
+  Mail, Phone, MessageCircle, Video, Camera, Mic, Music, Radio, Tv,
+  Server, Database, Cloud, HardDrive, Network, Wifi, Lock, KeyRound,
+  Fingerprint, Eye, Search, Filter, Settings, Cog, Hammer, Drill, Ruler,
+  Paintbrush, Scissors, Gift, Tag, Percent, Trees, Leaf, Flame, Droplet, Zap, Sun,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
