@@ -72,7 +72,7 @@ const LABELS: Record<Hit["entity"], { ar: string; en: string }> = {
 export function GlobalSearch() {
   const { lang } = useI18n();
   const ar = lang === "ar";
-  const navigate = useNavigate();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
