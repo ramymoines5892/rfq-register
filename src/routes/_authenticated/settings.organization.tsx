@@ -263,70 +263,111 @@ function OrganizationPage() {
         </div>
       </div>
 
-      {/* Preview canvas */}
-      <Card>
-        <CardContent className="p-4">
-          {loading ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">{ar ? "جارٍ التحميل..." : "Loading..."}</div>
-          ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
-            <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
-              <Sparkles className="h-8 w-8" />
-              <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
-              <Button size="sm" onClick={() => addDept(null)}>
-                <Plus className="h-4 w-4 me-1" />
-                {ar ? "إضافة إدارة" : "Add Department"}
+      {/* Split: tree editor + chart image */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LEFT — Tree editor */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {ar ? "الشجرة — تعديل مباشر" : "Tree — live editing"}
+              </div>
+              <Badge variant="outline" className="text-[10px]">{ar ? "تعديل" : "Edit"}</Badge>
+            </div>
+            {loading ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">{ar ? "جارٍ التحميل..." : "Loading..."}</div>
+            ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+                <Sparkles className="h-8 w-8" />
+                <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
+                <Button size="sm" onClick={() => addDept(null)}>
+                  <Plus className="h-4 w-4 me-1" />
+                  {ar ? "إضافة إدارة" : "Add Department"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {rootDepts
+                  .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
+                  .map((d) => (
+                    <DeptCard
+                      key={d.id}
+                      dept={d}
+                      depth={0}
+                      depts={depts}
+                      jobs={jobs}
+                      memberCounts={memberCounts}
+                      lang={lang}
+                      query={q}
+                      selected={selected}
+                      onSelect={(id, kind) => setSelected({ id, kind })}
+                      onAddDept={addDept}
+                      onAddJob={addJob}
+                      onDelete={remove}
+                    />
+                  ))}
+
+                {unassignedJobs.length > 0 && (
+                  <div className="rounded-xl border border-dashed p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {unassignedJobs
+                        .filter((j) => !q || jobMatches(j))
+                        .map((j) => (
+                          <JobChip
+                            key={j.id}
+                            job={j}
+                            lang={lang}
+                            selected={selected?.id === j.id && selected.kind === "job_title"}
+                            onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
+                            onDelete={() => remove(j.id, "job_title")}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* RIGHT — Chart image + download */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5" />
+                {ar ? "الصورة — للاستخدام في بروفايل الشركة" : "Image — for company profile"}
+              </div>
+              <Button size="sm" variant="outline" onClick={downloadChart} disabled={loading || rootDepts.length === 0}>
+                <Download className="h-4 w-4 me-1" />
+                {ar ? "تحميل PNG" : "Download PNG"}
               </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {rootDepts
-                .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
-                .map((d) => (
-                  <DeptCard
-                    key={d.id}
-                    dept={d}
-                    depth={0}
-                    depts={depts}
-                    jobs={jobs}
-                    memberCounts={memberCounts}
-                    lang={lang}
-                    query={q}
-                    selected={selected}
-                    onSelect={(id, kind) => setSelected({ id, kind })}
-                    onAddDept={addDept}
-                    onAddJob={addJob}
-                    onDelete={remove}
-                  />
-                ))}
-
-              {unassignedJobs.length > 0 && (
-                <div className="rounded-xl border border-dashed p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {unassignedJobs
-                      .filter((j) => !q || jobMatches(j))
-                      .map((j) => (
-                        <JobChip
-                          key={j.id}
-                          job={j}
-                          lang={lang}
-                          selected={selected?.id === j.id && selected.kind === "job_title"}
-                          onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
-                          onDelete={() => remove(j.id, "job_title")}
-                        />
-                      ))}
-                  </div>
+            <div className="rounded-lg border bg-white overflow-auto max-h-[600px]">
+              {rootDepts.length === 0 ? (
+                <div className="py-16 text-center text-sm text-muted-foreground">
+                  {ar ? "أضف إدارة لعرض الرسمة" : "Add a department to see the chart"}
+                </div>
+              ) : (
+                <div ref={chartRef}>
+                  <OrgChartImage departments={depts} jobs={jobs} lang={ar ? "ar" : "en"} />
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              {ar
+                ? "الرسمة تتحدث تلقائيًا مع كل تعديل. اضغط تحميل لحفظها كصورة."
+                : "The chart updates automatically as you edit. Click download to save as image."}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Inspector Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && closeInspector()}>
