@@ -37,62 +37,37 @@ function DeptNode({ data, selected }: NodeProps) {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="relative" style={{ width: 170, height: isDept ? 78 : 46 }} title={d.label}>
+      <div className="relative flex flex-col items-center" style={{ width: 72 }}>
         <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
-        <div
-          className={`h-full w-full rounded-lg border bg-card shadow-sm px-2 py-1.5 flex flex-col justify-between transition-shadow hover:shadow-md ${
-            selected ? "ring-2 ring-primary ring-offset-1" : ""
-          }`}
-          style={{ borderInlineStart: `3px solid ${color}` }}
-        >
-          {/* Top row: icon + name */}
-          <div className="flex items-center gap-2 min-w-0">
-            <div
-              className="h-7 w-7 shrink-0 rounded-md flex items-center justify-center"
-              style={{ backgroundColor: `${color}18` }}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className={`h-11 w-11 rounded-xl border bg-card shadow-sm flex items-center justify-center transition-all hover:shadow-md hover:scale-105 cursor-pointer ${
+                selected ? "ring-2 ring-primary ring-offset-1" : ""
+              }`}
+              style={{ backgroundColor: `${color}14`, borderColor: `${color}55` }}
             >
-              <Icon className="h-4 w-4" style={{ color }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold leading-tight truncate">{d.label}</div>
-              {d.code && (
-                <div className="text-[9px] font-mono uppercase text-muted-foreground truncate">{d.code}</div>
+              <Icon className="h-5 w-5" style={{ color }} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-[220px]">
+            <div className="space-y-1.5">
+              <div className="font-semibold text-sm">{d.label}</div>
+              {d.code && <div className="text-[10px] font-mono opacity-70">{d.code}</div>}
+              {isDept && (
+                <div className="flex items-center gap-3 pt-1 text-xs">
+                  <div className="flex items-center gap-1"><Network className="h-3 w-3" /><span>{d.childCount ?? 0}</span></div>
+                  <div className="flex items-center gap-1"><Briefcase className="h-3 w-3" /><span>{d.jobCount ?? 0}</span></div>
+                  <div className="flex items-center gap-1"><Users className="h-3 w-3" /><span>{d.memberCount ?? 0}</span></div>
+                </div>
               )}
+              <div className="text-[10px] opacity-60 pt-0.5">Double-click for details</div>
             </div>
-          </div>
-
-          {/* Bottom row: 3 stat icons with tooltips */}
-          {isDept && (
-            <div className="flex items-center justify-around border-t pt-1 mt-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground cursor-help">
-                    <Network className="h-3 w-3" />
-                    <span className="font-semibold">{d.childCount ?? 0}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">الإدارات الفرعية: {d.childCount ?? 0}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground cursor-help">
-                    <Briefcase className="h-3 w-3" />
-                    <span className="font-semibold">{d.jobCount ?? 0}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">المسميات الوظيفية: {d.jobCount ?? 0}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground cursor-help">
-                    <Users className="h-3 w-3" />
-                    <span className="font-semibold">{d.memberCount ?? 0}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">عدد الموظفين: {d.memberCount ?? 0}</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
+          </TooltipContent>
+        </Tooltip>
+        <div className="mt-1 text-[10px] font-medium leading-tight text-center truncate w-full" title={d.label}>
+          {d.label}
         </div>
         <Handle type="source" position={Position.Bottom} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
       </div>
