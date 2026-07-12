@@ -159,6 +159,7 @@ function AuthenticatedLayout() {
       <main className="flex-1 min-w-0 pt-14 md:pt-0">
         <Outlet />
       </main>
+      <GlobalSearch />
     </div>
   );
 }
