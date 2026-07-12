@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2, ShieldAlert } from "lucide-react";
 import { useAccess, type NotifCategory } from "@/hooks/useAccess";
 
 export const Route = createFileRoute("/_authenticated/settings/notifications")({
@@ -40,6 +40,11 @@ function NotificationSettings() {
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
+    typeof window !== "undefined" && "Notification" in window
+      ? Notification.permission
+      : "unsupported",
+  );
 
   useEffect(() => {
     (async () => {
@@ -77,11 +82,34 @@ function NotificationSettings() {
   }
 
   async function requestBrowserPermission(v: boolean) {
-    if (v && "Notification" in window && Notification.permission !== "granted") {
-      const p = await Notification.requestPermission();
-      if (p !== "granted") { toast.error(ar ? "تم رفض الإذن" : "Permission denied"); return; }
+    if (!v) {
+      setPrefs((p) => ({ ...p, browser_push_enabled: false }));
+      return;
     }
-    setPrefs((p) => ({ ...p, browser_push_enabled: v }));
+    if (!("Notification" in window)) {
+      toast.error(ar ? "المتصفح لا يدعم إشعارات المتصفح" : "This browser doesn't support notifications");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      toast.error(
+        ar ? "الإشعارات محظورة فى إعدادات المتصفح" : "Notifications are blocked in your browser",
+        {
+          description: ar
+            ? "افتح إعدادات الموقع من شريط العنوان (🔒 أو ⓘ)، غيّر «الإشعارات» إلى «سماح»، ثم أعد تحميل الصفحة."
+            : "Open Site settings from the address bar (🔒 or ⓘ), set Notifications to Allow, then reload.",
+          duration: 8000,
+        },
+      );
+      return;
+    }
+    const p = await Notification.requestPermission();
+    setPushPerm(p);
+    if (p !== "granted") {
+      toast.message(ar ? "لم يتم منح الإذن" : "Permission not granted");
+      return;
+    }
+    setPrefs((prev) => ({ ...prev, browser_push_enabled: true }));
+    toast.success(ar ? "تم تفعيل إشعارات المتصفح" : "Browser notifications enabled");
   }
 
   if (loading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
@@ -118,8 +146,32 @@ function NotificationSettings() {
               <Switch checked={prefs.sound_enabled} onCheckedChange={(v) => setPrefs({ ...prefs, sound_enabled: v })} />
             </Row>
             <Row label={ar ? "إشعارات المتصفح" : "Browser push"} desc={ar ? "إشعار حتى لو التبويب مقفول" : "Notify even when tab is closed"}>
-              <Switch checked={prefs.browser_push_enabled} onCheckedChange={requestBrowserPermission} />
+              <Switch
+                checked={prefs.browser_push_enabled && pushPerm === "granted"}
+                onCheckedChange={requestBrowserPermission}
+                disabled={pushPerm === "unsupported"}
+              />
             </Row>
+            {pushPerm === "denied" && (
+              <div className="flex gap-2 items-start rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+                <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-amber-700 dark:text-amber-400">
+                    {ar ? "الإشعارات محظورة فى المتصفح" : "Notifications are blocked in your browser"}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {ar
+                      ? "افتح إعدادات الموقع من شريط العنوان (رمز 🔒 أو ⓘ)، غيّر «الإشعارات» إلى «سماح»، ثم أعد تحميل الصفحة."
+                      : "Open site settings from the address bar (🔒 or ⓘ icon), set Notifications to Allow, then reload this page."}
+                  </p>
+                </div>
+              </div>
+            )}
+            {pushPerm === "unsupported" && (
+              <p className="text-xs text-muted-foreground">
+                {ar ? "متصفحك لا يدعم إشعارات المتصفح." : "Your browser doesn't support browser notifications."}
+              </p>
+            )}
           </CardContent>
         </Card>
 
