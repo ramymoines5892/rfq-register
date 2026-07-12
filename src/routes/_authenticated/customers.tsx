@@ -68,7 +68,16 @@ import {
   File as FileIcon,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { parseTerms, stringifyTerms, parseList, stringifyList, type TermItem } from "@/lib/terms";
+import {
+  parseTerms,
+  stringifyTerms,
+  parseBiList,
+  stringifyBiList,
+  emptyTerm,
+  type TermItem,
+  type BiListItem,
+} from "@/lib/terms";
+import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
 
 export const Route = createFileRoute("/_authenticated/customers")({
   component: CustomersPage,
@@ -84,6 +93,8 @@ type Customer = {
   id: string;
   user_id: string;
   name: string;
+  name_ar: string | null;
+  name_en: string | null;
   tax_id: string | null;
   currency: string;
   terms: string | null;
@@ -92,10 +103,16 @@ type Customer = {
   phone: string | null;
   website: string | null;
   address: string | null;
+  address_ar: string | null;
+  address_en: string | null;
   city: string | null;
   country: string | null;
   industry: string | null;
+  industry_ar: string | null;
+  industry_en: string | null;
   payment_terms: string | null;
+  payment_terms_ar: string | null;
+  payment_terms_en: string | null;
   created_at: string;
 };
 
@@ -103,7 +120,11 @@ type Contact = {
   id: string;
   customer_id: string;
   name: string;
+  name_ar: string | null;
+  name_en: string | null;
   title: string | null;
+  title_ar: string | null;
+  title_en: string | null;
   email: string | null;
   phone: string | null;
   is_primary: boolean;
@@ -114,17 +135,22 @@ type Bank = {
   id: string;
   customer_id: string;
   bank_name: string;
+  bank_name_ar: string | null;
+  bank_name_en: string | null;
   account_name: string | null;
+  account_name_ar: string | null;
+  account_name_en: string | null;
   account_number: string | null;
   iban: string | null;
   swift: string | null;
   currency: string;
   branch: string | null;
+  branch_ar: string | null;
+  branch_en: string | null;
   is_primary: boolean;
   notes: string | null;
 };
 
-// Draft types used while a customer hasn't been saved yet.
 type DraftContact = Omit<Contact, "id" | "customer_id"> & { _key: string };
 type DraftBank = Omit<Bank, "id" | "customer_id"> & { _key: string };
 
@@ -214,13 +240,18 @@ function CustomersPage() {
       if (currencyFilter !== "all" && c.currency !== currencyFilter) return false;
       if (!search) return true;
       const s = search.toLowerCase();
-      return (
-        c.name.toLowerCase().includes(s) ||
-        (c.tax_id ?? "").toLowerCase().includes(s) ||
-        (c.email ?? "").toLowerCase().includes(s) ||
-        (c.phone ?? "").toLowerCase().includes(s) ||
-        (c.city ?? "").toLowerCase().includes(s)
-      );
+      const hay = [
+        c.name,
+        c.name_ar,
+        c.name_en,
+        c.tax_id,
+        c.email,
+        c.phone,
+        c.city,
+      ]
+        .filter(Boolean)
+        .map((x) => String(x).toLowerCase());
+      return hay.some((h) => h.includes(s));
     });
   }, [customers, search, currencyFilter]);
 
@@ -240,9 +271,10 @@ function CustomersPage() {
     setSheetOpen(true);
   }
 
+  const displayName = (c: Customer) => pickLangValue(c as any, "name", lang).value || c.name;
+
   return (
     <div className="min-h-screen">
-      {/* Compact page header */}
       <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -264,7 +296,6 @@ function CustomersPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
       <div className="max-w-7xl mx-auto px-6 pt-6">
         <div className="flex flex-col md:flex-row gap-3 mb-4">
           <div className="relative flex-1">
@@ -274,7 +305,9 @@ function CustomersPage() {
             />
             <Input
               placeholder={
-                lang === "ar" ? "ابحث بالاسم / رقم ضريبي / إيميل / تليفون" : "Search name / tax id / email / phone"
+                lang === "ar"
+                  ? "ابحث بالاسم (عربي أو إنجليزي) / رقم ضريبي / إيميل / تليفون"
+                  : "Search name (AR or EN) / tax id / email / phone"
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -296,7 +329,6 @@ function CustomersPage() {
           </Select>
         </div>
 
-        {/* Table */}
         {loading ? (
           <div className="text-center py-16 text-muted-foreground">{t("loading")}</div>
         ) : filtered.length === 0 ? (
@@ -333,70 +365,75 @@ function CustomersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    className="cursor-pointer hover:bg-muted/30"
-                    onClick={() => openEdit(c)}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                          {c.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate">{c.name}</div>
-                          {c.tax_id && (
-                            <div className="text-[10px] text-muted-foreground truncate" dir="ltr">
-                              {c.tax_id}
+                {filtered.map((c) => {
+                  const dispName = displayName(c);
+                  return (
+                    <TableRow
+                      key={c.id}
+                      className="cursor-pointer hover:bg-muted/30"
+                      onClick={() => openEdit(c)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                            {dispName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate">
+                              <BilingualText row={c as any} base="name" />
                             </div>
-                          )}
+                            {c.tax_id && (
+                              <div className="text-[10px] text-muted-foreground truncate" dir="ltr">
+                                {c.tax_id}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {c.industry || "—"}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground" dir="ltr">
-                      {c.email || "—"}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground" dir="ltr">
-                      {c.phone || "—"}
-                    </TableCell>
-                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
-                      {[c.city, c.country].filter(Boolean).join(", ") || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{c.currency}</Badge>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-0.5">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
-                              <AlertDialogDescription>{c.name}</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(c)}>
-                                {t("delete")}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                        <BilingualText row={c as any} base="industry" />
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground" dir="ltr">
+                        {c.email || "—"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground" dir="ltr">
+                        {c.phone || "—"}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                        {[c.city, c.country].filter(Boolean).join(", ") || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{c.currency}</Badge>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-0.5">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
+                                <AlertDialogDescription>{dispName}</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(c)}>
+                                  {t("delete")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </Card>
@@ -414,8 +451,42 @@ function CustomersPage() {
 }
 
 /* ---------------------------------------------------------------- */
-/* Side sheet: sectioned form, no tabs, drafts before first save.    */
+/* Side sheet                                                       */
 /* ---------------------------------------------------------------- */
+
+type Form = {
+  name_ar: string;
+  name_en: string;
+  tax_id: string;
+  currency: string;
+  notes: string;
+  email: string;
+  phone: string;
+  website: string;
+  address_ar: string;
+  address_en: string;
+  city: string;
+  country: string;
+  industry_ar: string;
+  industry_en: string;
+};
+
+const emptyForm: Form = {
+  name_ar: "",
+  name_en: "",
+  tax_id: "",
+  currency: "EGP",
+  notes: "",
+  email: "",
+  phone: "",
+  website: "",
+  address_ar: "",
+  address_en: "",
+  city: "",
+  country: "",
+  industry_ar: "",
+  industry_en: "",
+};
 
 function CustomerSheet({
   open,
@@ -429,36 +500,21 @@ function CustomerSheet({
   onSaved: () => void;
 }) {
   const { t, lang, dir } = useI18n();
-  const emptyForm = {
-    name: "",
-    tax_id: "",
-    currency: "EGP",
-    notes: "",
-    email: "",
-    phone: "",
-    website: "",
-    address: "",
-    city: "",
-    country: "",
-    industry: "",
-  };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<Form>(emptyForm);
   const [terms, setTerms] = useState<TermItem[]>([]);
-  const [paymentTermsList, setPaymentTermsList] = useState<string[]>([]);
-  const [paymentInput, setPaymentInput] = useState("");
+  const [paymentTermsList, setPaymentTermsList] = useState<BiListItem[]>([]);
+  const [paymentInputAr, setPaymentInputAr] = useState("");
+  const [paymentInputEn, setPaymentInputEn] = useState("");
   const [taxIdConflict, setTaxIdConflict] = useState<{ name: string; ownedByMe: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Live rows (existing customer) — persisted individually
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
 
-  // Draft rows (new customer) — inserted after main save
   const [draftContacts, setDraftContacts] = useState<DraftContact[]>([]);
   const [draftBanks, setDraftBanks] = useState<DraftBank[]>([]);
 
-  // Attachments
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [draftAttachments, setDraftAttachments] = useState<DraftAttachment[]>([]);
   const [uploadingAttach, setUploadingAttach] = useState(false);
@@ -471,20 +527,23 @@ function CustomerSheet({
     if (!open) return;
     if (customer) {
       setForm({
-        name: customer.name,
+        name_ar: customer.name_ar ?? customer.name ?? "",
+        name_en: customer.name_en ?? customer.name ?? "",
         tax_id: customer.tax_id ?? "",
         currency: customer.currency,
         notes: customer.notes ?? "",
         email: customer.email ?? "",
         phone: customer.phone ?? "",
         website: customer.website ?? "",
-        address: customer.address ?? "",
+        address_ar: customer.address_ar ?? customer.address ?? "",
+        address_en: customer.address_en ?? customer.address ?? "",
         city: customer.city ?? "",
         country: customer.country ?? "",
-        industry: customer.industry ?? "",
+        industry_ar: customer.industry_ar ?? customer.industry ?? "",
+        industry_en: customer.industry_en ?? customer.industry ?? "",
       });
       setTerms(parseTerms(customer.terms));
-      setPaymentTermsList(parseList(customer.payment_terms));
+      setPaymentTermsList(parseBiList(customer.payment_terms_ar, customer.payment_terms_en ?? customer.payment_terms));
       loadRelated(customer.id);
     } else {
       setForm(emptyForm);
@@ -497,7 +556,8 @@ function CustomerSheet({
       setAttachments([]);
       setDraftAttachments([]);
     }
-    setPaymentInput("");
+    setPaymentInputAr("");
+    setPaymentInputEn("");
     setTaxIdConflict(null);
     setNewAttachCategory("company_profile");
     setNewAttachLabel("");
@@ -515,7 +575,6 @@ function CustomerSheet({
     setBanks((bs ?? []) as Bank[]);
     setAttachments((as ?? []) as Attachment[]);
   }
-
 
   useEffect(() => {
     const tid = form.tax_id.trim();
@@ -543,14 +602,16 @@ function CustomerSheet({
     return () => clearTimeout(timer);
   }, [form.tax_id, customer]);
 
+  const primaryName = form.name_ar.trim() || form.name_en.trim();
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (taxIdConflict) {
       toast.error(`${t("taxIdInUse")}: ${taxIdConflict.name}`);
       return;
     }
-    if (!form.name.trim()) {
-      toast.error(lang === "ar" ? "اسم العميل مطلوب" : "Customer name is required");
+    if (!primaryName) {
+      toast.error(lang === "ar" ? "اسم العميل مطلوب (عربي أو إنجليزي)" : "Customer name is required (AR or EN)");
       setOpenSection("identity");
       return;
     }
@@ -560,8 +621,11 @@ function CustomerSheet({
       const uid = userData.user?.id;
       if (!uid) throw new Error("Not authenticated");
 
+      const pt = stringifyBiList(paymentTermsList);
       const payload = {
-        name: form.name.trim(),
+        name: primaryName,
+        name_ar: form.name_ar.trim() || null,
+        name_en: form.name_en.trim() || null,
         tax_id: form.tax_id.trim() || null,
         currency: form.currency,
         terms: stringifyTerms(terms),
@@ -569,11 +633,17 @@ function CustomerSheet({
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         website: form.website.trim() || null,
-        address: form.address.trim() || null,
+        address: (form.address_ar.trim() || form.address_en.trim()) || null,
+        address_ar: form.address_ar.trim() || null,
+        address_en: form.address_en.trim() || null,
         city: form.city.trim() || null,
         country: form.country.trim() || null,
-        industry: form.industry.trim() || null,
-        payment_terms: stringifyList(paymentTermsList),
+        industry: (form.industry_ar.trim() || form.industry_en.trim()) || null,
+        industry_ar: form.industry_ar.trim() || null,
+        industry_en: form.industry_en.trim() || null,
+        payment_terms: pt.ar ?? pt.en,
+        payment_terms_ar: pt.ar,
+        payment_terms_en: pt.en,
       };
 
       if (customer) {
@@ -590,36 +660,53 @@ function CustomerSheet({
             throw new Error(t("taxIdInUse"));
           throw error;
         }
-        // Batch insert drafts
         const newId = (inserted as Customer).id;
         if (draftContacts.length > 0) {
-          const rows = draftContacts.map((c) => ({
-            customer_id: newId,
-            user_id: uid,
-            name: c.name || (lang === "ar" ? "بدون اسم" : "Untitled"),
-            title: c.title,
-            email: c.email,
-            phone: c.phone,
-            is_primary: c.is_primary,
-            notes: c.notes,
-          }));
+          const rows = draftContacts.map((c) => {
+            const name = c.name_ar.trim() || c.name_en.trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
+            const title = c.title_ar?.trim() || c.title_en?.trim() || null;
+            return {
+              customer_id: newId,
+              user_id: uid,
+              name,
+              name_ar: c.name_ar?.trim() || null,
+              name_en: c.name_en?.trim() || null,
+              title,
+              title_ar: c.title_ar?.trim() || null,
+              title_en: c.title_en?.trim() || null,
+              email: c.email,
+              phone: c.phone,
+              is_primary: c.is_primary,
+              notes: c.notes,
+            };
+          });
           const { error: ce } = await supabase.from("customer_contacts").insert(rows);
           if (ce) toast.error(ce.message);
         }
         if (draftBanks.length > 0) {
-          const rows = draftBanks.map((b) => ({
-            customer_id: newId,
-            user_id: uid,
-            bank_name: b.bank_name || (lang === "ar" ? "بدون اسم" : "Untitled"),
-            account_name: b.account_name,
-            account_number: b.account_number,
-            iban: b.iban,
-            swift: b.swift,
-            branch: b.branch,
-            currency: b.currency,
-            is_primary: b.is_primary,
-            notes: b.notes,
-          }));
+          const rows = draftBanks.map((b) => {
+            const bankName =
+              b.bank_name_ar?.trim() || b.bank_name_en?.trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
+            return {
+              customer_id: newId,
+              user_id: uid,
+              bank_name: bankName,
+              bank_name_ar: b.bank_name_ar?.trim() || null,
+              bank_name_en: b.bank_name_en?.trim() || null,
+              account_name: b.account_name_ar?.trim() || b.account_name_en?.trim() || null,
+              account_name_ar: b.account_name_ar?.trim() || null,
+              account_name_en: b.account_name_en?.trim() || null,
+              account_number: b.account_number,
+              iban: b.iban,
+              swift: b.swift,
+              branch: b.branch_ar?.trim() || b.branch_en?.trim() || null,
+              branch_ar: b.branch_ar?.trim() || null,
+              branch_en: b.branch_en?.trim() || null,
+              currency: b.currency,
+              is_primary: b.is_primary,
+              notes: b.notes,
+            };
+          });
           const { error: be } = await supabase.from("customer_banks").insert(rows);
           if (be) toast.error(be.message);
         }
@@ -663,12 +750,16 @@ function CustomerSheet({
     if (!customer) return;
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id!;
+    const seedAr = lang === "ar" ? "مسؤول جديد" : "";
+    const seedEn = lang === "en" ? "New contact" : "";
     const { data, error } = await supabase
       .from("customer_contacts")
       .insert({
         customer_id: customer.id,
         user_id: uid,
-        name: lang === "ar" ? "مسؤول جديد" : "New contact",
+        name: seedAr || seedEn || "New contact",
+        name_ar: seedAr || null,
+        name_en: seedEn || null,
       })
       .select()
       .single();
@@ -676,8 +767,22 @@ function CustomerSheet({
     setContacts([...contacts, data as Contact]);
   }
   async function updateContact(id: string, patch: Partial<Contact>) {
-    setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-    const { error } = await supabase.from("customer_contacts").update(patch).eq("id", id);
+    // Keep legacy name/title in sync with picked value from AR/EN if either changed.
+    const merged: Partial<Contact> = { ...patch };
+    if ("name_ar" in patch || "name_en" in patch) {
+      const cur = contacts.find((c) => c.id === id);
+      const nameAr = (patch.name_ar ?? cur?.name_ar ?? "") || "";
+      const nameEn = (patch.name_en ?? cur?.name_en ?? "") || "";
+      merged.name = nameAr.trim() || nameEn.trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
+    }
+    if ("title_ar" in patch || "title_en" in patch) {
+      const cur = contacts.find((c) => c.id === id);
+      const ar = (patch.title_ar ?? cur?.title_ar ?? "") || "";
+      const en = (patch.title_en ?? cur?.title_en ?? "") || "";
+      merged.title = ar.trim() || en.trim() || null;
+    }
+    setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...merged } : c)));
+    const { error } = await supabase.from("customer_contacts").update(merged).eq("id", id);
     if (error) toast.error(error.message);
   }
   async function deleteContact(id: string) {
@@ -691,12 +796,16 @@ function CustomerSheet({
     if (!customer) return;
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id!;
+    const seedAr = lang === "ar" ? "بنك جديد" : "";
+    const seedEn = lang === "en" ? "New bank" : "";
     const { data, error } = await supabase
       .from("customer_banks")
       .insert({
         customer_id: customer.id,
         user_id: uid,
-        bank_name: lang === "ar" ? "بنك جديد" : "New bank",
+        bank_name: seedAr || seedEn || "New bank",
+        bank_name_ar: seedAr || null,
+        bank_name_en: seedEn || null,
         currency: form.currency,
       })
       .select()
@@ -705,8 +814,27 @@ function CustomerSheet({
     setBanks([...banks, data as Bank]);
   }
   async function updateBank(id: string, patch: Partial<Bank>) {
-    setBanks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
-    const { error } = await supabase.from("customer_banks").update(patch).eq("id", id);
+    const merged: Partial<Bank> = { ...patch };
+    if ("bank_name_ar" in patch || "bank_name_en" in patch) {
+      const cur = banks.find((b) => b.id === id);
+      const ar = (patch.bank_name_ar ?? cur?.bank_name_ar ?? "") || "";
+      const en = (patch.bank_name_en ?? cur?.bank_name_en ?? "") || "";
+      merged.bank_name = ar.trim() || en.trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
+    }
+    if ("account_name_ar" in patch || "account_name_en" in patch) {
+      const cur = banks.find((b) => b.id === id);
+      const ar = (patch.account_name_ar ?? cur?.account_name_ar ?? "") || "";
+      const en = (patch.account_name_en ?? cur?.account_name_en ?? "") || "";
+      merged.account_name = ar.trim() || en.trim() || null;
+    }
+    if ("branch_ar" in patch || "branch_en" in patch) {
+      const cur = banks.find((b) => b.id === id);
+      const ar = (patch.branch_ar ?? cur?.branch_ar ?? "") || "";
+      const en = (patch.branch_en ?? cur?.branch_en ?? "") || "";
+      merged.branch = ar.trim() || en.trim() || null;
+    }
+    setBanks((prev) => prev.map((b) => (b.id === id ? { ...b, ...merged } : b)));
+    const { error } = await supabase.from("customer_banks").update(merged).eq("id", id);
     if (error) toast.error(error.message);
   }
   async function deleteBank(id: string) {
@@ -722,7 +850,11 @@ function CustomerSheet({
       {
         _key: crypto.randomUUID(),
         name: "",
+        name_ar: "",
+        name_en: "",
         title: null,
+        title_ar: "",
+        title_en: "",
         email: null,
         phone: null,
         is_primary: p.length === 0,
@@ -742,11 +874,17 @@ function CustomerSheet({
       {
         _key: crypto.randomUUID(),
         bank_name: "",
+        bank_name_ar: "",
+        bank_name_en: "",
         account_name: null,
+        account_name_ar: "",
+        account_name_en: "",
         account_number: null,
         iban: null,
         swift: null,
         branch: null,
+        branch_ar: "",
+        branch_en: "",
         currency: form.currency,
         is_primary: p.length === 0,
         notes: null,
@@ -771,7 +909,6 @@ function CustomerSheet({
       toast.error(lang === "ar" ? "اكتب مسمى الملف" : "Enter a label");
       return;
     }
-    // New customer → keep as draft
     if (!customer) {
       setDraftAttachments((p) => [
         ...p,
@@ -785,7 +922,6 @@ function CustomerSheet({
       setNewAttachLabel("");
       return;
     }
-    // Existing customer → upload immediately
     setUploadingAttach(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -848,6 +984,15 @@ function CustomerSheet({
   const banksCount = customer ? banks.length : draftBanks.length;
   const attachmentsCount = customer ? attachments.length : draftAttachments.length;
 
+  function addPaymentTerm() {
+    const ar = paymentInputAr.trim();
+    const en = paymentInputEn.trim();
+    if (!ar && !en) return;
+    setPaymentTermsList([...paymentTermsList, { ar, en }]);
+    setPaymentInputAr("");
+    setPaymentInputEn("");
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -861,8 +1006,8 @@ function CustomerSheet({
           </SheetTitle>
           <SheetDescription className="text-xs">
             {lang === "ar"
-              ? "املأ البيانات في أقسام مرتّبة. يمكنك إضافة جهات الاتصال والحسابات البنكية قبل الحفظ."
-              : "Fill in the sections below. Contacts and bank accounts can be added before saving."}
+              ? "أدخل البيانات بالعربي والإنجليزي في نفس الوقت علشان التقارير باللغتين تكون تمام."
+              : "Enter data in both Arabic and English so bilingual reports render correctly."}
           </SheetDescription>
         </SheetHeader>
 
@@ -880,20 +1025,22 @@ function CustomerSheet({
                 <SectionTitle
                   icon={<Info className="h-4 w-4" />}
                   title={lang === "ar" ? "بيانات أساسية" : "Identity"}
-                  subtitle={form.name || (lang === "ar" ? "اسم العميل مطلوب" : "Required")}
+                  subtitle={primaryName || (lang === "ar" ? "اسم العميل مطلوب" : "Required")}
                 />
               </AccordionTrigger>
-              <AccordionContent className="pt-2">
+              <AccordionContent className="pt-2 space-y-4">
+                <BilingualInputs
+                  label={<><Building2 className="h-3.5 w-3.5" /> {t("customerName")}</>}
+                  required
+                  valueAr={form.name_ar}
+                  valueEn={form.name_en}
+                  onChangeAr={(v) => setForm({ ...form, name_ar: v })}
+                  onChangeEn={(v) => setForm({ ...form, name_en: v })}
+                  maxLength={200}
+                  placeholderAr="اسم الشركة"
+                  placeholderEn="Company name"
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label={`${t("customerName")} *`} className="md:col-span-2">
-                    <Input
-                      required
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      maxLength={200}
-                      placeholder={lang === "ar" ? "اسم الشركة" : "Company name"}
-                    />
-                  </Field>
                   <Field label={t("taxIdOptional")}>
                     <Input
                       value={form.tax_id}
@@ -914,13 +1061,6 @@ function CustomerSheet({
                       </div>
                     )}
                   </Field>
-                  <Field label={t("industry")}>
-                    <Input
-                      value={form.industry}
-                      onChange={(e) => setForm({ ...form, industry: e.target.value })}
-                      maxLength={100}
-                    />
-                  </Field>
                   <Field label={t("defaultCurrency")}>
                     <Select
                       value={form.currency}
@@ -939,6 +1079,14 @@ function CustomerSheet({
                     </Select>
                   </Field>
                 </div>
+                <BilingualInputs
+                  label={t("industry")}
+                  valueAr={form.industry_ar}
+                  valueEn={form.industry_en}
+                  onChangeAr={(v) => setForm({ ...form, industry_ar: v })}
+                  onChangeEn={(v) => setForm({ ...form, industry_en: v })}
+                  maxLength={100}
+                />
               </AccordionContent>
             </AccordionItem>
 
@@ -959,7 +1107,7 @@ function CustomerSheet({
                       dir="ltr"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      maxLength={255}
+                      maxLength={200}
                     />
                   </Field>
                   <Field icon={<Phone className="h-3.5 w-3.5" />} label={t("phone")}>
@@ -970,16 +1118,12 @@ function CustomerSheet({
                       maxLength={50}
                     />
                   </Field>
-                  <Field
-                    icon={<Globe className="h-3.5 w-3.5" />}
-                    label={t("website")}
-                    className="md:col-span-2"
-                  >
+                  <Field icon={<Globe className="h-3.5 w-3.5" />} label={t("website")} className="md:col-span-2">
                     <Input
                       dir="ltr"
                       value={form.website}
                       onChange={(e) => setForm({ ...form, website: e.target.value })}
-                      maxLength={255}
+                      maxLength={200}
                     />
                   </Field>
                 </div>
@@ -992,21 +1136,21 @@ function CustomerSheet({
                 <SectionTitle
                   icon={<MapPin className="h-4 w-4" />}
                   title={lang === "ar" ? "العنوان" : "Location"}
-                  subtitle={
-                    [form.city, form.country].filter(Boolean).join(", ") ||
-                    (lang === "ar" ? "اختياري" : "Optional")
-                  }
+                  subtitle={[form.city, form.country].filter(Boolean).join(", ") || (lang === "ar" ? "اختياري" : "Optional")}
                 />
               </AccordionTrigger>
-              <AccordionContent className="pt-2">
+              <AccordionContent className="pt-2 space-y-4">
+                <BilingualInputs
+                  label={t("address")}
+                  textarea
+                  rows={2}
+                  valueAr={form.address_ar}
+                  valueEn={form.address_en}
+                  onChangeAr={(v) => setForm({ ...form, address_ar: v })}
+                  onChangeEn={(v) => setForm({ ...form, address_en: v })}
+                  maxLength={500}
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label={t("address")} className="md:col-span-2">
-                    <Input
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      maxLength={500}
-                    />
-                  </Field>
                   <Field label={t("city")}>
                     <Input
                       value={form.city}
@@ -1057,11 +1201,7 @@ function CustomerSheet({
                   ? contacts.map((c) => (
                       <ContactRow
                         key={c.id}
-                        name={c.name}
-                        title={c.title ?? ""}
-                        email={c.email ?? ""}
-                        phone={c.phone ?? ""}
-                        isPrimary={c.is_primary}
+                        contact={c}
                         onChange={(patch) => updateContact(c.id, patch)}
                         onDelete={() => deleteContact(c.id)}
                       />
@@ -1069,12 +1209,8 @@ function CustomerSheet({
                   : draftContacts.map((c) => (
                       <ContactRow
                         key={c._key}
-                        name={c.name}
-                        title={c.title ?? ""}
-                        email={c.email ?? ""}
-                        phone={c.phone ?? ""}
-                        isPrimary={c.is_primary}
-                        onChange={(patch) => updateDraftContact(c._key, patch)}
+                        contact={c as unknown as Contact}
+                        onChange={(patch) => updateDraftContact(c._key, patch as Partial<DraftContact>)}
                         onDelete={() => removeDraftContact(c._key)}
                       />
                     ))}
@@ -1127,7 +1263,7 @@ function CustomerSheet({
                       <BankRow
                         key={b._key}
                         bank={b as unknown as Bank}
-                        onChange={(patch) => updateDraftBank(b._key, patch)}
+                        onChange={(patch) => updateDraftBank(b._key, patch as Partial<DraftBank>)}
                         onDelete={() => removeDraftBank(b._key)}
                       />
                     ))}
@@ -1155,66 +1291,73 @@ function CustomerSheet({
                 />
               </AccordionTrigger>
               <AccordionContent className="pt-2 space-y-5">
+                {/* Payment terms — bilingual chips */}
                 <div>
                   <Label className="mb-1.5 block text-xs">{t("paymentTerms")}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={paymentInput}
-                      onChange={(e) => setPaymentInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const v = paymentInput.trim();
-                          if (v && !paymentTermsList.includes(v))
-                            setPaymentTermsList([...paymentTermsList, v]);
-                          setPaymentInput("");
-                        }
-                      }}
-                      maxLength={200}
-                      placeholder={
-                        lang === "ar"
-                          ? "اكتب شرط الدفع واضغط Enter"
-                          : "Type a payment term and press Enter"
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const v = paymentInput.trim();
-                        if (v && !paymentTermsList.includes(v))
-                          setPaymentTermsList([...paymentTermsList, v]);
-                        setPaymentInput("");
-                      }}
-                    >
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute top-1 end-1 z-10 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">AR</span>
+                      <Input
+                        dir="rtl"
+                        value={paymentInputAr}
+                        onChange={(e) => setPaymentInputAr(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPaymentTerm(); } }}
+                        maxLength={200}
+                        placeholder="مثال: 30 يوم من تاريخ الفاتورة"
+                        className="pe-8"
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute top-1 end-1 z-10 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">EN</span>
+                      <Input
+                        dir="ltr"
+                        value={paymentInputEn}
+                        onChange={(e) => setPaymentInputEn(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPaymentTerm(); } }}
+                        maxLength={200}
+                        placeholder="e.g. Net 30"
+                        className="pe-8"
+                      />
+                    </div>
+                    <Button type="button" variant="outline" onClick={addPaymentTerm}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   {paymentTermsList.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-2">
-                      {paymentTermsList.map((p, i) => (
-                        <Badge
-                          key={i}
-                          variant="secondary"
-                          className="gap-1.5 py-1 ps-2.5 pe-1"
-                        >
-                          <span>{p}</span>
-                          <button
-                            type="button"
-                            className="rounded-full hover:bg-destructive/20 p-0.5"
-                            onClick={() =>
-                              setPaymentTermsList(paymentTermsList.filter((_, idx) => idx !== i))
-                            }
-                            aria-label="remove"
+                      {paymentTermsList.map((p, i) => {
+                        const display = lang === "ar" ? (p.ar || p.en) : (p.en || p.ar);
+                        const fallback = !(lang === "ar" ? p.ar : p.en);
+                        return (
+                          <Badge
+                            key={i}
+                            variant="secondary"
+                            className="gap-1.5 py-1 ps-2.5 pe-1"
                           >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </button>
-                        </Badge>
-                      ))}
+                            <span>{display}</span>
+                            {fallback && (
+                              <span className="rounded border border-dashed border-muted-foreground/40 px-1 text-[9px] text-muted-foreground">
+                                {lang === "ar" ? "EN" : "AR"}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="rounded-full hover:bg-destructive/20 p-0.5"
+                              onClick={() =>
+                                setPaymentTermsList(paymentTermsList.filter((_, idx) => idx !== i))
+                              }
+                              aria-label="remove"
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
+                {/* Terms — bilingual title + body */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <Label className="text-xs">{t("terms")}</Label>
@@ -1222,7 +1365,7 @@ function CustomerSheet({
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => setTerms([...terms, { title: "", body: "" }])}
+                      onClick={() => setTerms([...terms, emptyTerm()])}
                     >
                       <Plus className="h-4 w-4 me-1" />
                       {t("addTerm")}
@@ -1233,48 +1376,51 @@ function CustomerSheet({
                       {t("noTerms")}
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {terms.map((it, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-2 border rounded-md p-2 bg-muted/30"
+                          className="border rounded-md p-2 bg-muted/30 space-y-2"
                         >
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
-                            <Input
-                              placeholder={t("termTitle")}
-                              value={it.title}
-                              maxLength={120}
-                              onChange={(e) =>
-                                setTerms(
-                                  terms.map((x, i) =>
-                                    i === idx ? { ...x, title: e.target.value } : x,
-                                  ),
-                                )
-                              }
-                            />
-                            <Textarea
-                              rows={1}
-                              placeholder={t("termBody")}
-                              value={it.body}
-                              maxLength={1000}
-                              className="md:col-span-2 min-h-[38px]"
-                              onChange={(e) =>
-                                setTerms(
-                                  terms.map((x, i) =>
-                                    i === idx ? { ...x, body: e.target.value } : x,
-                                  ),
-                                )
-                              }
-                            />
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-[11px] text-muted-foreground">
+                              {lang === "ar" ? `شرط ${idx + 1}` : `Term ${idx + 1}`}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setTerms(terms.filter((_, i) => i !== idx))}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setTerms(terms.filter((_, i) => i !== idx))}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <BilingualInputs
+                            label={t("termTitle")}
+                            valueAr={it.title_ar}
+                            valueEn={it.title_en}
+                            onChangeAr={(v) =>
+                              setTerms(terms.map((x, i) => (i === idx ? { ...x, title_ar: v } : x)))
+                            }
+                            onChangeEn={(v) =>
+                              setTerms(terms.map((x, i) => (i === idx ? { ...x, title_en: v } : x)))
+                            }
+                            maxLength={120}
+                          />
+                          <BilingualInputs
+                            label={t("termBody")}
+                            textarea
+                            rows={2}
+                            valueAr={it.body_ar}
+                            valueEn={it.body_en}
+                            onChangeAr={(v) =>
+                              setTerms(terms.map((x, i) => (i === idx ? { ...x, body_ar: v } : x)))
+                            }
+                            onChangeEn={(v) =>
+                              setTerms(terms.map((x, i) => (i === idx ? { ...x, body_en: v } : x)))
+                            }
+                            maxLength={1000}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1300,7 +1446,6 @@ function CustomerSheet({
                 />
               </AccordionTrigger>
               <AccordionContent className="pt-2 space-y-3">
-                {/* Upload row */}
                 <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div className="space-y-1">
@@ -1365,7 +1510,6 @@ function CustomerSheet({
                   </div>
                 </div>
 
-                {/* List */}
                 {attachmentsCount === 0 ? (
                   <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
                     {lang === "ar" ? "لا توجد مرفقات بعد" : "No attachments yet"}
@@ -1488,7 +1632,7 @@ function Field({
   className,
   children,
 }: {
-  label: string;
+  label: React.ReactNode;
   icon?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
@@ -1505,59 +1649,59 @@ function Field({
 }
 
 function ContactRow({
-  name,
-  title,
-  email,
-  phone,
-  isPrimary,
+  contact,
   onChange,
   onDelete,
 }: {
-  name: string;
-  title: string;
-  email: string;
-  phone: string;
-  isPrimary: boolean;
+  contact: Contact;
   onChange: (patch: Partial<Contact>) => void;
   onDelete: () => void;
 }) {
   const { t } = useI18n();
   return (
     <Card className="border-s-4 border-s-primary/60">
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-3 space-y-3">
         <div className="flex items-start gap-2">
           <UserRound className="h-4 w-4 mt-2.5 text-muted-foreground shrink-0" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1">
-            <Input
-              placeholder={t("contactName")}
-              value={name}
-              onChange={(e) => onChange({ name: e.target.value })}
+          <div className="flex-1 space-y-3">
+            <BilingualInputs
+              label={t("contactName")}
+              valueAr={contact.name_ar ?? ""}
+              valueEn={contact.name_en ?? ""}
+              onChangeAr={(v) => onChange({ name_ar: v })}
+              onChangeEn={(v) => onChange({ name_en: v })}
+              maxLength={150}
             />
-            <Input
-              placeholder={t("jobTitle")}
-              value={title}
-              onChange={(e) => onChange({ title: e.target.value })}
+            <BilingualInputs
+              label={t("jobTitle")}
+              valueAr={contact.title_ar ?? ""}
+              valueEn={contact.title_en ?? ""}
+              onChangeAr={(v) => onChange({ title_ar: v })}
+              onChangeEn={(v) => onChange({ title_en: v })}
+              maxLength={150}
             />
-            <Input
-              type="email"
-              dir="ltr"
-              placeholder={t("email")}
-              value={email}
-              onChange={(e) => onChange({ email: e.target.value })}
-            />
-            <Input
-              dir="ltr"
-              placeholder={t("phone")}
-              value={phone}
-              onChange={(e) => onChange({ phone: e.target.value })}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <Input
+                type="email"
+                dir="ltr"
+                placeholder={t("email")}
+                value={contact.email ?? ""}
+                onChange={(e) => onChange({ email: e.target.value })}
+              />
+              <Input
+                dir="ltr"
+                placeholder={t("phone")}
+                value={contact.phone ?? ""}
+                onChange={(e) => onChange({ phone: e.target.value })}
+              />
+            </div>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onDelete}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
         <div className="flex items-center gap-2 text-xs ps-6">
-          <Switch checked={isPrimary} onCheckedChange={(v) => onChange({ is_primary: v })} />
+          <Switch checked={contact.is_primary} onCheckedChange={(v) => onChange({ is_primary: v })} />
           <Star className="h-3.5 w-3.5" />
           {t("primary")}
         </div>
@@ -1578,55 +1722,66 @@ function BankRow({
   const { t } = useI18n();
   return (
     <Card className="border-s-4 border-s-accent">
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-3 space-y-3">
         <div className="flex items-start gap-2">
           <Landmark className="h-4 w-4 mt-2.5 text-muted-foreground shrink-0" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1">
-            <Input
-              placeholder={t("bankName")}
-              value={bank.bank_name}
-              onChange={(e) => onChange({ bank_name: e.target.value })}
+          <div className="flex-1 space-y-3">
+            <BilingualInputs
+              label={t("bankName")}
+              valueAr={bank.bank_name_ar ?? ""}
+              valueEn={bank.bank_name_en ?? ""}
+              onChangeAr={(v) => onChange({ bank_name_ar: v })}
+              onChangeEn={(v) => onChange({ bank_name_en: v })}
+              maxLength={150}
             />
-            <Input
-              placeholder={t("accountName")}
-              value={bank.account_name ?? ""}
-              onChange={(e) => onChange({ account_name: e.target.value })}
+            <BilingualInputs
+              label={t("accountName")}
+              valueAr={bank.account_name_ar ?? ""}
+              valueEn={bank.account_name_en ?? ""}
+              onChangeAr={(v) => onChange({ account_name_ar: v })}
+              onChangeEn={(v) => onChange({ account_name_en: v })}
+              maxLength={150}
             />
-            <Input
-              dir="ltr"
-              placeholder={t("accountNumber")}
-              value={bank.account_number ?? ""}
-              onChange={(e) => onChange({ account_number: e.target.value })}
+            <BilingualInputs
+              label={t("branch")}
+              valueAr={bank.branch_ar ?? ""}
+              valueEn={bank.branch_en ?? ""}
+              onChangeAr={(v) => onChange({ branch_ar: v })}
+              onChangeEn={(v) => onChange({ branch_en: v })}
+              maxLength={150}
             />
-            <Input
-              dir="ltr"
-              placeholder={t("iban")}
-              value={bank.iban ?? ""}
-              onChange={(e) => onChange({ iban: e.target.value })}
-            />
-            <Input
-              dir="ltr"
-              placeholder={t("swift")}
-              value={bank.swift ?? ""}
-              onChange={(e) => onChange({ swift: e.target.value })}
-            />
-            <Input
-              placeholder={t("branch")}
-              value={bank.branch ?? ""}
-              onChange={(e) => onChange({ branch: e.target.value })}
-            />
-            <Select value={bank.currency} onValueChange={(v) => onChange({ currency: v })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <Input
+                dir="ltr"
+                placeholder={t("accountNumber")}
+                value={bank.account_number ?? ""}
+                onChange={(e) => onChange({ account_number: e.target.value })}
+              />
+              <Input
+                dir="ltr"
+                placeholder={t("iban")}
+                value={bank.iban ?? ""}
+                onChange={(e) => onChange({ iban: e.target.value })}
+              />
+              <Input
+                dir="ltr"
+                placeholder={t("swift")}
+                value={bank.swift ?? ""}
+                onChange={(e) => onChange({ swift: e.target.value })}
+              />
+              <Select value={bank.currency} onValueChange={(v) => onChange({ currency: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onDelete}>
             <Trash2 className="h-4 w-4 text-destructive" />
