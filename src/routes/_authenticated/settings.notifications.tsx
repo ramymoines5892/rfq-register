@@ -36,6 +36,7 @@ const DEFAULT: Prefs = {
 function NotificationSettings() {
   const { lang } = useI18n();
   const ar = lang === "ar";
+  const access = useAccess();
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
