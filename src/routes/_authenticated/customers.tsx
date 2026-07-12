@@ -619,11 +619,9 @@ function CustomerSheet({
     }
     setChecking(true);
     const timer = setTimeout(async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id ?? "";
-      const { data, error } = await supabase.rpc("find_customer_by_tax_id", { _tax_id: tid });
-      if (!error && data && data.length > 0) {
-        const row = data[0] as { id: string; name: string; owner_id: string };
+      const uid = (await currentUserId()) ?? "";
+      const row = await findCustomerByTaxId(tid);
+      if (row) {
         if (!customer || row.id !== customer.id) {
           setTaxIdConflict({ name: row.name, ownedByMe: row.owner_id === uid });
         } else setTaxIdConflict(null);
