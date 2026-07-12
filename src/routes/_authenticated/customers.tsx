@@ -1283,6 +1283,136 @@ function CustomerSheet({
               </AccordionContent>
             </AccordionItem>
 
+            {/* Attachments */}
+            <AccordionItem value="attachments">
+              <AccordionTrigger className="hover:no-underline">
+                <SectionTitle
+                  icon={<Paperclip className="h-4 w-4" />}
+                  title={lang === "ar" ? "المرفقات" : "Attachments"}
+                  subtitle={
+                    attachmentsCount > 0
+                      ? `${attachmentsCount} ${lang === "ar" ? "ملف" : "file(s)"}`
+                      : lang === "ar"
+                        ? "بروفيل، سجل تجاري، بطاقة ضريبية…"
+                        : "Profile, register, tax card…"
+                  }
+                  count={attachmentsCount}
+                />
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 space-y-3">
+                {/* Upload row */}
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        {lang === "ar" ? "نوع الملف" : "File type"}
+                      </Label>
+                      <Select
+                        value={newAttachCategory}
+                        onValueChange={(v) => setNewAttachCategory(v as AttachmentCategory)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ATTACHMENT_CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {attachmentCategoryLabel(c, lang)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {newAttachCategory === "other" && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">
+                          {lang === "ar" ? "مسمى الملف" : "File label"}
+                        </Label>
+                        <Input
+                          value={newAttachLabel}
+                          onChange={(e) => setNewAttachLabel(e.target.value)}
+                          maxLength={100}
+                          placeholder={lang === "ar" ? "مثال: عقد الشراكة" : "e.g. Partnership contract"}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      id="customer-attachment-input"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadAttachment(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={uploadingAttach}
+                      onClick={() =>
+                        document.getElementById("customer-attachment-input")?.click()
+                      }
+                      className="w-full"
+                    >
+                      <Upload className="h-4 w-4 me-1.5" />
+                      {uploadingAttach
+                        ? lang === "ar" ? "جارِ الرفع…" : "Uploading…"
+                        : lang === "ar" ? "اختر ملفًا للرفع" : "Choose file to upload"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* List */}
+                {attachmentsCount === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
+                    {lang === "ar" ? "لا توجد مرفقات بعد" : "No attachments yet"}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {customer
+                      ? attachments.map((a) => (
+                          <AttachmentRow
+                            key={a.id}
+                            categoryLabel={
+                              a.category === "other"
+                                ? a.label || attachmentCategoryLabel("other", lang)
+                                : attachmentCategoryLabel(a.category, lang)
+                            }
+                            fileName={a.file_name}
+                            size={a.size_bytes ?? undefined}
+                            onDownload={() => downloadAttachment(a)}
+                            onDelete={() => deleteAttachment(a)}
+                          />
+                        ))
+                      : draftAttachments.map((a) => (
+                          <AttachmentRow
+                            key={a._key}
+                            categoryLabel={
+                              a.category === "other"
+                                ? a.label || attachmentCategoryLabel("other", lang)
+                                : attachmentCategoryLabel(a.category, lang)
+                            }
+                            fileName={a.file.name}
+                            size={a.file.size}
+                            pending
+                            onDelete={() => removeDraftAttachment(a._key)}
+                          />
+                        ))}
+                  </div>
+                )}
+                {!customer && draftAttachments.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    {lang === "ar"
+                      ? "الملفات هترفع بعد حفظ العميل"
+                      : "Files will be uploaded after saving the customer"}
+                  </p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
             {/* Notes */}
             <AccordionItem value="notes">
               <AccordionTrigger className="hover:no-underline">
