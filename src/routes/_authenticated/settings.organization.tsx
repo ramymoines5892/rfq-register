@@ -684,26 +684,37 @@ function DeptCard({
       </Tooltip>
 
       {children.length > 0 && (
-        <div className="relative flex flex-nowrap items-start justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 gap-y-6 border-t pt-6 overflow-x-auto max-w-full before:absolute before:left-1/2 before:top-0 before:h-6 before:border-l before:border-border">
-          {children.map((c) => (
-            <DeptCard
-              key={c.id}
-              dept={c}
-              depth={depth + 1}
-              depts={depts}
-              jobs={jobs}
-              memberCounts={memberCounts}
-              lang={lang}
-              query={query}
-              selected={selected}
-              onSelect={onSelect}
-              onAddDept={onAddDept}
-              onAddJob={onAddJob}
-              onDelete={onDelete}
-              onMove={onMove}
-              parentId={dept.id}
-            />
-          ))}
+        <div className="relative pt-6">
+          {/* vertical trunk from parent */}
+          <div className="absolute left-1/2 -top-0 h-6 w-px bg-border -translate-x-1/2" />
+          {/* horizontal bus across children (hidden when single child) */}
+          {children.length > 1 && (
+            <div className="absolute top-6 left-[calc(50%_-_(100%_-_3rem)/2)] right-[calc(50%_-_(100%_-_3rem)/2)] h-px bg-border" />
+          )}
+          <div className="flex flex-nowrap items-start justify-center gap-6">
+            {children.map((c) => (
+              <div key={c.id} className="relative pt-6">
+                {/* vertical drop from bus to each child */}
+                <div className="absolute left-1/2 top-0 h-6 w-px bg-border -translate-x-1/2" />
+                <DeptCard
+                  dept={c}
+                  depth={depth + 1}
+                  depts={depts}
+                  jobs={jobs}
+                  memberCounts={memberCounts}
+                  lang={lang}
+                  query={query}
+                  selected={selected}
+                  onSelect={onSelect}
+                  onAddDept={onAddDept}
+                  onAddJob={onAddJob}
+                  onDelete={onDelete}
+                  onMove={onMove}
+                  parentId={dept.id}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
