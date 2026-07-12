@@ -892,7 +892,6 @@ function FieldEditor({
     }
 
 
-    setSaving(true);
     const rules: Record<string, string | number> = {};
     if (validation.minLength) rules.minLength = Number(validation.minLength);
     if (validation.maxLength) rules.maxLength = Number(validation.maxLength);
@@ -909,44 +908,39 @@ function FieldEditor({
       validation_rules: rules as unknown as import("@/integrations/supabase/types").Json,
     };
 
-    let fieldId = editing?.id;
-    if (editing) {
-      const { error } = await supabase.from("customer_field_definitions").update(payload).eq("id", editing.id);
-      if (error) { setSaving(false); toast.error(error.message); return; }
-    } else {
-      const { data, error } = await supabase.from("customer_field_definitions")
-        .insert({ ...payload, position: maxPosition + 10 }).select("id").single();
-      if (error || !data) { setSaving(false); toast.error(error?.message ?? "Error"); return; }
-      fieldId = data.id;
-    }
+    const usedValues = new Set<string>();
+    const genValue = (le: string, la: string) => {
+      const base = slugify(le) || slugify(la) || "option";
+      let v = base;
+      let n = 2;
+      while (usedValues.has(v)) v = `${base}_${n++}`;
+      usedValues.add(v);
+      return v;
+    };
+    const optionRows = localOptions
+      .filter((o) => o.label_ar.trim() && o.label_en.trim())
+      .map((o, i) => ({
+        field_id: "", // filled by mutation once we have the field id
+        value: genValue(o.label_en, o.label_ar),
+        label_ar: o.label_ar.trim(),
+        label_en: o.label_en.trim(),
+        position: (i + 1) * 10,
+        is_active: o.is_active,
+      }));
 
-    if (fieldId && needsOptions(fieldType) && !isReferenceField(editing)) {
-      await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
-      const usedValues = new Set<string>();
-      const genValue = (labelEn: string, labelAr: string) => {
-        const base = slugify(labelEn) || slugify(labelAr) || "option";
-        let v = base;
-        let n = 2;
-        while (usedValues.has(v)) v = `${base}_${n++}`;
-        usedValues.add(v);
-        return v;
-      };
-      const rows = localOptions
-        .filter((o) => o.label_ar.trim() && o.label_en.trim())
-        .map((o, i) => ({
-          field_id: fieldId!, value: genValue(o.label_en, o.label_ar),
-          label_ar: o.label_ar.trim(), label_en: o.label_en.trim(),
-          position: (i + 1) * 10, is_active: o.is_active,
-        }));
-      if (rows.length) {
-        const { error } = await supabase.from("customer_field_options").insert(rows);
-        if (error) { setSaving(false); toast.error(error.message); return; }
-      }
-    } else if (fieldId && !needsOptions(fieldType) && !isReferenceField(editing)) {
-      await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
-    }
+    try {
+      await saveM.mutateAsync({
+        editingId: editing?.id ?? null,
+        payload,
+        maxPosition,
+        options: {
+          needs: needsOptions(fieldType),
+          isReference: isReferenceField(editing),
+          rows: optionRows,
+        },
+      });
+    } catch (e) { toast.error((e as Error).message); return; }
 
-    setSaving(false);
     toast.success(ar ? "تم الحفظ" : "Saved");
     onOpenChange(false);
     onSaved();
