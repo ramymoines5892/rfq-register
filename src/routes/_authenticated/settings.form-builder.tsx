@@ -101,22 +101,32 @@ function FormBuilderPage() {
   useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sections = useMemo(() => {
+    // Group by the visible (current-language) name so a missing translation
+    // in one field doesn't split the section into two buckets.
     const map = new Map<string, { sectionAr: string; sectionEn: string; items: FieldDef[] }>();
     for (const f of fields) {
       const sAr = f.section_ar ?? "";
       const sEn = f.section_en ?? "";
-      const key = `${sAr}|||${sEn}`;
-      if (!map.has(key)) map.set(key, { sectionAr: sAr, sectionEn: sEn, items: [] });
-      map.get(key)!.items.push(f);
+      const displayKey = (ar ? sAr : sEn) || sAr || sEn || "";
+      const existing = map.get(displayKey);
+      if (existing) {
+        // First non-empty translation wins, so we always keep both names.
+        if (!existing.sectionAr && sAr) existing.sectionAr = sAr;
+        if (!existing.sectionEn && sEn) existing.sectionEn = sEn;
+        existing.items.push(f);
+      } else {
+        map.set(displayKey, { sectionAr: sAr, sectionEn: sEn, items: [f] });
+      }
     }
     return Array.from(map.entries()).map(([key, v]) => ({
       key,
       sectionAr: v.sectionAr,
       sectionEn: v.sectionEn,
-      label: (ar ? v.sectionAr : v.sectionEn) || (ar ? "بدون قسم" : "No section"),
+      label: (ar ? v.sectionAr : v.sectionEn) || v.sectionAr || v.sectionEn || (ar ? "بدون قسم" : "No section"),
       items: v.items.sort((a, b) => a.position - b.position),
     }));
   }, [fields, ar]);
+
 
   async function updateColSpan(f: FieldDef, span: number) {
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, col_span: span } : x)));
@@ -199,13 +209,18 @@ function FormBuilderPage() {
     } else {
       overField = fields.find((f) => f.id === overId);
       if (!overField) return;
-      destAr = overField.section_ar;
-      destEn = overField.section_en;
+      // Take the destination section names from the section that CONTAINS
+      // overField (so we inherit both AR + EN even if overField itself has
+      // one language empty).
+      const destSec = sections.find((s) => s.items.some((it) => it.id === overField!.id));
+      destAr = (destSec?.sectionAr || overField.section_ar) || null;
+      destEn = (destSec?.sectionEn || overField.section_en) || null;
     }
 
+    const srcSec = sections.find((s) => s.items.some((it) => it.id === activeField.id));
     const sameSection =
-      (activeField.section_ar ?? "") === (destAr ?? "") &&
-      (activeField.section_en ?? "") === (destEn ?? "");
+      (srcSec?.sectionAr ?? activeField.section_ar ?? "") === (destAr ?? "") &&
+      (srcSec?.sectionEn ?? activeField.section_en ?? "") === (destEn ?? "");
 
     setSavingLayout(true);
     if (sameSection && overField) {
