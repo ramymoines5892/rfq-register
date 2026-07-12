@@ -3,7 +3,24 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendQuoteForApproval } from "@/lib/send-quote-email.functions";
 import { useEffect, useMemo, useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchDashboardBase,
+  fetchAttachmentsAndApprovals,
+  fetchStagesForTemplates,
+  softDeleteQuote,
+  createSignedAttachmentUrl,
+  fetchStageApprovers,
+  upsertQuoteApprovals,
+  updateQuoteApprovalState,
+  updateApprovalDecision,
+  fetchApprovalsForQuote,
+  fetchQuoteAttachments,
+  updateQuote,
+  insertQuote,
+  uploadQuoteAttachment,
+  softDeleteAttachment,
+  getCurrentUserId,
+} from "@/features/quotes/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
@@ -124,50 +141,42 @@ function Dashboard() {
   );
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => { setUserId(data.user?.id ?? ""); });
+    getCurrentUserId().then((uid) => setUserId(uid));
     load();
   }, []);
 
   async function load() {
     setLoading(true);
-    const [{ data: qs }, { data: tpls }, { data: profs }, { data: cus }] = await Promise.all([
-      supabase.from("quotes").select("*").is("deleted_at", null).order("received_date", { ascending: false }),
-      supabase.from("workflow_templates").select("id, name").is("deleted_at", null),
-      supabase.from("profiles").select("id, email, full_name"),
-      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").is("deleted_at", null).order("name"),
-    ]);
-    setCustomers((cus ?? []) as Customer[]);
-    const allQuotes = (qs ?? []) as Quote[];
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id ?? "";
+    const base = await fetchDashboardBase();
+    setCustomers(base.customers as Customer[]);
+    const allQuotes = base.quotes as Quote[];
+    const uid = base.userId;
     setQuotes(allQuotes.filter(q => q.user_id === uid));
     setPendingQuotes(allQuotes.filter(q => q.user_id !== uid && q.approval_state === "in_progress"));
-    setTemplates((tpls ?? []) as Template[]);
-    setProfiles((profs ?? []) as Profile[]);
+    setTemplates(base.templates as Template[]);
+    setProfiles(base.profiles as Profile[]);
 
     if (allQuotes.length) {
       const ids = allQuotes.map(q => q.id);
-      const [{ data: atts }, { data: apps }] = await Promise.all([
-        supabase.from("quote_attachments").select("*").in("quote_id", ids).is("deleted_at", null),
-        supabase.from("quote_approvals").select("*").in("quote_id", ids),
-      ]);
+      const { attachments: atts, approvals: apps } = await fetchAttachmentsAndApprovals(ids);
       const ag: Record<string, Attachment[]> = {};
-      (atts ?? []).forEach(a => { (ag[a.quote_id] ??= []).push(a as Attachment); });
+      (atts as Attachment[]).forEach(a => { (ag[a.quote_id] ??= []).push(a); });
       setAttachments(ag);
       const apg: Record<string, Approval[]> = {};
-      (apps ?? []).forEach(a => { (apg[(a as Approval).quote_id] ??= []).push(a as Approval); });
+      (apps as Approval[]).forEach(a => { (apg[a.quote_id] ??= []).push(a); });
       setApprovalsByQuote(apg);
     }
 
     const tplIds = Array.from(new Set(allQuotes.map(q => q.workflow_template_id).filter(Boolean))) as string[];
     if (tplIds.length) {
-      const { data: stages } = await supabase.from("workflow_stages").select("*").in("template_id", tplIds).is("deleted_at", null).order("position");
+      const stages = await fetchStagesForTemplates(tplIds);
       const sg: Record<string, Stage[]> = {};
-      (stages ?? []).forEach(s => { (sg[(s as Stage).template_id] ??= []).push(s as Stage); });
+      (stages as Stage[]).forEach(s => { (sg[s.template_id] ??= []).push(s); });
       setStagesByTemplate(sg);
     }
     setLoading(false);
   }
+
 
 
 
@@ -420,18 +429,14 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
   };
 
   async function handleDelete() {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("quotes").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", quote.id);
+    const { error } = await softDeleteQuote(quote.id);
     if (error) { toast.error(error.message); return; }
     toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات" : "Moved to trash");
     onChanged();
   }
 
   async function downloadFile(a: Attachment) {
-    const { data, error } = await supabase.storage.from("quote-attachments").createSignedUrl(a.storage_path, 60);
+    const { data, error } = await createSignedAttachmentUrl(a.storage_path, 60);
     if (error) { toast.error(error.message); return; }
     window.open(data.signedUrl, "_blank");
   }
@@ -447,16 +452,16 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
       let currentStage = stages.find(s => s.id === quote.current_stage_id) ?? stages[0];
 
       // Get approvers for the current stage
-      const { data: stageApprovers } = await supabase.from("workflow_stage_approvers").select("*").eq("stage_id", currentStage.id);
-      const approverIds = (stageApprovers ?? []).map(a => (a as StageApprover).approver_id);
+      const stageApprovers = await fetchStageApprovers(currentStage.id);
+      const approverIds = (stageApprovers as StageApprover[]).map(a => a.approver_id);
       if (approverIds.length === 0) { toast.error(t("noApprovers")); return; }
 
       // Create pending approvals (upsert)
-      const rows = approverIds.map(aid => ({ quote_id: quote.id, stage_id: currentStage.id, approver_id: aid, decision: "pending" as Decision }));
-      await supabase.from("quote_approvals").upsert(rows, { onConflict: "quote_id,stage_id,approver_id" });
+      const rows = approverIds.map((aid: string) => ({ quote_id: quote.id, stage_id: currentStage.id, approver_id: aid, decision: "pending" as Decision }));
+      await upsertQuoteApprovals(rows);
 
       // Update quote state
-      await supabase.from("quotes").update({ approval_state: "in_progress" as ApprovalState, current_stage_id: currentStage.id }).eq("id", quote.id);
+      await updateQuoteApprovalState(quote.id, { approval_state: "in_progress", current_stage_id: currentStage.id });
 
       // Send email via Gmail connector (server function attaches files from storage)
       try {
@@ -479,18 +484,15 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
 
   async function submitDecision() {
     if (!myPending || !decisionDialog) return;
-    const { error } = await supabase.from("quote_approvals").update({
-      decision: decisionDialog, comment: comment.trim() || null, decided_at: new Date().toISOString(),
-    }).eq("id", myPending.id);
+    const { error } = await updateApprovalDecision(myPending.id, decisionDialog, comment.trim() || null);
     if (error) { toast.error(error.message); return; }
 
-    // Recompute quote approval state: if any stage rejected → rejected;
-    // if all approvers approved in current stage → advance or complete
-    const { data: allApps } = await supabase.from("quote_approvals").select("*").eq("quote_id", quote.id);
-    const apps = (allApps ?? []) as Approval[];
+    // Recompute quote approval state
+    const allApps = await fetchApprovalsForQuote(quote.id);
+    const apps = allApps as Approval[];
     const anyRejected = apps.some(a => a.decision === "rejected");
     if (anyRejected) {
-      await supabase.from("quotes").update({ approval_state: "rejected" as ApprovalState }).eq("id", quote.id);
+      await updateQuoteApprovalState(quote.id, { approval_state: "rejected" });
     } else {
       const currentStageApps = apps.filter(a => a.stage_id === quote.current_stage_id);
       const allApproved = currentStageApps.length > 0 && currentStageApps.every(a => a.decision === "approved");
@@ -498,16 +500,15 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
         const currentIdx = stages.findIndex(s => s.id === quote.current_stage_id);
         const next = stages[currentIdx + 1];
         if (next) {
-          // Advance to next stage; create pending approvals for next stage
-          const { data: nextApprovers } = await supabase.from("workflow_stage_approvers").select("*").eq("stage_id", next.id);
-          const nextIds = (nextApprovers ?? []).map(a => (a as StageApprover).approver_id);
+          const nextApprovers = await fetchStageApprovers(next.id);
+          const nextIds = (nextApprovers as StageApprover[]).map(a => a.approver_id);
           if (nextIds.length) {
-            const rows = nextIds.map(aid => ({ quote_id: quote.id, stage_id: next.id, approver_id: aid, decision: "pending" as Decision }));
-            await supabase.from("quote_approvals").upsert(rows, { onConflict: "quote_id,stage_id,approver_id" });
+            const rows = nextIds.map((aid: string) => ({ quote_id: quote.id, stage_id: next.id, approver_id: aid, decision: "pending" as Decision }));
+            await upsertQuoteApprovals(rows);
           }
-          await supabase.from("quotes").update({ current_stage_id: next.id }).eq("id", quote.id);
+          await updateQuoteApprovalState(quote.id, { current_stage_id: next.id });
         } else {
-          await supabase.from("quotes").update({ approval_state: "approved" as ApprovalState }).eq("id", quote.id);
+          await updateQuoteApprovalState(quote.id, { approval_state: "approved" });
         }
       }
     }
@@ -517,6 +518,7 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
     setComment("");
     onChanged();
   }
+
 
   const currentStage = stages.find(s => s.id === quote.current_stage_id);
   const ownerProfile = profiles.find(p => p.id === quote.user_id);
@@ -660,7 +662,7 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
           terms_override: quote.terms_override ?? "",
           override_enabled: quote.terms_override !== null,
         });
-        supabase.from("quote_attachments").select("*").eq("quote_id", quote.id).then(({ data }) => setExistingAttachments((data ?? []) as Attachment[]));
+        fetchQuoteAttachments(quote.id).then((data) => setExistingAttachments(data as Attachment[]));
       } else {
         setForm({ supplier_name: "", reference_no: "", description: "", amount: "", currency: "EGP", status: "new", received_date: new Date().toISOString().slice(0, 10), expiry_date: "", notes: "", workflow_template_id: "", customer_id: "", terms_override: "", override_enabled: false });
         setExistingAttachments([]);
@@ -675,8 +677,7 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
     e.preventDefault();
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
+      const uid = await getCurrentUserId();
       if (!uid) throw new Error("Not authenticated");
 
       const payload = {
@@ -695,23 +696,15 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
 
       let quoteId: string;
       if (quote) {
-        const { error } = await supabase.from("quotes").update(payload).eq("id", quote.id);
+        const { error } = await updateQuote(quote.id, payload);
         if (error) throw error;
         quoteId = quote.id;
       } else {
-        const { data, error } = await supabase.from("quotes").insert({ ...payload, user_id: uid }).select("id").single();
-        if (error) throw error;
-        quoteId = data.id;
+        quoteId = await insertQuote(payload, uid);
       }
 
       for (const f of files) {
-        const path = `${uid}/${quoteId}/${Date.now()}-${f.name}`;
-        const { error: upErr } = await supabase.storage.from("quote-attachments").upload(path, f);
-        if (upErr) throw upErr;
-        const { error: aErr } = await supabase.from("quote_attachments").insert({
-          quote_id: quoteId, user_id: uid, file_name: f.name, storage_path: path, mime_type: f.type, size_bytes: f.size,
-        });
-        if (aErr) throw aErr;
+        await uploadQuoteAttachment(uid, quoteId, f);
       }
 
       toast.success(lang === "ar" ? "تم الحفظ" : "Saved");
@@ -725,13 +718,10 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
   }
 
   async function removeAttachment(a: Attachment) {
-    const { data: u } = await supabase.auth.getUser();
-    await supabase.from("quote_attachments").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", a.id);
+    await softDeleteAttachment(a.id);
     setExistingAttachments(prev => prev.filter(x => x.id !== a.id));
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
