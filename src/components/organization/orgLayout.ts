@@ -1,13 +1,21 @@
 import dagre from "dagre";
 import { Position, type Node, type Edge } from "@xyflow/react";
 
-const NODE_W = 56;
-const NODE_H = 72;
+const NODE_W = 110;
+const NODE_H = 78;
 
 export function layoutTree(nodes: Node[], edges: Edge[], direction: "TB" | "LR" = "TB"): Node[] {
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: direction, nodesep: 16, ranksep: 34, marginx: 16, marginy: 16 });
+  g.setGraph({
+    rankdir: direction,
+    align: "UL",
+    nodesep: 28,
+    ranksep: 70,
+    edgesep: 20,
+    marginx: 24,
+    marginy: 24,
+  });
 
 
   nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
