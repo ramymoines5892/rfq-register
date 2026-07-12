@@ -760,8 +760,93 @@ function CustomerSheet({
     setDraftBanks((p) => p.filter((b) => b._key !== key));
   }
 
+  /* ------------- attachments ------------- */
+  async function uploadAttachment(file: File) {
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error(lang === "ar" ? "الحد الأقصى 25 ميجا" : "Max size 25 MB");
+      return;
+    }
+    if (newAttachCategory === "other" && !newAttachLabel.trim()) {
+      toast.error(lang === "ar" ? "اكتب مسمى الملف" : "Enter a label");
+      return;
+    }
+    // New customer → keep as draft
+    if (!customer) {
+      setDraftAttachments((p) => [
+        ...p,
+        {
+          _key: crypto.randomUUID(),
+          file,
+          category: newAttachCategory,
+          label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
+        },
+      ]);
+      setNewAttachLabel("");
+      return;
+    }
+    // Existing customer → upload immediately
+    setUploadingAttach(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id!;
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${uid}/${customer.id}/${crypto.randomUUID()}_${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from(ATTACHMENT_BUCKET)
+        .upload(path, file, { contentType: file.type });
+      if (upErr) throw upErr;
+      const { data, error } = await supabase
+        .from("customer_attachments")
+        .insert({
+          customer_id: customer.id,
+          user_id: uid,
+          category: newAttachCategory,
+          label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
+          file_path: path,
+          file_name: file.name,
+          mime_type: file.type || null,
+          size_bytes: file.size,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setAttachments((p) => [...p, data as Attachment]);
+      setNewAttachLabel("");
+      toast.success(lang === "ar" ? "تم الرفع" : "Uploaded");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploadingAttach(false);
+    }
+  }
+
+  async function downloadAttachment(a: Attachment) {
+    const { data, error } = await supabase.storage
+      .from(ATTACHMENT_BUCKET)
+      .createSignedUrl(a.file_path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error(error?.message ?? "Error");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  }
+
+  async function deleteAttachment(a: Attachment) {
+    const { error: sErr } = await supabase.storage.from(ATTACHMENT_BUCKET).remove([a.file_path]);
+    if (sErr) toast.error(sErr.message);
+    const { error } = await supabase.from("customer_attachments").delete().eq("id", a.id);
+    if (error) return toast.error(error.message);
+    setAttachments((p) => p.filter((x) => x.id !== a.id));
+  }
+
+  function removeDraftAttachment(key: string) {
+    setDraftAttachments((p) => p.filter((x) => x._key !== key));
+  }
+
   const contactsCount = customer ? contacts.length : draftContacts.length;
   const banksCount = customer ? banks.length : draftBanks.length;
+  const attachmentsCount = customer ? attachments.length : draftAttachments.length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
