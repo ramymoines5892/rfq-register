@@ -102,8 +102,8 @@ function HrPage() {
     const [{ data: p }, { data: r }, { data: d }, { data: j }] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
-      supabase.from("departments").select("*").order("name"),
-      supabase.from("job_titles").select("*").order("name"),
+      supabase.from("departments").select("*").is("deleted_at", null).order("name"),
+      supabase.from("job_titles").select("*").is("deleted_at", null).order("name"),
     ]);
     setProfiles((p ?? []) as Profile[]);
     setRoles((r ?? []) as { user_id: string; role: AppRole }[]);
@@ -540,7 +540,11 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
   }
   async function remove(id: string) {
     if (!confirm(t("confirmDelete"))) return;
-    const { error } = await supabase.from("departments").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("departments").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     onChanged();
   }
@@ -641,7 +645,11 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
   }
   async function remove(id: string) {
     if (!confirm(t("confirmDelete"))) return;
-    const { error } = await supabase.from("job_titles").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("job_titles").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     onChanged();
   }

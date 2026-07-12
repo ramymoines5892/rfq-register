@@ -32,7 +32,7 @@ function WorkflowsPage() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("workflow_templates").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("workflow_templates").select("*").is("deleted_at", null).order("created_at", { ascending: false });
     setTemplates((data ?? []) as Template[]);
     setLoading(false);
   }
@@ -51,7 +51,11 @@ function WorkflowsPage() {
 
   async function deleteTemplate(id: string) {
     if (!confirm(t("confirmDelete"))) return;
-    const { error } = await supabase.from("workflow_templates").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("workflow_templates").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(t("saved"));
     load();
@@ -135,7 +139,7 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   }, [open, template.id]);
 
   async function reloadStages() {
-    const { data: st } = await supabase.from("workflow_stages").select("*").eq("template_id", template.id).order("position");
+    const { data: st } = await supabase.from("workflow_stages").select("*").eq("template_id", template.id).is("deleted_at", null).order("position");
     const stagesList = (st ?? []) as Stage[];
     setStages(stagesList);
     if (stagesList.length) {
@@ -169,7 +173,11 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   }
 
   async function deleteStage(id: string) {
-    await supabase.from("workflow_stages").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("workflow_stages").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     reloadStages();
   }
 

@@ -92,10 +92,10 @@ function Dashboard() {
   async function load() {
     setLoading(true);
     const [{ data: qs }, { data: tpls }, { data: profs }, { data: cus }] = await Promise.all([
-      supabase.from("quotes").select("*").order("received_date", { ascending: false }),
-      supabase.from("workflow_templates").select("id, name"),
+      supabase.from("quotes").select("*").is("deleted_at", null).order("received_date", { ascending: false }),
+      supabase.from("workflow_templates").select("id, name").is("deleted_at", null),
       supabase.from("profiles").select("id, email, full_name"),
-      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").order("name"),
+      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").is("deleted_at", null).order("name"),
     ]);
     setCustomers((cus ?? []) as Customer[]);
     const allQuotes = (qs ?? []) as Quote[];
@@ -109,7 +109,7 @@ function Dashboard() {
     if (allQuotes.length) {
       const ids = allQuotes.map(q => q.id);
       const [{ data: atts }, { data: apps }] = await Promise.all([
-        supabase.from("quote_attachments").select("*").in("quote_id", ids),
+        supabase.from("quote_attachments").select("*").in("quote_id", ids).is("deleted_at", null),
         supabase.from("quote_approvals").select("*").in("quote_id", ids),
       ]);
       const ag: Record<string, Attachment[]> = {};
@@ -122,7 +122,7 @@ function Dashboard() {
 
     const tplIds = Array.from(new Set(allQuotes.map(q => q.workflow_template_id).filter(Boolean))) as string[];
     if (tplIds.length) {
-      const { data: stages } = await supabase.from("workflow_stages").select("*").in("template_id", tplIds).order("position");
+      const { data: stages } = await supabase.from("workflow_stages").select("*").in("template_id", tplIds).is("deleted_at", null).order("position");
       const sg: Record<string, Stage[]> = {};
       (stages ?? []).forEach(s => { (sg[(s as Stage).template_id] ??= []).push(s as Stage); });
       setStagesByTemplate(sg);
@@ -299,10 +299,13 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
   };
 
   async function handleDelete() {
-    if (attachments.length) await supabase.storage.from("quote-attachments").remove(attachments.map(a => a.storage_path));
-    const { error } = await supabase.from("quotes").delete().eq("id", quote.id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("quotes").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", quote.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(lang === "ar" ? "تم الحذف" : "Deleted");
+    toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات" : "Moved to trash");
     onChanged();
   }
 
@@ -601,8 +604,11 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
   }
 
   async function removeAttachment(a: Attachment) {
-    await supabase.storage.from("quote-attachments").remove([a.storage_path]);
-    await supabase.from("quote_attachments").delete().eq("id", a.id);
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("quote_attachments").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", a.id);
     setExistingAttachments(prev => prev.filter(x => x.id !== a.id));
   }
 

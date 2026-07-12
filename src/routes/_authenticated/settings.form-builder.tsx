@@ -74,8 +74,9 @@ function FormBuilderPage() {
         .from("customer_field_definitions")
         .select("*")
         .eq("entity_key", entity)
+        .is("deleted_at", null)
         .order("position", { ascending: true }),
-      supabase.from("customer_field_options").select("*").order("position", { ascending: true }),
+      supabase.from("customer_field_options").select("*").is("deleted_at", null).order("position", { ascending: true }),
     ]);
     setFields(defs ?? []);
     const grouped: Record<string, FieldOption[]> = {};
@@ -119,18 +120,33 @@ function FormBuilderPage() {
   }
 
   async function toggleActive(f: FieldDef) {
+    const { data: u } = await supabase.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const hide = f.is_active; // currently active → we're hiding it
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, is_active: !x.is_active } : x)));
-    await supabase.from("customer_field_definitions").update({ is_active: !f.is_active }).eq("id", f.id);
+    await supabase.from("customer_field_definitions").update({
+      is_active: !f.is_active,
+      hidden_at: hide ? new Date().toISOString() : null,
+      hidden_by: hide ? uid : null,
+    }).eq("id", f.id);
   }
 
   async function removeField(f: FieldDef) {
     if (f.is_system) { toast.error(ar ? "لا يمكن حذف حقل نظام" : "System fields cannot be deleted"); return; }
-    if (!confirm(ar ? `حذف الحقل "${f.label_ar}"؟` : `Delete field "${f.label_en}"?`)) return;
-    const { error } = await supabase.from("customer_field_definitions").delete().eq("id", f.id);
+    if (!confirm(ar
+      ? `حذف الحقل "${f.label_ar}"؟ (الـ Owner بس هيقدر يشوفه أو يرجّعه من سلة المحذوفات)`
+      : `Delete field "${f.label_en}"? (Only the Owner can see or restore it from Trash)`)) return;
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("customer_field_definitions").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+      is_active: false,
+    }).eq("id", f.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(ar ? "تم الحذف" : "Deleted");
+    toast.success(ar ? "تم النقل لسلة المحذوفات" : "Moved to trash");
     loadAll();
   }
+
 
   async function persistSectionOrder(sectionFields: FieldDef[]) {
     setSavingLayout(true);

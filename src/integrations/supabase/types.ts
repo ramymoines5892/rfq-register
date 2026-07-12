@@ -61,8 +61,12 @@ export type Database = {
           category: Database["public"]["Enums"]["customer_attachment_category"]
           created_at: string
           customer_id: string
+          deleted_at: string | null
+          deleted_by: string | null
           file_name: string
           file_path: string
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           label: string | null
           mime_type: string | null
@@ -74,8 +78,12 @@ export type Database = {
           category?: Database["public"]["Enums"]["customer_attachment_category"]
           created_at?: string
           customer_id: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           file_name: string
           file_path: string
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           label?: string | null
           mime_type?: string | null
@@ -87,8 +95,12 @@ export type Database = {
           category?: Database["public"]["Enums"]["customer_attachment_category"]
           created_at?: string
           customer_id?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           file_name?: string
           file_path?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           label?: string | null
           mime_type?: string | null
@@ -121,6 +133,10 @@ export type Database = {
           created_at: string
           currency: string
           customer_id: string
+          deleted_at: string | null
+          deleted_by: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           iban: string | null
           id: string
           is_primary: boolean
@@ -143,6 +159,10 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_id: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           iban?: string | null
           id?: string
           is_primary?: boolean
@@ -165,6 +185,10 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_id?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           iban?: string | null
           id?: string
           is_primary?: boolean
@@ -187,7 +211,11 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           is_primary: boolean
           name: string
@@ -204,7 +232,11 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           is_primary?: boolean
           name: string
@@ -221,7 +253,11 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           is_primary?: boolean
           name?: string
@@ -250,10 +286,14 @@ export type Database = {
           col_span: number
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           entity_key: string
           field_type: Database["public"]["Enums"]["customer_field_type"]
           help_text_ar: string | null
           help_text_en: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           is_active: boolean
           is_required: boolean
@@ -274,10 +314,14 @@ export type Database = {
           col_span?: number
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           entity_key?: string
           field_type: Database["public"]["Enums"]["customer_field_type"]
           help_text_ar?: string | null
           help_text_en?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -298,10 +342,14 @@ export type Database = {
           col_span?: number
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           entity_key?: string
           field_type?: Database["public"]["Enums"]["customer_field_type"]
           help_text_ar?: string | null
           help_text_en?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           is_active?: boolean
           is_required?: boolean
@@ -323,7 +371,11 @@ export type Database = {
       customer_field_options: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           field_id: string
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           is_active: boolean
           label_ar: string
@@ -334,7 +386,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           field_id: string
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           is_active?: boolean
           label_ar: string
@@ -345,7 +401,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           field_id?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           is_active?: boolean
           label_ar?: string
@@ -415,7 +475,11 @@ export type Database = {
           country: string | null
           created_at: string
           currency: string
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           industry: string | null
           industry_ar: string | null
@@ -442,7 +506,11 @@ export type Database = {
           country?: string | null
           created_at?: string
           currency?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           industry?: string | null
           industry_ar?: string | null
@@ -469,7 +537,11 @@ export type Database = {
           country?: string | null
           created_at?: string
           currency?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           industry?: string | null
           industry_ar?: string | null
@@ -493,7 +565,11 @@ export type Database = {
       departments: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           manager_id: string | null
           name: string
@@ -503,7 +579,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           manager_id?: string | null
           name: string
@@ -513,7 +593,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           manager_id?: string | null
           name?: string
@@ -534,7 +618,11 @@ export type Database = {
       job_titles: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           department_id: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           name: string
           name_ar: string | null
@@ -543,7 +631,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           department_id?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           name: string
           name_ar?: string | null
@@ -552,7 +644,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           department_id?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           name?: string
           name_ar?: string | null
@@ -727,7 +823,11 @@ export type Database = {
       quote_attachments: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           file_name: string
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           mime_type: string | null
           quote_id: string
@@ -737,7 +837,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           file_name: string
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           mime_type?: string | null
           quote_id: string
@@ -747,7 +851,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           file_name?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           mime_type?: string | null
           quote_id?: string
@@ -818,8 +926,12 @@ export type Database = {
           currency: string
           current_stage_id: string | null
           customer_id: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           expiry_date: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           notes: string | null
           received_date: string
@@ -838,8 +950,12 @@ export type Database = {
           currency?: string
           current_stage_id?: string | null
           customer_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           expiry_date?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           notes?: string | null
           received_date?: string
@@ -858,8 +974,12 @@ export type Database = {
           currency?: string
           current_stage_id?: string | null
           customer_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           expiry_date?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           notes?: string | null
           received_date?: string
@@ -982,6 +1102,10 @@ export type Database = {
       workflow_stages: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           name: string
           position: number
@@ -989,6 +1113,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           name: string
           position: number
@@ -996,6 +1124,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           name?: string
           position?: number
@@ -1014,6 +1146,10 @@ export type Database = {
       workflow_templates: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           name: string
           owner_id: string
@@ -1021,6 +1157,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           name: string
           owner_id: string
@@ -1028,6 +1168,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          hidden_at?: string | null
+          hidden_by?: string | null
           id?: string
           name?: string
           owner_id?: string
@@ -1044,6 +1188,10 @@ export type Database = {
         Args: { _name?: string; _template_id: string }
         Returns: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          hidden_at: string | null
+          hidden_by: string | null
           id: string
           name: string
           position: number
@@ -1097,6 +1245,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_owner: { Args: { _uid: string }; Returns: boolean }
       is_template_owner: {
         Args: { _template_id: string; _user_id: string }
         Returns: boolean

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, redirect } from "@tansta
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders } from "lucide-react";
+import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsLayout,
@@ -19,12 +19,14 @@ type TabDef = {
   labelEn: string;
   icon: typeof Settings2;
   perm?: string; // permission required (checked at runtime)
+  ownerOnly?: boolean;
   disabled?: boolean;
 };
 
 const TABS: TabDef[] = [
   { to: "/settings", labelAr: "نظرة عامة", labelEn: "Overview", icon: Sliders },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", icon: LayoutGrid, perm: "manage_form_fields" },
+  { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", icon: Trash2, ownerOnly: true },
   { to: "/settings/language", labelAr: "اللغة والتوطين", labelEn: "Language & Locale", icon: Languages, disabled: true },
   { to: "/settings/reports", labelAr: "التقارير", labelEn: "Reports", icon: FileText, disabled: true },
   { to: "/settings/permissions", labelAr: "الصلاحيات", labelEn: "Permissions", icon: ShieldCheck, disabled: true },
@@ -36,6 +38,7 @@ function SettingsLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [perms, setPerms] = useState<Set<string>>(new Set());
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -45,13 +48,19 @@ function SettingsLayout() {
         supabase.from("user_roles").select("role").eq("user_id", u.user.id),
         supabase.from("user_permissions").select("permission").eq("user_id", u.user.id),
       ]);
-      const admin = !!roles?.some((r) => r.role === "owner" || r.role === "admin");
+      const owner = !!roles?.some((r) => r.role === "owner");
+      const admin = owner || !!roles?.some((r) => r.role === "admin");
+      setIsOwner(owner);
       setIsAdmin(admin);
       setPerms(new Set((userPerms ?? []).map((p) => p.permission)));
     })();
   }, []);
 
-  const canSee = (perm?: string) => !perm || isAdmin || perms.has(perm);
+  const canSee = (tab: TabDef) => {
+    if (tab.ownerOnly) return isOwner;
+    if (!tab.perm) return true;
+    return isAdmin || perms.has(tab.perm);
+  };
 
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
@@ -67,7 +76,7 @@ function SettingsLayout() {
           <nav className="space-y-1 sticky top-20">
             {TABS.map((tab) => {
               const active = pathname === tab.to || (tab.to !== "/settings" && pathname.startsWith(tab.to));
-              const visible = canSee(tab.perm);
+              const visible = canSee(tab);
               const Icon = tab.icon;
               if (tab.disabled || !visible) {
                 return (
