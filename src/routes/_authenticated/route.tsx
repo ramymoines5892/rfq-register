@@ -24,6 +24,14 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [email, setEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("cs.sidebar.collapsed") === "1";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cs.sidebar.collapsed", collapsed ? "1" : "0");
+  }, [collapsed]);
 
   useEffect(() => {
     (async () => {
