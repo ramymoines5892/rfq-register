@@ -325,20 +325,17 @@ function FormBuilderPage() {
           {ar ? "لا توجد حقول بعد. أضف أول حقل." : "No fields yet. Add your first."}
         </CardContent></Card>
       ) : (
-        sections.map((sec) => (
-          <SectionGrid
-            key={sec.name}
-            title={sec.name}
-            items={sec.items}
-            optionsByField={optionsByField}
-            ar={ar}
-            onDragEnd={(e) => handleDragEnd(sec.name, e)}
-            onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
-            onColSpan={updateColSpan}
-            onToggleActive={toggleActive}
-            onDelete={removeField}
-          />
-        ))
+        <BuilderCanvas
+          sections={sections}
+          optionsByField={optionsByField}
+          ar={ar}
+          onDragEnd={handleDragEnd}
+          onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
+          onColSpan={updateColSpan}
+          onToggleActive={toggleActive}
+          onDelete={removeField}
+          onRenameSection={renameSection}
+        />
       )}
 
       <FieldEditor
@@ -356,11 +353,18 @@ function FormBuilderPage() {
   );
 }
 
-function SectionGrid({
-  title, items, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete,
-}: {
-  title: string;
+type Section = {
+  key: string;
+  sectionAr: string;
+  sectionEn: string;
+  label: string;
   items: FieldDef[];
+};
+
+function BuilderCanvas({
+  sections, optionsByField, ar, onDragEnd, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+}: {
+  sections: Section[];
   optionsByField: Record<string, FieldOption[]>;
   ar: boolean;
   onDragEnd: (e: DragEndEvent) => void;
@@ -368,33 +372,101 @@ function SectionGrid({
   onColSpan: (f: FieldDef, span: number) => void;
   onToggleActive: (f: FieldDef) => void;
   onDelete: (f: FieldDef) => void;
+  onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const allIds = sections.flatMap((s) => s.items.map((f) => f.id));
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={allIds} strategy={rectSortingStrategy}>
+        <div className="space-y-4">
+          {sections.map((sec) => (
+            <SectionGrid
+              key={sec.key}
+              section={sec}
+              optionsByField={optionsByField}
+              ar={ar}
+              onEdit={onEdit}
+              onColSpan={onColSpan}
+              onToggleActive={onToggleActive}
+              onDelete={onDelete}
+              onRenameSection={onRenameSection}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SectionGrid({
+  section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+}: {
+  section: Section;
+  optionsByField: Record<string, FieldOption[]>;
+  ar: boolean;
+  onEdit: (f: FieldDef) => void;
+  onColSpan: (f: FieldDef, span: number) => void;
+  onToggleActive: (f: FieldDef) => void;
+  onDelete: (f: FieldDef) => void;
+  onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
+}) {
+  const { items, sectionAr, sectionEn, label } = section;
+  const { setNodeRef, isOver } = useDroppable({ id: `__sec:${section.key}` });
+  const [renaming, setRenaming] = useState(false);
+  const [nAr, setNAr] = useState(sectionAr);
+  const [nEn, setNEn] = useState(sectionEn);
+
+  useEffect(() => { setNAr(sectionAr); setNEn(sectionEn); }, [sectionAr, sectionEn]);
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{title}</h3>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={items.map((f) => f.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-12 gap-2 rounded-lg border bg-background/60 p-2">
-            {items.map((f) => (
-              <SortableFieldCard
-                key={f.id}
-                field={f}
-                optionCount={optionsByField[f.id]?.length ?? 0}
-                ar={ar}
-                onEdit={() => onEdit(f)}
-                onColSpan={(s) => onColSpan(f, s)}
-                onToggleActive={() => onToggleActive(f)}
-                onDelete={() => onDelete(f)}
-              />
-            ))}
+      <div className="flex items-center gap-2">
+        {renaming ? (
+          <>
+            <Input value={nAr} onChange={(e) => setNAr(e.target.value)} placeholder={ar ? "عربي" : "AR"} className="h-7 text-xs w-40" />
+            <Input value={nEn} onChange={(e) => setNEn(e.target.value)} placeholder="EN" className="h-7 text-xs w-40" />
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={() => { onRenameSection(sectionAr, sectionEn, nAr, nEn); setRenaming(false); }}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setNAr(sectionAr); setNEn(sectionEn); setRenaming(false); }}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{label}</h3>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+      </div>
+      <div
+        ref={setNodeRef}
+        className={`grid grid-cols-12 gap-2 rounded-lg border bg-background/60 p-2 min-h-[70px] transition-colors ${isOver ? "border-primary bg-primary/5" : ""}`}
+      >
+        {items.map((f) => (
+          <SortableFieldCard
+            key={f.id}
+            field={f}
+            optionCount={optionsByField[f.id]?.length ?? 0}
+            ar={ar}
+            onEdit={() => onEdit(f)}
+            onColSpan={(s) => onColSpan(f, s)}
+            onToggleActive={() => onToggleActive(f)}
+            onDelete={() => onDelete(f)}
+          />
+        ))}
+        {items.length === 0 && (
+          <div className="col-span-12 text-center text-xs text-muted-foreground py-4">
+            {ar ? "اسحب حقل هنا" : "Drop a field here"}
           </div>
-        </SortableContext>
-      </DndContext>
+        )}
+      </div>
     </div>
   );
 }
