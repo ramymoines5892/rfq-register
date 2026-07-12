@@ -1106,8 +1106,11 @@ function FieldEditor({
                 <Input type="number" value={validation.maxLength ?? ""} onChange={(e) => setValidation((v) => ({ ...v, maxLength: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <Label>{ar ? "Regex Pattern (اختياري)" : "Regex pattern (optional)"}</Label>
-                <Input value={validation.pattern ?? ""} onChange={(e) => setValidation((v) => ({ ...v, pattern: e.target.value }))} placeholder="^[0-9]{14}$" className="font-mono text-sm" />
+                <Label className="flex items-center gap-1.5">
+                  {ar ? "Regex Pattern (اختياري)" : "Regex pattern (optional)"}
+                  <RegexHelper ar={ar} onPick={(p) => setValidation((v) => ({ ...v, pattern: p }))} />
+                </Label>
+                <Input value={validation.pattern ?? ""} onChange={(e) => setValidation((v) => ({ ...v, pattern: e.target.value }))} placeholder="^[0-9]{14}$" className="font-mono text-sm" dir="ltr" />
               </div>
             </div>
           )}
