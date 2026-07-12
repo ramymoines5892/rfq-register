@@ -454,7 +454,13 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("none")}</SelectItem>
-                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
+                    {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        <span style={{ paddingInlineStart: depth * 14 }}>
+                          {depth > 0 ? "└ " : ""}{pickLangValue(d as any, "name", lang).value || d.name}
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FieldRow>
