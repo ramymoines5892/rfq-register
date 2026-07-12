@@ -150,12 +150,28 @@ function FormBuilderPage() {
     }));
   }, [fields, ar, extraSections]);
 
-  function addSection() {
-    const nAr = window.prompt(ar ? "اسم القسم بالعربي:" : "Section name (AR):", "")?.trim() ?? "";
-    const nEn = window.prompt(ar ? "اسم القسم بالإنجليزي:" : "Section name (EN):", "")?.trim() ?? "";
-    if (!nAr && !nEn) return;
+  const [newSectionOpen, setNewSectionOpen] = useState(false);
+  const [newSectionAr, setNewSectionAr] = useState("");
+  const [newSectionEn, setNewSectionEn] = useState("");
+
+  function submitNewSection() {
+    const nAr = newSectionAr.trim();
+    const nEn = newSectionEn.trim();
+    if (!nAr && !nEn) {
+      toast.error(ar ? "اكتب اسم واحد على الأقل" : "Enter at least one name");
+      return;
+    }
+    const displayKey = (ar ? nAr : nEn) || nAr || nEn;
+    if (sections.some((s) => s.key === displayKey)) {
+      toast.error(ar ? "فيه قسم بنفس الاسم" : "A section with this name already exists");
+      return;
+    }
     setExtraSections((prev) => [...prev, { sectionAr: nAr, sectionEn: nEn }]);
+    setNewSectionAr("");
+    setNewSectionEn("");
+    setNewSectionOpen(false);
   }
+
 
 
 
