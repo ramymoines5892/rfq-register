@@ -98,7 +98,7 @@ function TreeNode({
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
       {/* Node card */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 100 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 80, flex: "1 1 0", maxWidth: 180 }}>
         <div
           style={{
             width: size,
