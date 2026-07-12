@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -10,36 +9,22 @@ import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { Bell, Loader2, ShieldAlert } from "lucide-react";
 import { useAccess, type NotifCategory } from "@/hooks/useAccess";
+import { useNotificationPrefs, useSaveNotificationPrefs } from "@/features/notifications/queries";
+import { DEFAULT_PREFS, type NotifPrefs } from "@/features/notifications/api";
 
 export const Route = createFileRoute("/_authenticated/settings/notifications")({
   component: NotificationSettings,
 });
 
-type Prefs = {
-  enabled: boolean;
-  reminder_enabled: boolean;
-  reminder_interval_minutes: number;
-  sound_enabled: boolean;
-  browser_push_enabled: boolean;
-  categories: Record<string, boolean>;
-};
-
-const DEFAULT: Prefs = {
-  enabled: true,
-  reminder_enabled: true,
-  reminder_interval_minutes: 15,
-  sound_enabled: true,
-  browser_push_enabled: false,
-  categories: { pending_users: true, approvals: true, tasks: true, system: true },
-};
+type Prefs = NotifPrefs;
 
 function NotificationSettings() {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { data: loadedPrefs, isLoading } = useNotificationPrefs();
+  const savePrefs = useSaveNotificationPrefs();
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const [pushPerm, setPushPerm] = useState<NotificationPermission | "unsupported">(
     typeof window !== "undefined" && "Notification" in window
       ? Notification.permission
@@ -47,38 +32,16 @@ function NotificationSettings() {
   );
 
   useEffect(() => {
-    (async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-      const { data } = await supabase
-        .from("notification_preferences")
-        .select("*")
-        .eq("user_id", user.user.id)
-        .maybeSingle();
-      if (data) {
-        setPrefs({
-          enabled: data.enabled,
-          reminder_enabled: data.reminder_enabled,
-          reminder_interval_minutes: data.reminder_interval_minutes,
-          sound_enabled: data.sound_enabled,
-          browser_push_enabled: data.browser_push_enabled,
-          categories: (data.categories as Record<string, boolean>) ?? DEFAULT.categories,
-        });
-      }
-      setLoading(false);
-    })();
-  }, []);
+    if (loadedPrefs) setPrefs(loadedPrefs);
+  }, [loadedPrefs]);
 
   async function save() {
-    setSaving(true);
-    const { data: user } = await supabase.auth.getUser();
-    if (!user.user) { setSaving(false); return; }
-    const { error } = await supabase
-      .from("notification_preferences")
-      .upsert({ user_id: user.user.id, ...prefs }, { onConflict: "user_id" });
-    setSaving(false);
-    if (error) toast.error(error.message);
-    else toast.success(ar ? "تم الحفظ" : "Saved");
+    try {
+      await savePrefs.mutateAsync(prefs);
+      toast.success(ar ? "تم الحفظ" : "Saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    }
   }
 
   async function requestBrowserPermission(v: boolean) {
@@ -112,7 +75,7 @@ function NotificationSettings() {
     toast.success(ar ? "تم تفعيل إشعارات المتصفح" : "Browser notifications enabled");
   }
 
-  if (loading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  if (isLoading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
 
   const allCats: { key: NotifCategory; ar: string; en: string }[] = [
     { key: "pending_users", ar: "المستخدمين الجدد بانتظار التفعيل", en: "New users pending approval" },
@@ -215,8 +178,8 @@ function NotificationSettings() {
 
 
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
+          <Button onClick={save} disabled={savePrefs.isPending}>
+            {savePrefs.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : null}
             {ar ? "حفظ" : "Save"}
           </Button>
         </div>

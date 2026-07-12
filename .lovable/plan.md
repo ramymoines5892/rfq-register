@@ -1,73 +1,74 @@
-# خطة: شاشة الهيكل التنظيمي (Organization)
+## الخطوة 1: إنشاء طبقة Data Layer + TanStack Query
 
-## الهدف
-شاشة موحّدة داخل الإعدادات لإدارة **الإدارات** و**المسميات الوظيفية** برسمة Org Chart حية، وحقول قابلة للتخصيص، وبيانات افتراضية جاهزة.
+### الهدف
+تنظيم كل استدعاءات قاعدة البيانات (151 استدعاء مباشر لـ `supabase.from(...)`) في طبقة واحدة منظمة، وتحويل الـ 45 استخدام لـ `useEffect + fetch` إلى TanStack Query — علشان:
+- الأداء أحسن (caching + deduplication)
+- الكود أنضف وأسهل في الصيانة
+- تحديث تلقائي للبيانات بعد التعديل
+- معالجة أفضل للأخطاء والتحميل
 
-## المكان والتنقّل
-- شاشة جديدة: `/settings/organization` (تبويب داخل الإعدادات).
-- ننقل تبويبَي "الإدارات" و"المسميات" من `/hr` إلى هنا، ويبقى `/hr` لإدارة الموظفين فقط.
-- إضافة التبويب في `settings.tsx` بأيقونة Network.
+### الاستراتيجية
+هنشتغل بالتدريج — مش هنكسر أي حاجة. كل feature (customers, workflows, notifications...) ليها فولدر خاص، والمكونات القديمة تفضل شغالة لحد ما نحوّلها.
 
-## تخطيط الشاشة (Layout)
-عمودان (2:1) مع toggle للموبايل:
+### هيكل جديد
 
+```text
+src/features/
+├── customers/
+│   ├── api.ts          ← دوال Supabase raw
+│   └── queries.ts      ← queryOptions + hooks
+├── workflows/
+│   ├── api.ts
+│   └── queries.ts
+├── notifications/
+│   ├── api.ts
+│   └── queries.ts
+├── quotes/
+├── hr/                 ← profiles, departments, job_titles
+└── settings/           ← form-builder, org fields
 ```
-┌─────────────────────────────────┬──────────────────┐
-│  Org Chart (react-flow)         │  Inspector       │
-│  - سحب/تكبير/تصغير              │  الاسم AR/EN     │
-│  - كل إدارة node ملوّن          │  الكود، المدير   │
-│  - أزرار: + قسم فرعي، +مسمى     │  الحقول المخصصة  │
-│  - Fit view، Export PNG          │  حذف/أرشفة      │
-│  - عرض تلقائى بالـ dagre layout │                  │
-└─────────────────────────────────┴──────────────────┘
-Tabs: [الإدارات] [المسميات الوظيفية]  (نفس الـ inspector يشتغل للاثنين)
-```
 
-- كل node يعرض: اللون، الاسم، عدد الأقسام الفرعية، عدد المسميات المرتبطة، عدد الموظفين.
-- كليك على node → يفتح Inspector؛ dblclick → تعديل سريع للاسم inline.
-- زر عائم `+ إدارة جديدة` أعلى يمين الرسمة.
+### الخطوات التنفيذية (بالترتيب)
 
-## القوالب (Form Builder)
-- إضافة entity جديد في `form_entities`: `department` و `job_title` (system-seeded).
-- الحقول النظامية المحمية (لا تُحذف، تُخفى فقط):
-  - department: name_ar, name_en, code, color, parent_id, manager_id, status
-  - job_title: name_ar, name_en, code, department_id, level, status
-- الحقول الإضافية (تليفون داخلي، ميزانية، موقع، …) تُضاف من `/settings/form-builder?entity=department` وتظهر تلقائيًا في Inspector عبر `<DynamicForm />`.
+**المرحلة 1.1 — البنية التحتية** (هنبدأ بيها دلوقتي)
+1. التأكد إن `QueryClient` مظبوط في `router.tsx` بـ defaults كويسة (staleTime، retry).
+2. إنشاء `src/features/_shared/queryKeys.ts` — factory موحّد للـ query keys.
+3. إنشاء `src/features/_shared/types.ts` — DTOs مشتركة (Pagination، Result).
 
-## البيانات الافتراضية
-Migration seed (idempotent — يعمل فقط لو الجدول فارغ):
-- **إدارات**: المبيعات، المشتريات، المخازن، المالية، الموارد البشرية.
-- **مسميات**: مدير النظام، مدير عام، مدير الموارد البشرية، مدير مبيعات، مدير مشتريات، أمين مخزن، محاسب.
-- كل إدارة لها لون ثابت (design tokens) وكود قصير.
-- زر "إعادة تعيين الافتراضيات" فى الـ header للـ owner.
+**المرحلة 1.2 — أول feature: Notifications** (نموذج تجريبي)
+- ملف `src/features/notifications/api.ts` — كل استدعاءات جدول notifications و notification_preferences.
+- ملف `src/features/notifications/queries.ts` — `useNotifications()`, `useNotificationPrefs()`, `useMarkRead()`, `useMarkAllRead()`, `useSaveNotificationPrefs()`.
+- تحويل `NotificationBell.tsx` و `settings.notifications.tsx` يستخدموا الـ hooks الجديدة.
+- الـ realtime channel يعمل `queryClient.invalidateQueries` بدل ما يعدل الـ state يدوي.
 
-## سلاسة الاستخدام
-- إضافة سريعة: `Enter` بعد الاسم يحفظ ويفتح صف جديد.
-- Optimistic updates + toast محترم (بدل confirm/alert المتصفح).
-- Drag & drop لتغيير الأب (parent_id) داخل الـ chart.
-- بحث فورى فى الرسمة (يميّز الـ nodes المطابقة).
-- ألوان محددة من قائمة (لا color picker حر).
+**المرحلة 1.3 — Customers**
+- كل حاجة خاصة بـ customers, customer_contacts, customer_banks, customer_attachments, customer_field_*.
+- تحويل `customers.tsx` (1348 سطر) يستخدم الطبقة الجديدة.
 
-## التفاصيل التقنية
+**المرحلة 1.4 — Workflows + Quotes**
+- workflow_templates, workflow_stages, workflow_stage_approvers, quotes, quote_approvals, quote_attachments.
+- تحويل `workflows.tsx` (1873 سطر).
 
-**DB migration:**
-- `ALTER TABLE departments ADD COLUMN parent_id uuid REFERENCES departments(id), color text, code text`.
-- `ALTER TABLE job_titles ADD COLUMN department_id uuid, level int, code text`.
-- Seed rows للـ `form_entities` لـ `department` و`job_title`.
-- Seed للـ system fields فى `form_fields` لكل entity.
-- Seed للـ default departments/job_titles (بس لو الجداول فاضية).
+**المرحلة 1.5 — HR + Settings**
+- profiles, user_roles, user_permissions, departments, job_titles.
+- تحويل `hr.tsx`, `team.tsx`, `settings.*`.
 
-**Packages:**
-- `@xyflow/react` (react-flow الحديث) — للـ Org Chart.
-- `dagre` — للـ auto-layout الشجرى.
+**المرحلة 1.6 — التنظيف**
+- إزالة أي `useEffect + supabase.from` متبقي.
+- توحيد error handling عبر `errorComponent` في الـ routes.
 
-**Files:**
-- `src/routes/_authenticated/settings.organization.tsx` — الشاشة.
-- `src/components/organization/OrgChart.tsx` — الرسمة.
-- `src/components/organization/OrgInspector.tsx` — لوحة التعديل.
-- `src/components/organization/orgLayout.ts` — منطق dagre.
-- تحديث `settings.tsx` لإضافة التبويب.
-- تنظيف tabs الإدارات/المسميات من `hr.tsx`.
+### النطاق للـ turn ده بس
+هنعمل **المرحلة 1.1 + 1.2 فقط** (البنية التحتية + Notifications كنموذج). لو الشغل عجبك، نكمل باقي المراحل واحدة واحدة.
 
-## نطاق التنفيذ
-جلسة واحدة كبيرة. هأبدأ بالـ migration، وأستنى موافقتك عليها، وبعدها أكوّد الشاشة والمكونات دفعة واحدة.
+### ملفات هتتعدل/تتعمل في الـ turn ده
+- ✨ جديد: `src/features/_shared/queryKeys.ts`
+- ✨ جديد: `src/features/notifications/api.ts`
+- ✨ جديد: `src/features/notifications/queries.ts`
+- 📝 تعديل: `src/components/notifications/NotificationBell.tsx` (يستخدم الـ hooks الجديدة)
+- 📝 تعديل: `src/routes/_authenticated/settings.notifications.tsx` (يستخدم الـ hooks الجديدة)
+- 📝 تحقق: `src/router.tsx` (QueryClient defaults)
+
+### ملاحظة مهمة
+مش هنمس أي feature تانية في الـ turn ده — كل الصفحات التانية هتفضل شغالة زي ما هي. التحويل هيكون تدريجي وآمن.
+
+**موافق نبدأ؟**
