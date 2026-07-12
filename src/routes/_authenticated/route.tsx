@@ -75,14 +75,17 @@ function AuthenticatedLayout() {
       <Link
         key={n.to}
         to={n.to}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
+        title={collapsed ? n.label : undefined}
+        className={`flex items-center gap-3 rounded-xl text-sm transition-all ${
+          collapsed ? "justify-center px-2 py-2.5" : "px-4 py-2.5"
+        } ${
           active
             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
             : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
         }`}
       >
-        <Icon className="h-4 w-4 opacity-90" />
-        <span>{n.label}</span>
+        <Icon className="h-4 w-4 opacity-90 shrink-0" />
+        {!collapsed && <span className="truncate">{n.label}</span>}
       </Link>
     );
   });
@@ -90,58 +93,97 @@ function AuthenticatedLayout() {
   return (
     <div className="min-h-screen flex bg-background" dir={dir}>
       {/* Sidebar */}
-      <aside className={`hidden md:flex md:w-64 lg:w-72 flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border`}>
-        <div className="px-6 pt-7 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-sm">
+      <aside
+        className={`hidden md:flex ${collapsed ? "md:w-16" : "md:w-64 lg:w-72"} flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out relative`}
+      >
+        {/* Toggle button (floats on the edge) */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          title={collapsed ? (lang === "ar" ? "توسيع" : "Expand") : (lang === "ar" ? "طي" : "Collapse")}
+          className={`absolute top-4 ${dir === "rtl" ? "-start-3" : "-end-3"} z-10 h-6 w-6 rounded-full bg-background border shadow-sm grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors`}
+        >
+          {collapsed
+            ? <PanelLeftOpen className="h-3.5 w-3.5" />
+            : <PanelLeftClose className="h-3.5 w-3.5" />}
+        </button>
+
+        <div className={`${collapsed ? "px-3" : "px-6"} pt-7 pb-4`}>
+          <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
+            <div className="h-9 w-9 rounded-xl bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-sm shrink-0">
               <Gem className="h-4 w-4" />
             </div>
-            <div className="font-display text-lg font-bold tracking-tight">
-              <span className="text-sidebar-primary">Core</span>
-              <span>Suite</span>
+            {!collapsed && (
+              <div className="font-display text-lg font-bold tracking-tight">
+                <span className="text-sidebar-primary">Core</span>
+                <span>Suite</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!collapsed && (
+          <div className="px-4 pb-2">
+            <GlobalSearchTrigger className="w-full justify-start" />
+          </div>
+        )}
+
+        <nav className={`flex-1 ${collapsed ? "px-2" : "px-4"} space-y-1 overflow-y-auto overflow-x-hidden`}>
+          {!collapsed && (
+            <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-4 pb-2 text-sidebar-primary/70">
+              {t("mainMenu") ?? "القائمة الرئيسية"}
             </div>
-          </div>
-        </div>
-
-        <div className="px-4 pb-2">
-          <GlobalSearchTrigger className="w-full justify-start" />
-        </div>
-
-
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-4 pb-2 text-sidebar-primary/70">
-            {t("mainMenu") ?? "القائمة الرئيسية"}
-          </div>
+          )}
+          {collapsed && <div className="pt-4" />}
           {renderNav(mainNav)}
 
           {adminNav.length > 0 && (
             <>
-              <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-6 pb-2 text-sidebar-primary/70">
-                {t("administration") ?? "الإدارة"}
-              </div>
+              {!collapsed ? (
+                <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-6 pb-2 text-sidebar-primary/70">
+                  {t("administration") ?? "الإدارة"}
+                </div>
+              ) : (
+                <div className="my-2 mx-2 border-t border-sidebar-border/50" />
+              )}
               {renderNav(adminNav)}
             </>
           )}
         </nav>
 
-        <div className="p-4 space-y-2">
-          <div className="bg-sidebar-accent/60 rounded-2xl p-3 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center font-bold text-sidebar-primary-foreground shrink-0">
-              {initial}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold truncate">{email}</div>
-              <div className="text-[10px] text-sidebar-foreground/60">
-                {isAdmin ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "مستخدم" : "Member")}
+        <div className={`${collapsed ? "p-2" : "p-4"} space-y-2`}>
+          {!collapsed && (
+            <div className="bg-sidebar-accent/60 rounded-2xl p-3 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center font-bold text-sidebar-primary-foreground shrink-0">
+                {initial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold truncate">{email}</div>
+                <div className="text-[10px] text-sidebar-foreground/60">
+                  {isAdmin ? (lang === "ar" ? "مدير النظام" : "Administrator") : (lang === "ar" ? "مستخدم" : "Member")}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2 items-center">
-            <Button variant="ghost" size="sm" className="flex-1 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
-              <Languages className="h-4 w-4 me-1" /> {t("langToggle")}
+          )}
+          <div className={`flex ${collapsed ? "flex-col" : "gap-2 items-center"}`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${collapsed ? "w-full justify-center" : "flex-1"} text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground`}
+              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+              title={collapsed ? t("langToggle") : undefined}
+            >
+              <Languages className="h-4 w-4" />
+              {!collapsed && <span className="ms-1">{t("langToggle")}</span>}
             </Button>
             <NotificationBell />
-            <Button variant="ghost" size="sm" className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={signOut}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${collapsed ? "w-full justify-center" : ""} text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground`}
+              onClick={signOut}
+              title={collapsed ? (lang === "ar" ? "تسجيل الخروج" : "Sign out") : undefined}
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
