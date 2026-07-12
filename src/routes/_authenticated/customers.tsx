@@ -770,23 +770,19 @@ function CustomerSheet({
   /* ------------- contacts (existing customer) ------------- */
   async function addContact() {
     if (!customer) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id!;
     const seedAr = lang === "ar" ? "مسؤول جديد" : "";
     const seedEn = lang === "en" ? "New contact" : "";
-    const { data, error } = await supabase
-      .from("customer_contacts")
-      .insert({
+    try {
+      const uid = await requireUserId();
+      const row = await insertContact<Contact>({
         customer_id: customer.id,
         user_id: uid,
         name: seedAr || seedEn || "New contact",
         name_ar: seedAr || null,
         name_en: seedEn || null,
-      })
-      .select()
-      .single();
-    if (error) return toast.error(error.message);
-    setContacts([...contacts, data as Contact]);
+      });
+      setContacts([...contacts, row]);
+    } catch (e: any) { toast.error(e?.message); }
   }
   async function updateContact(id: string, patch: Partial<Contact>) {
     // Keep legacy name/title in sync with picked value from AR/EN if either changed.
@@ -804,40 +800,32 @@ function CustomerSheet({
       merged.title = ar.trim() || en.trim() || null;
     }
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...merged } : c)));
-    const { error } = await supabase.from("customer_contacts").update(merged).eq("id", id);
-    if (error) toast.error(error.message);
+    try { await updateContactRow(id, merged as Record<string, unknown>); } catch (e: any) { toast.error(e?.message); }
   }
   async function deleteContact(id: string) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_contacts").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) return toast.error(error.message);
-    setContacts((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await softDeleteContact(id);
+      setContacts((prev) => prev.filter((c) => c.id !== id));
+    } catch (e: any) { toast.error(e?.message); }
   }
 
   /* ------------- banks (existing customer) ------------- */
   async function addBank() {
     if (!customer) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id!;
     const seedAr = lang === "ar" ? "بنك جديد" : "";
     const seedEn = lang === "en" ? "New bank" : "";
-    const { data, error } = await supabase
-      .from("customer_banks")
-      .insert({
+    try {
+      const uid = await requireUserId();
+      const row = await insertBank<Bank>({
         customer_id: customer.id,
         user_id: uid,
         bank_name: seedAr || seedEn || "New bank",
         bank_name_ar: seedAr || null,
         bank_name_en: seedEn || null,
         currency: form.currency,
-      })
-      .select()
-      .single();
-    if (error) return toast.error(error.message);
-    setBanks([...banks, data as Bank]);
+      });
+      setBanks([...banks, row]);
+    } catch (e: any) { toast.error(e?.message); }
   }
   async function updateBank(id: string, patch: Partial<Bank>) {
     const merged: Partial<Bank> = { ...patch };
@@ -860,17 +848,13 @@ function CustomerSheet({
       merged.branch = ar.trim() || en.trim() || null;
     }
     setBanks((prev) => prev.map((b) => (b.id === id ? { ...b, ...merged } : b)));
-    const { error } = await supabase.from("customer_banks").update(merged).eq("id", id);
-    if (error) toast.error(error.message);
+    try { await updateBankRow(id, merged as Record<string, unknown>); } catch (e: any) { toast.error(e?.message); }
   }
   async function deleteBank(id: string) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_banks").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) return toast.error(error.message);
-    setBanks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await softDeleteBank(id);
+      setBanks((prev) => prev.filter((b) => b.id !== id));
+    } catch (e: any) { toast.error(e?.message); }
   }
 
   /* ------------- drafts (new customer) ------------- */
