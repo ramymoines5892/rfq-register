@@ -409,8 +409,14 @@ function FormBuilderPage() {
     setDirty(false);
   }
 
-  function discardChanges() {
-    if (!confirm(ar ? "التراجع عن كل التغييرات؟" : "Discard all changes?")) return;
+  async function discardChanges() {
+    const ok = await confirm({
+      title: ar ? "تراجع" : "Discard",
+      description: ar ? "التراجع عن كل التغييرات؟" : "Discard all changes?",
+      confirmText: ar ? "تراجع" : "Discard",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setFields(originalFieldsRef.current.map((f) => ({ ...f })));
     setDirty(false);
   }
