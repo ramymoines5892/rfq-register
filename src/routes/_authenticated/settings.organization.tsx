@@ -532,14 +532,47 @@ function DeptCard({
   if (!matchesDeep) return null;
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div
+      className="relative flex flex-col items-center gap-4"
+      onDragOver={(e) => {
+        const sourceId = e.dataTransfer.types.includes("text/dept-id") ? "yes" : null;
+        if (!sourceId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = e.currentTarget.getBoundingClientRect();
+        const relX = e.clientX - rect.left;
+        // Left 25% zone = insert-before (sibling); rest = child
+        setDropMode(relX < rect.width * 0.25 ? "before" : "child");
+      }}
+      onDragLeave={() => setDropMode(null)}
+      onDrop={(e) => {
+        const sourceId = e.dataTransfer.getData("text/dept-id");
+        setDropMode(null);
+        if (!sourceId || sourceId === dept.id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (dropMode === "before") {
+          onMove(sourceId, parentId, dept.id);
+        } else {
+          onMove(sourceId, dept.id, null);
+        }
+      }}
+    >
+      {dropMode === "before" && (
+        <div className="absolute -start-1 top-0 bottom-0 w-1 rounded bg-primary" />
+      )}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             type="button"
-            className={`group relative flex flex-col items-center gap-2 outline-none ${
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("text/dept-id", dept.id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            className={`group relative flex flex-col items-center gap-2 outline-none cursor-grab active:cursor-grabbing ${
               isSelected ? "text-primary" : "text-foreground"
-            }`}
+            } ${dropMode === "child" ? "scale-105" : ""}`}
             onClick={() => onSelect(dept.id, "department")}
             onDoubleClick={() => onSelect(dept.id, "department")}
           >
@@ -550,7 +583,9 @@ function DeptCard({
                   : depth === 1
                   ? "h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12"
                   : "h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10"
-              } ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}`}
+              } ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""} ${
+                dropMode === "child" ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
               style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
               <Building2 className={
