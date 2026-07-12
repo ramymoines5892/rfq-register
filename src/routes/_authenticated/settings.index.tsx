@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
-import { LayoutGrid, Languages, FileText, ShieldCheck } from "lucide-react";
+import { LayoutGrid, Languages, FileText, ShieldCheck, Bell } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings/")({
