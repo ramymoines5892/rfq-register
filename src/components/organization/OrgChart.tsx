@@ -33,55 +33,70 @@ function DeptNode({ data, selected }: NodeProps) {
   const d = data as unknown as OrgNodeData;
   const color = d.color || "#3b6fa0";
   const Icon = d.kind === "department" ? Building2 : Briefcase;
-  return (
-    <div
-      className="group relative"
-      style={{ width: 110, height: 78 }}
-      title={d.label}
-    >
-      <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
-      <div
-        className={`h-full w-full rounded-lg border bg-card shadow-sm flex flex-col items-center justify-center gap-1 px-2 transition-shadow hover:shadow-md ${
-          selected ? "ring-2 ring-primary ring-offset-1" : ""
-        }`}
-        style={{ borderTop: `3px solid ${color}` }}
-      >
-        <div
-          className="h-8 w-8 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: `${color}18` }}
-        >
-          <Icon className="h-4 w-4" style={{ color }} />
-        </div>
-        <div className="text-center text-[11px] font-medium leading-tight w-full truncate">
-          {d.label}
-        </div>
-      </div>
+  const isDept = d.kind === "department";
 
-      {/* Hover details popover */}
-      <div
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-150 w-56 rounded-lg border bg-popover text-popover-foreground shadow-lg"
-        style={{ borderColor: color }}
-      >
-        <div className="px-2.5 py-1.5 border-b flex items-center gap-2" style={{ backgroundColor: `${color}15` }}>
-          <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold truncate">{d.label}</div>
-            {d.code && <div className="text-[9px] font-mono uppercase text-muted-foreground truncate">{d.code}</div>}
+  return (
+    <TooltipProvider delayDuration={100}>
+      <div className="relative" style={{ width: 170, height: isDept ? 78 : 46 }} title={d.label}>
+        <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
+        <div
+          className={`h-full w-full rounded-lg border bg-card shadow-sm px-2 py-1.5 flex flex-col justify-between transition-shadow hover:shadow-md ${
+            selected ? "ring-2 ring-primary ring-offset-1" : ""
+          }`}
+          style={{ borderInlineStart: `3px solid ${color}` }}
+        >
+          {/* Top row: icon + name */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className="h-7 w-7 shrink-0 rounded-md flex items-center justify-center"
+              style={{ backgroundColor: `${color}18` }}
+            >
+              <Icon className="h-4 w-4" style={{ color }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold leading-tight truncate">{d.label}</div>
+              {d.code && (
+                <div className="text-[9px] font-mono uppercase text-muted-foreground truncate">{d.code}</div>
+              )}
+            </div>
           </div>
+
+          {/* Bottom row: 3 stat icons with tooltips */}
+          {isDept && (
+            <div className="flex items-center justify-around border-t pt-1 mt-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground cursor-help">
+                    <Network className="h-3 w-3" />
+                    <span className="font-semibold">{d.childCount ?? 0}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">الإدارات الفرعية: {d.childCount ?? 0}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground cursor-help">
+                    <Briefcase className="h-3 w-3" />
+                    <span className="font-semibold">{d.jobCount ?? 0}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">المسميات الوظيفية: {d.jobCount ?? 0}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground cursor-help">
+                    <Users className="h-3 w-3" />
+                    <span className="font-semibold">{d.memberCount ?? 0}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">عدد الموظفين: {d.memberCount ?? 0}</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
-        {d.kind === "department" && (
-          <div className="px-2.5 py-1.5 flex items-center gap-3 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{d.childCount ?? 0}</span>
-            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" />{d.jobCount ?? 0}</span>
-            <span className="flex items-center gap-1"><Users className="h-3 w-3" />{d.memberCount ?? 0}</span>
-          </div>
-        )}
-        <div className="px-2.5 py-1 text-[9px] text-muted-foreground/70 border-t bg-muted/30 rounded-b-lg">
-          Double-click for details
-        </div>
+        <Handle type="source" position={Position.Bottom} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
       </div>
-      <Handle type="source" position={Position.Bottom} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
-    </div>
+    </TooltipProvider>
   );
 }
 
