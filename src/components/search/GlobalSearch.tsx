@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { semanticSearch } from "@/lib/semantic-search.functions";
+import { useAccess } from "@/hooks/useAccess";
 import {
   Users,
   FileText,
