@@ -22,7 +22,6 @@ export const Route = createFileRoute("/_authenticated/settings/trash")({
 /** Configurable per-table display. `label` is what shows in a deleted row. */
 const TABLES = [
   { key: "customer_field_definitions", ar: "حقول الفورم",       en: "Form Fields",         label: ["label_ar", "label_en", "key"] },
-  { key: "customer_field_options",     ar: "قيم القوائم",         en: "List Options",        label: ["label_ar", "label_en", "value"] },
   { key: "customers",                  ar: "العملاء",             en: "Customers",           label: ["name_ar", "name_en", "name"] },
   { key: "customer_contacts",          ar: "جهات الاتصال",        en: "Contacts",            label: ["name_ar", "name_en", "name"] },
   { key: "customer_banks",             ar: "البنوك",              en: "Banks",               label: ["bank_name_ar", "bank_name_en", "bank_name"] },
