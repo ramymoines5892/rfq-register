@@ -1,6 +1,13 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  useCanManageFormFields,
+  useFormBuilderData,
+  usePersistFieldChanges,
+  useSaveFieldDefinition,
+  useSoftDeleteField,
+  useSoftDeleteFieldsBulk,
+} from "@/features/formBuilder/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,55 +86,42 @@ function FormBuilderPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const confirm = useConfirm();
-  const [canManage, setCanManage] = useState<boolean | null>(null);
+  
   const search = useSearch({ from: "/_authenticated/settings/form-builder" });
   const [entity, setEntity] = useState<string>(
     search.entity && ENTITIES.some((e) => e.key === search.entity) ? search.entity : "customers"
   );
+  const canManageQ = useCanManageFormFields();
+  const canManage = canManageQ.isFetched ? !!canManageQ.data : null;
   const [fields, setFields] = useState<FieldDef[]>([]);
   const originalFieldsRef = useRef<FieldDef[]>([]);
   const [dirty, setDirty] = useState(false);
   const [optionsByField, setOptionsByField] = useState<Record<string, FieldOption[]>>({});
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<FieldDef | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
 
-  async function loadAll() {
-    setLoading(true);
-    const [{ data: defs }, { data: opts }] = await Promise.all([
-      supabase
-        .from("customer_field_definitions")
-        .select("*")
-        .eq("entity_key", entity)
-        .is("deleted_at", null)
-        .order("position", { ascending: true }),
-      supabase.from("customer_field_options").select("*").is("deleted_at", null).order("position", { ascending: true }),
-    ]);
-    const list = defs ?? [];
-    setFields(list);
-    originalFieldsRef.current = list.map((f) => ({ ...f }));
-    setDirty(false);
-    const grouped: Record<string, FieldOption[]> = {};
-    for (const o of opts ?? []) (grouped[o.field_id] ??= []).push(o);
-    setOptionsByField(grouped);
-    setLoading(false);
-  }
+  const dataQ = useFormBuilderData(entity, !!canManage);
+  const loading = !canManageQ.isFetched || (!!canManage && dataQ.isLoading);
+  const softDeleteM = useSoftDeleteField(entity);
+  const softDeleteBulkM = useSoftDeleteFieldsBulk(entity);
+  const persistM = usePersistFieldChanges(entity);
+  const saveFieldM = useSaveFieldDefinition(entity);
+  const saving = persistM.isPending || saveFieldM.isPending;
 
+  // Hydrate local state from query. `dirty` guards against clobbering in-flight edits.
   useEffect(() => {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) { setCanManage(false); return; }
-      const [{ data: legacy }, { data: unified }] = await Promise.all([
-        supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_customer_fields" }),
-        supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_form_fields" }),
-      ]);
-      setCanManage(Boolean(legacy) || Boolean(unified));
-    })();
-  }, []);
+    if (!dataQ.data) return;
+    if (dirty) return;
+    setFields(dataQ.data.fields);
+    originalFieldsRef.current = dataQ.data.fields.map((f) => ({ ...f }));
+    setOptionsByField(dataQ.data.optionsByField);
+  }, [dataQ.data, dirty]);
 
-  useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function loadAll() {
+    setDirty(false);
+    await dataQ.refetch();
+  }
 
   // Warn on unload if dirty
   useEffect(() => {
@@ -218,15 +212,11 @@ function FormBuilderPage() {
       variant: "destructive",
     });
     if (!ok) return;
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_field_definitions").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-      is_active: false,
-    }).eq("id", f.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(ar ? "تم النقل لسلة المحذوفات" : "Moved to trash");
-    loadAll();
+    try {
+      await softDeleteM.mutateAsync(f.id);
+      toast.success(ar ? "تم النقل لسلة المحذوفات" : "Moved to trash");
+      loadAll();
+    } catch (e) { toast.error((e as Error).message); }
   }
 
   function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
@@ -293,18 +283,9 @@ function FormBuilderPage() {
     if (!ok) return;
 
     if (sec.items.length > 0) {
-      const { data: u } = await supabase.auth.getUser();
-      const now = new Date().toISOString();
-      const uid = u.user?.id ?? null;
-      const results = await Promise.all(
-        sec.items.map((f) =>
-          supabase.from("customer_field_definitions").update({
-            deleted_at: now, deleted_by: uid, is_active: false,
-          }).eq("id", f.id),
-        ),
-      );
-      const failed = results.find((r) => r.error);
-      if (failed?.error) { toast.error(failed.error.message); return; }
+      try {
+        await softDeleteBulkM.mutateAsync(sec.items.map((f) => f.id));
+      } catch (e) { toast.error((e as Error).message); return; }
     }
     setExtraSections((prev) =>
       prev.filter((es) => ((ar ? es.sectionAr : es.sectionEn) || es.sectionAr || es.sectionEn || "") !== secKey),
@@ -384,7 +365,6 @@ function FormBuilderPage() {
 
 
   async function saveAll() {
-    setSaving(true);
     const original = new Map(originalFieldsRef.current.map((f) => [f.id, f]));
     const changed = fields.filter((f) => {
       const o = original.get(f.id);
@@ -398,31 +378,13 @@ function FormBuilderPage() {
       );
     });
     if (changed.length === 0) {
-      setSaving(false); setDirty(false);
+      setDirty(false);
       toast.info(ar ? "لا يوجد تغييرات" : "No changes to save");
       return;
     }
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id ?? null;
-    const results = await Promise.all(
-      changed.map((f) => {
-        const o = original.get(f.id)!;
-        const hidChanged = o.is_active !== f.is_active;
-        return supabase.from("customer_field_definitions").update({
-          position: f.position,
-          col_span: f.col_span,
-          is_active: f.is_active,
-          section_ar: f.section_ar,
-          section_en: f.section_en,
-          ...(hidChanged
-            ? { hidden_at: !f.is_active ? new Date().toISOString() : null, hidden_by: !f.is_active ? uid : null }
-            : {}),
-        }).eq("id", f.id);
-      }),
-    );
-    setSaving(false);
-    const failed = results.find((r) => r.error);
-    if (failed?.error) { toast.error(failed.error.message); return; }
+    try {
+      await persistM.mutateAsync({ changed, original });
+    } catch (e) { toast.error((e as Error).message); return; }
     toast.success(ar ? `تم حفظ ${changed.length} تعديل` : `Saved ${changed.length} change(s)`);
     originalFieldsRef.current = fields.map((f) => ({ ...f }));
     setDirty(false);
@@ -879,7 +841,8 @@ function FieldEditor({
   const [colSpan, setColSpan] = useState<number>(12);
   const [validation, setValidation] = useState<{ minLength?: string; maxLength?: string; min?: string; max?: string; pattern?: string }>({});
   const [localOptions, setLocalOptions] = useState<{ id?: string; value: string; label_ar: string; label_en: string; is_active: boolean }[]>([]);
-  const [saving, setSaving] = useState(false);
+  const saveM = useSaveFieldDefinition(entityKey);
+  const saving = saveM.isPending;
 
   useEffect(() => {
     if (!open) return;
@@ -929,7 +892,6 @@ function FieldEditor({
     }
 
 
-    setSaving(true);
     const rules: Record<string, string | number> = {};
     if (validation.minLength) rules.minLength = Number(validation.minLength);
     if (validation.maxLength) rules.maxLength = Number(validation.maxLength);
@@ -946,44 +908,39 @@ function FieldEditor({
       validation_rules: rules as unknown as import("@/integrations/supabase/types").Json,
     };
 
-    let fieldId = editing?.id;
-    if (editing) {
-      const { error } = await supabase.from("customer_field_definitions").update(payload).eq("id", editing.id);
-      if (error) { setSaving(false); toast.error(error.message); return; }
-    } else {
-      const { data, error } = await supabase.from("customer_field_definitions")
-        .insert({ ...payload, position: maxPosition + 10 }).select("id").single();
-      if (error || !data) { setSaving(false); toast.error(error?.message ?? "Error"); return; }
-      fieldId = data.id;
-    }
+    const usedValues = new Set<string>();
+    const genValue = (le: string, la: string) => {
+      const base = slugify(le) || slugify(la) || "option";
+      let v = base;
+      let n = 2;
+      while (usedValues.has(v)) v = `${base}_${n++}`;
+      usedValues.add(v);
+      return v;
+    };
+    const optionRows = localOptions
+      .filter((o) => o.label_ar.trim() && o.label_en.trim())
+      .map((o, i) => ({
+        field_id: "", // filled by mutation once we have the field id
+        value: genValue(o.label_en, o.label_ar),
+        label_ar: o.label_ar.trim(),
+        label_en: o.label_en.trim(),
+        position: (i + 1) * 10,
+        is_active: o.is_active,
+      }));
 
-    if (fieldId && needsOptions(fieldType) && !isReferenceField(editing)) {
-      await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
-      const usedValues = new Set<string>();
-      const genValue = (labelEn: string, labelAr: string) => {
-        const base = slugify(labelEn) || slugify(labelAr) || "option";
-        let v = base;
-        let n = 2;
-        while (usedValues.has(v)) v = `${base}_${n++}`;
-        usedValues.add(v);
-        return v;
-      };
-      const rows = localOptions
-        .filter((o) => o.label_ar.trim() && o.label_en.trim())
-        .map((o, i) => ({
-          field_id: fieldId!, value: genValue(o.label_en, o.label_ar),
-          label_ar: o.label_ar.trim(), label_en: o.label_en.trim(),
-          position: (i + 1) * 10, is_active: o.is_active,
-        }));
-      if (rows.length) {
-        const { error } = await supabase.from("customer_field_options").insert(rows);
-        if (error) { setSaving(false); toast.error(error.message); return; }
-      }
-    } else if (fieldId && !needsOptions(fieldType) && !isReferenceField(editing)) {
-      await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
-    }
+    try {
+      await saveM.mutateAsync({
+        editingId: editing?.id ?? null,
+        payload,
+        maxPosition,
+        options: {
+          needs: needsOptions(fieldType),
+          isReference: isReferenceField(editing),
+          rows: optionRows,
+        },
+      });
+    } catch (e) { toast.error((e as Error).message); return; }
 
-    setSaving(false);
     toast.success(ar ? "تم الحفظ" : "Saved");
     onOpenChange(false);
     onSaved();
