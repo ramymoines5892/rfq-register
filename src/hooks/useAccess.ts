@@ -57,8 +57,8 @@ export function useAccess(): Access {
         supabase.from("user_roles").select("role").eq("user_id", uid),
         supabase.rpc("has_permission", { _user_id: uid, _perm: "manage_customer_fields" }),
         supabase.rpc("has_permission", { _user_id: uid, _perm: "manage_form_fields" }),
-        supabase.rpc("has_permission", { _user_id: uid, _perm: "approve_quotes" }),
-        supabase.rpc("has_permission", { _user_id: uid, _perm: "manage_users" }),
+        supabase.rpc("has_permission", { _user_id: uid, _perm: "quotes.approve" }),
+        supabase.rpc("has_permission", { _user_id: uid, _perm: "users.manage_roles" }),
       ]);
       const isOwner = !!rolesRes.data?.some((r) => r.role === "owner");
       const isAdmin = isOwner || !!rolesRes.data?.some((r) => r.role === "admin");
