@@ -365,7 +365,6 @@ function FormBuilderPage() {
 
 
   async function saveAll() {
-    setSaving(true);
     const original = new Map(originalFieldsRef.current.map((f) => [f.id, f]));
     const changed = fields.filter((f) => {
       const o = original.get(f.id);
@@ -379,31 +378,13 @@ function FormBuilderPage() {
       );
     });
     if (changed.length === 0) {
-      setSaving(false); setDirty(false);
+      setDirty(false);
       toast.info(ar ? "لا يوجد تغييرات" : "No changes to save");
       return;
     }
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id ?? null;
-    const results = await Promise.all(
-      changed.map((f) => {
-        const o = original.get(f.id)!;
-        const hidChanged = o.is_active !== f.is_active;
-        return supabase.from("customer_field_definitions").update({
-          position: f.position,
-          col_span: f.col_span,
-          is_active: f.is_active,
-          section_ar: f.section_ar,
-          section_en: f.section_en,
-          ...(hidChanged
-            ? { hidden_at: !f.is_active ? new Date().toISOString() : null, hidden_by: !f.is_active ? uid : null }
-            : {}),
-        }).eq("id", f.id);
-      }),
-    );
-    setSaving(false);
-    const failed = results.find((r) => r.error);
-    if (failed?.error) { toast.error(failed.error.message); return; }
+    try {
+      await persistM.mutateAsync({ changed, original });
+    } catch (e) { toast.error((e as Error).message); return; }
     toast.success(ar ? `تم حفظ ${changed.length} تعديل` : `Saved ${changed.length} change(s)`);
     originalFieldsRef.current = fields.map((f) => ({ ...f }));
     setDirty(false);
