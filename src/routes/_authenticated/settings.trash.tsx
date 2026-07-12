@@ -249,8 +249,7 @@ function TrashPage() {
             </div>
             <div>
               <Label>{ar ? "كلمة السر" : "Password"}</Label>
-              <Input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus
