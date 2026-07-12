@@ -495,7 +495,7 @@ function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string
 /* --------------------------------- DEPT CARD -------------------------------- */
 
 function DeptCard({
-  dept, depth, depts, jobs, memberCounts, lang, query, selected, onSelect, onAddDept, onAddJob, onDelete,
+  dept, depth, depts, jobs, memberCounts, lang, query, selected, onSelect, onAddDept, onAddJob, onDelete, onMove, parentId,
 }: {
   dept: Department;
   depth: number;
@@ -509,14 +509,18 @@ function DeptCard({
   onAddDept: (parentId: string | null) => void;
   onAddJob: (deptId: string | null) => void;
   onDelete: (id: string, kind: "department" | "job_title") => void;
+  onMove: (sourceId: string, newParentId: string | null, insertBeforeId?: string | null) => void;
+  parentId: string | null;
 }) {
   const ar = lang === "ar";
   const color = dept.color || "#3b6fa0";
-  const children = depts.filter((c) => c.parent_id === dept.id);
+  const children = depts.filter((c) => c.parent_id === dept.id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const deptJobs = jobs.filter((j) => j.department_id === dept.id);
   const isSelected = selected?.id === dept.id && selected.kind === "department";
   const label = pick(dept, lang);
   const members = memberCounts[dept.id] || 0;
+  const [dropMode, setDropMode] = useState<null | "child" | "before">(null);
+
 
   const q = query;
   const matchesDeep = !q || (() => {
