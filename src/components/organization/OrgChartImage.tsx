@@ -31,13 +31,13 @@ export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChart
       ref={ref}
       dir={ar ? "rtl" : "ltr"}
       style={{
-        padding: 32,
+        padding: "clamp(16px, 3vw, 32px)",
         background: "#ffffff",
         fontFamily: ar
           ? "'Cairo', 'Tajawal', system-ui, sans-serif"
           : "system-ui, -apple-system, 'Segoe UI', sans-serif",
         color: "#0f172a",
-        minWidth: 640,
+        width: "100%",
       }}
     >
       <div style={{ textAlign: "center", marginBottom: 24 }}>
