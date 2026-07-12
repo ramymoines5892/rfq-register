@@ -938,30 +938,21 @@ function CustomerSheet({
     }
     setUploadingAttach(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id!;
+      const uid = await requireUserId();
       const safeName = file.name.replace(/[^\w.\-]+/g, "_");
       const path = `${uid}/${customer.id}/${crypto.randomUUID()}_${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from(ATTACHMENT_BUCKET)
-        .upload(path, file, { contentType: file.type });
-      if (upErr) throw upErr;
-      const { data, error } = await supabase
-        .from("customer_attachments")
-        .insert({
-          customer_id: customer.id,
-          user_id: uid,
-          category: newAttachCategory,
-          label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
-          file_path: path,
-          file_name: file.name,
-          mime_type: file.type || null,
-          size_bytes: file.size,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      setAttachments((p) => [...p, data as Attachment]);
+      await uploadAttachmentFile(path, file);
+      const row = await insertAttachment<Attachment>({
+        customer_id: customer.id,
+        user_id: uid,
+        category: newAttachCategory,
+        label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
+        file_path: path,
+        file_name: file.name,
+        mime_type: file.type || null,
+        size_bytes: file.size,
+      });
+      setAttachments((p) => [...p, row]);
       setNewAttachLabel("");
       toast.success(lang === "ar" ? "تم الرفع" : "Uploaded");
     } catch (err) {
@@ -972,24 +963,19 @@ function CustomerSheet({
   }
 
   async function downloadAttachment(a: Attachment) {
-    const { data, error } = await supabase.storage
-      .from(ATTACHMENT_BUCKET)
-      .createSignedUrl(a.file_path, 60);
-    if (error || !data?.signedUrl) {
-      toast.error(error?.message ?? "Error");
-      return;
+    try {
+      const url = await createAttachmentSignedUrl(a.file_path, 60);
+      window.open(url, "_blank");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Error");
     }
-    window.open(data.signedUrl, "_blank");
   }
 
   async function deleteAttachment(a: Attachment) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_attachments").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", a.id);
-    if (error) return toast.error(error.message);
-    setAttachments((p) => p.filter((x) => x.id !== a.id));
+    try {
+      await softDeleteAttachment(a.id);
+      setAttachments((p) => p.filter((x) => x.id !== a.id));
+    } catch (e: any) { toast.error(e?.message); }
   }
 
   function removeDraftAttachment(key: string) {
