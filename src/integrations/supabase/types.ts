@@ -56,6 +56,56 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_attachments: {
+        Row: {
+          category: Database["public"]["Enums"]["customer_attachment_category"]
+          created_at: string
+          customer_id: string
+          file_name: string
+          file_path: string
+          id: string
+          label: string | null
+          mime_type: string | null
+          size_bytes: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["customer_attachment_category"]
+          created_at?: string
+          customer_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          label?: string | null
+          mime_type?: string | null
+          size_bytes?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["customer_attachment_category"]
+          created_at?: string
+          customer_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          label?: string | null
+          mime_type?: string | null
+          size_bytes?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_attachments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_banks: {
         Row: {
           account_name: string | null
@@ -863,6 +913,12 @@ export type Database = {
         | "notifications.view"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
+      customer_attachment_category:
+        | "company_profile"
+        | "commercial_register"
+        | "tax_card"
+        | "bank_letter"
+        | "other"
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -1023,6 +1079,13 @@ export const Constants = {
       ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
+      customer_attachment_category: [
+        "company_profile",
+        "commercial_register",
+        "tax_card",
+        "bank_letter",
+        "other",
+      ],
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],

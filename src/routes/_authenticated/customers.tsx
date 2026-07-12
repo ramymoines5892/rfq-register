@@ -62,6 +62,10 @@ import {
   Wallet,
   Contact as ContactIcon,
   Info,
+  Paperclip,
+  Upload,
+  Download,
+  File as FileIcon,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { parseTerms, stringifyTerms, parseList, stringifyList, type TermItem } from "@/lib/terms";
@@ -123,6 +127,61 @@ type Bank = {
 // Draft types used while a customer hasn't been saved yet.
 type DraftContact = Omit<Contact, "id" | "customer_id"> & { _key: string };
 type DraftBank = Omit<Bank, "id" | "customer_id"> & { _key: string };
+
+type AttachmentCategory = "company_profile" | "commercial_register" | "tax_card" | "bank_letter" | "other";
+
+type Attachment = {
+  id: string;
+  customer_id: string;
+  category: AttachmentCategory;
+  label: string | null;
+  file_path: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+};
+
+type DraftAttachment = {
+  _key: string;
+  file: File;
+  category: AttachmentCategory;
+  label: string | null;
+};
+
+const ATTACHMENT_BUCKET = "customer-attachments";
+const ATTACHMENT_CATEGORIES: AttachmentCategory[] = [
+  "company_profile",
+  "commercial_register",
+  "tax_card",
+  "bank_letter",
+  "other",
+];
+
+function attachmentCategoryLabel(cat: AttachmentCategory, lang: "ar" | "en") {
+  const ar: Record<AttachmentCategory, string> = {
+    company_profile: "بروفيل الشركة",
+    commercial_register: "السجل التجاري",
+    tax_card: "البطاقة الضريبية",
+    bank_letter: "خطاب البنوك",
+    other: "أخرى",
+  };
+  const en: Record<AttachmentCategory, string> = {
+    company_profile: "Company profile",
+    commercial_register: "Commercial register",
+    tax_card: "Tax card",
+    bank_letter: "Bank letter",
+    other: "Other",
+  };
+  return lang === "ar" ? ar[cat] : en[cat];
+}
+
+function formatBytes(n: number | null | undefined) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const CURRENCIES = ["EGP", "USD", "EUR", "SAR", "AED", "GBP"];
 
@@ -399,6 +458,13 @@ function CustomerSheet({
   const [draftContacts, setDraftContacts] = useState<DraftContact[]>([]);
   const [draftBanks, setDraftBanks] = useState<DraftBank[]>([]);
 
+  // Attachments
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [draftAttachments, setDraftAttachments] = useState<DraftAttachment[]>([]);
+  const [uploadingAttach, setUploadingAttach] = useState(false);
+  const [newAttachCategory, setNewAttachCategory] = useState<AttachmentCategory>("company_profile");
+  const [newAttachLabel, setNewAttachLabel] = useState("");
+
   const [openSection, setOpenSection] = useState<string>("identity");
 
   useEffect(() => {
@@ -428,21 +494,28 @@ function CustomerSheet({
       setBanks([]);
       setDraftContacts([]);
       setDraftBanks([]);
+      setAttachments([]);
+      setDraftAttachments([]);
     }
     setPaymentInput("");
     setTaxIdConflict(null);
+    setNewAttachCategory("company_profile");
+    setNewAttachLabel("");
     setOpenSection("identity");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer]);
 
   async function loadRelated(customerId: string) {
-    const [{ data: cs }, { data: bs }] = await Promise.all([
+    const [{ data: cs }, { data: bs }, { data: as }] = await Promise.all([
       supabase.from("customer_contacts").select("*").eq("customer_id", customerId).order("created_at"),
       supabase.from("customer_banks").select("*").eq("customer_id", customerId).order("created_at"),
+      supabase.from("customer_attachments").select("*").eq("customer_id", customerId).order("created_at"),
     ]);
     setContacts((cs ?? []) as Contact[]);
     setBanks((bs ?? []) as Bank[]);
+    setAttachments((as ?? []) as Attachment[]);
   }
+
 
   useEffect(() => {
     const tid = form.tax_id.trim();
@@ -549,6 +622,30 @@ function CustomerSheet({
           }));
           const { error: be } = await supabase.from("customer_banks").insert(rows);
           if (be) toast.error(be.message);
+        }
+        if (draftAttachments.length > 0) {
+          for (const a of draftAttachments) {
+            const safeName = a.file.name.replace(/[^\w.\-]+/g, "_");
+            const path = `${uid}/${newId}/${crypto.randomUUID()}_${safeName}`;
+            const { error: upErr } = await supabase.storage
+              .from(ATTACHMENT_BUCKET)
+              .upload(path, a.file, { contentType: a.file.type });
+            if (upErr) {
+              toast.error(upErr.message);
+              continue;
+            }
+            const { error: insErr } = await supabase.from("customer_attachments").insert({
+              customer_id: newId,
+              user_id: uid,
+              category: a.category,
+              label: a.category === "other" ? a.label : null,
+              file_path: path,
+              file_name: a.file.name,
+              mime_type: a.file.type || null,
+              size_bytes: a.file.size,
+            });
+            if (insErr) toast.error(insErr.message);
+          }
         }
       }
       toast.success(t("customerSaved"));
@@ -663,8 +760,93 @@ function CustomerSheet({
     setDraftBanks((p) => p.filter((b) => b._key !== key));
   }
 
+  /* ------------- attachments ------------- */
+  async function uploadAttachment(file: File) {
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error(lang === "ar" ? "الحد الأقصى 25 ميجا" : "Max size 25 MB");
+      return;
+    }
+    if (newAttachCategory === "other" && !newAttachLabel.trim()) {
+      toast.error(lang === "ar" ? "اكتب مسمى الملف" : "Enter a label");
+      return;
+    }
+    // New customer → keep as draft
+    if (!customer) {
+      setDraftAttachments((p) => [
+        ...p,
+        {
+          _key: crypto.randomUUID(),
+          file,
+          category: newAttachCategory,
+          label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
+        },
+      ]);
+      setNewAttachLabel("");
+      return;
+    }
+    // Existing customer → upload immediately
+    setUploadingAttach(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id!;
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${uid}/${customer.id}/${crypto.randomUUID()}_${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from(ATTACHMENT_BUCKET)
+        .upload(path, file, { contentType: file.type });
+      if (upErr) throw upErr;
+      const { data, error } = await supabase
+        .from("customer_attachments")
+        .insert({
+          customer_id: customer.id,
+          user_id: uid,
+          category: newAttachCategory,
+          label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
+          file_path: path,
+          file_name: file.name,
+          mime_type: file.type || null,
+          size_bytes: file.size,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setAttachments((p) => [...p, data as Attachment]);
+      setNewAttachLabel("");
+      toast.success(lang === "ar" ? "تم الرفع" : "Uploaded");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploadingAttach(false);
+    }
+  }
+
+  async function downloadAttachment(a: Attachment) {
+    const { data, error } = await supabase.storage
+      .from(ATTACHMENT_BUCKET)
+      .createSignedUrl(a.file_path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error(error?.message ?? "Error");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  }
+
+  async function deleteAttachment(a: Attachment) {
+    const { error: sErr } = await supabase.storage.from(ATTACHMENT_BUCKET).remove([a.file_path]);
+    if (sErr) toast.error(sErr.message);
+    const { error } = await supabase.from("customer_attachments").delete().eq("id", a.id);
+    if (error) return toast.error(error.message);
+    setAttachments((p) => p.filter((x) => x.id !== a.id));
+  }
+
+  function removeDraftAttachment(key: string) {
+    setDraftAttachments((p) => p.filter((x) => x._key !== key));
+  }
+
   const contactsCount = customer ? contacts.length : draftContacts.length;
   const banksCount = customer ? banks.length : draftBanks.length;
+  const attachmentsCount = customer ? attachments.length : draftAttachments.length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1101,6 +1283,136 @@ function CustomerSheet({
               </AccordionContent>
             </AccordionItem>
 
+            {/* Attachments */}
+            <AccordionItem value="attachments">
+              <AccordionTrigger className="hover:no-underline">
+                <SectionTitle
+                  icon={<Paperclip className="h-4 w-4" />}
+                  title={lang === "ar" ? "المرفقات" : "Attachments"}
+                  subtitle={
+                    attachmentsCount > 0
+                      ? `${attachmentsCount} ${lang === "ar" ? "ملف" : "file(s)"}`
+                      : lang === "ar"
+                        ? "بروفيل، سجل تجاري، بطاقة ضريبية…"
+                        : "Profile, register, tax card…"
+                  }
+                  count={attachmentsCount}
+                />
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 space-y-3">
+                {/* Upload row */}
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">
+                        {lang === "ar" ? "نوع الملف" : "File type"}
+                      </Label>
+                      <Select
+                        value={newAttachCategory}
+                        onValueChange={(v) => setNewAttachCategory(v as AttachmentCategory)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ATTACHMENT_CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {attachmentCategoryLabel(c, lang)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {newAttachCategory === "other" && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">
+                          {lang === "ar" ? "مسمى الملف" : "File label"}
+                        </Label>
+                        <Input
+                          value={newAttachLabel}
+                          onChange={(e) => setNewAttachLabel(e.target.value)}
+                          maxLength={100}
+                          placeholder={lang === "ar" ? "مثال: عقد الشراكة" : "e.g. Partnership contract"}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      id="customer-attachment-input"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadAttachment(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={uploadingAttach}
+                      onClick={() =>
+                        document.getElementById("customer-attachment-input")?.click()
+                      }
+                      className="w-full"
+                    >
+                      <Upload className="h-4 w-4 me-1.5" />
+                      {uploadingAttach
+                        ? lang === "ar" ? "جارِ الرفع…" : "Uploading…"
+                        : lang === "ar" ? "اختر ملفًا للرفع" : "Choose file to upload"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* List */}
+                {attachmentsCount === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
+                    {lang === "ar" ? "لا توجد مرفقات بعد" : "No attachments yet"}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {customer
+                      ? attachments.map((a) => (
+                          <AttachmentRow
+                            key={a.id}
+                            categoryLabel={
+                              a.category === "other"
+                                ? a.label || attachmentCategoryLabel("other", lang)
+                                : attachmentCategoryLabel(a.category, lang)
+                            }
+                            fileName={a.file_name}
+                            size={a.size_bytes ?? undefined}
+                            onDownload={() => downloadAttachment(a)}
+                            onDelete={() => deleteAttachment(a)}
+                          />
+                        ))
+                      : draftAttachments.map((a) => (
+                          <AttachmentRow
+                            key={a._key}
+                            categoryLabel={
+                              a.category === "other"
+                                ? a.label || attachmentCategoryLabel("other", lang)
+                                : attachmentCategoryLabel(a.category, lang)
+                            }
+                            fileName={a.file.name}
+                            size={a.file.size}
+                            pending
+                            onDelete={() => removeDraftAttachment(a._key)}
+                          />
+                        ))}
+                  </div>
+                )}
+                {!customer && draftAttachments.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    {lang === "ar"
+                      ? "الملفات هترفع بعد حفظ العميل"
+                      : "Files will be uploaded after saving the customer"}
+                  </p>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
             {/* Notes */}
             <AccordionItem value="notes">
               <AccordionTrigger className="hover:no-underline">
@@ -1327,5 +1639,51 @@ function BankRow({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function AttachmentRow({
+  categoryLabel,
+  fileName,
+  size,
+  pending,
+  onDownload,
+  onDelete,
+}: {
+  categoryLabel: string;
+  fileName: string;
+  size?: number;
+  pending?: boolean;
+  onDownload?: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-md border bg-card px-3 py-2 hover:bg-muted/30 transition-colors">
+      <div className="h-9 w-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <FileIcon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
+          <span className="truncate">{categoryLabel}</span>
+          {pending && (
+            <Badge variant="outline" className="h-4 text-[10px] px-1">
+              pending
+            </Badge>
+          )}
+        </div>
+        <div className="text-[11px] text-muted-foreground truncate">
+          {fileName}
+          {size ? ` · ${formatBytes(size)}` : ""}
+        </div>
+      </div>
+      {onDownload && (
+        <Button type="button" variant="ghost" size="sm" onClick={onDownload}>
+          <Download className="h-4 w-4" />
+        </Button>
+      )}
+      <Button type="button" variant="ghost" size="sm" onClick={onDelete}>
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
   );
 }
