@@ -9,6 +9,7 @@ import { InputIcon } from "@/components/ui/input-icon";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -332,7 +333,8 @@ function OrganizationPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <TooltipProvider delayDuration={120}>
+              <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-10 py-4">
               {rootDepts
                 .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                 .map((d) => (
@@ -377,7 +379,8 @@ function OrganizationPage() {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
