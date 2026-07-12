@@ -535,16 +535,15 @@ function DeptCard({
     <div
       className="relative flex flex-col items-center gap-4"
       onDragOver={(e) => {
-        const sourceId = e.dataTransfer.types.includes("text/dept-id") ? "yes" : null;
-        if (!sourceId) return;
+        if (!e.dataTransfer.types.includes("text/dept-id")) return;
         e.preventDefault();
+        e.stopPropagation();
         e.dataTransfer.dropEffect = "move";
         const rect = e.currentTarget.getBoundingClientRect();
         const relX = e.clientX - rect.left;
-        // Left 25% zone = insert-before (sibling); rest = child
         setDropMode(relX < rect.width * 0.25 ? "before" : "child");
       }}
-      onDragLeave={() => setDropMode(null)}
+      onDragLeave={(e) => { e.stopPropagation(); setDropMode(null); }}
       onDrop={(e) => {
         const sourceId = e.dataTransfer.getData("text/dept-id");
         setDropMode(null);
