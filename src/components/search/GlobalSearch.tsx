@@ -133,7 +133,7 @@ export function GlobalSearch() {
     })();
   }, [open]);
 
-  // Debounced server search
+  // Debounced server search (plain or AI)
   useEffect(() => {
     const s = q.trim();
     if (s.length < 2) {
@@ -142,12 +142,31 @@ export function GlobalSearch() {
     }
     setLoading(true);
     const t = setTimeout(async () => {
-      const { data, error } = await supabase.rpc("global_search", { _q: s, _limit: 6 });
-      if (!error && data) setHits(data as Hit[]);
-      setLoading(false);
-    }, 180);
+      try {
+        if (aiMode) {
+          const rows = await runSemantic({ data: { q: s, limit: 8 } });
+          setHits(
+            (rows ?? []).map((r) => ({
+              entity: r.entity as Hit["entity"],
+              id: r.entity_id,
+              title: r.title,
+              subtitle: r.subtitle,
+              link: r.link,
+              rank: r.similarity,
+            })),
+          );
+        } else {
+          const { data, error } = await supabase.rpc("global_search", { _q: s, _limit: 6 });
+          if (!error && data) setHits(data as Hit[]);
+        }
+      } catch {
+        setHits([]);
+      } finally {
+        setLoading(false);
+      }
+    }, aiMode ? 320 : 180);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, aiMode, runSemantic]);
 
   const filteredPages = useMemo(() => {
     const s = q.trim().toLowerCase();
