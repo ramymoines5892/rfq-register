@@ -214,7 +214,9 @@ const CURRENCIES = ["EGP", "USD", "EUR", "SAR", "AED", "GBP"];
 
 function CustomersPage() {
   const { t, lang } = useI18n();
+  const access = useAccess();
   const [customers, setCustomers] = useState<Customer[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
