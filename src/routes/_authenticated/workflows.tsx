@@ -52,7 +52,8 @@ function WorkflowsPage() {
   }
 
   async function deleteTemplate(id: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), confirmText: t("delete") ?? undefined, variant: "destructive" });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("workflow_templates").update({
       deleted_at: new Date().toISOString(),
