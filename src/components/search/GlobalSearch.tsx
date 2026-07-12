@@ -55,6 +55,7 @@ const PAGES: PageEntry[] = [
   { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings" },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", keywords: "fields forms builder حقول تخصيص نماذج", icon: LayoutGrid, group: "settings" },
   { to: "/settings/notifications", labelAr: "الإشعارات", labelEn: "Notifications", keywords: "notifications alerts إشعارات تنبيهات", icon: Bell, group: "settings" },
+  { to: "/settings/search", labelAr: "البحث الذكي", labelEn: "AI Search", keywords: "search semantic ai بحث ذكي دلالي embeddings", icon: Sparkles, group: "settings" },
   { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", keywords: "trash deleted recycle bin سلة محذوفات", icon: Trash2, group: "settings" },
 ];
 
