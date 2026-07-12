@@ -86,12 +86,14 @@ function NotificationSettings() {
 
   if (loading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
 
-  const cats: { key: string; ar: string; en: string }[] = [
+  const allCats: { key: NotifCategory; ar: string; en: string }[] = [
     { key: "pending_users", ar: "المستخدمين الجدد بانتظار التفعيل", en: "New users pending approval" },
     { key: "approvals", ar: "طلبات الموافقة على العروض والمهام", en: "Approvals & tasks" },
     { key: "tasks", ar: "المهام والتذكيرات", en: "Tasks & reminders" },
     { key: "system", ar: "إشعارات النظام", en: "System notifications" },
   ];
+  // Only show categories the user is actually authorized to receive.
+  const cats = access.ready ? allCats.filter((c) => access.notifCategories.has(c.key)) : [];
 
   return (
     <div className="max-w-2xl">
