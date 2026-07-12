@@ -881,3 +881,108 @@ function FieldEditor({
     </Sheet>
   );
 }
+
+// ---------- Custom collision: prefer field under pointer, then section droppable ----------
+
+const sectionAwareCollision: CollisionDetection = (args) => {
+  const pw = pointerWithin(args);
+  const fieldHit = pw.find((c) => !String(c.id).startsWith("__sec:"));
+  if (fieldHit) return [fieldHit];
+  const secHit = pw.find((c) => String(c.id).startsWith("__sec:"));
+  if (secHit) return [secHit];
+  return closestCenter(args);
+};
+
+// ---------- Live Preview of the final form ----------
+
+function LivePreview({
+  sections, optionsByField, ar,
+}: {
+  sections: Section[];
+  optionsByField: Record<string, FieldOption[]>;
+  ar: boolean;
+}) {
+  return (
+    <Card className="border-primary/30">
+      <CardContent className="p-4 space-y-5">
+        <div className="flex items-center gap-2 pb-2 border-b">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wide">
+            {ar ? "معاينة الشاشة" : "Form Preview"}
+          </span>
+          <span className="ms-auto text-[10px] text-muted-foreground">
+            {ar ? "شكل الشاشة النهائي" : "Live output"}
+          </span>
+        </div>
+        {sections.map((sec) => {
+          const visible = sec.items.filter((f) => f.is_active);
+          if (visible.length === 0) return null;
+          return (
+            <div key={sec.key} className="space-y-2">
+              <div className="text-xs font-bold text-primary/80">{sec.label}</div>
+              <div className="grid grid-cols-12 gap-2">
+                {visible.map((f) => (
+                  <PreviewField
+                    key={f.id}
+                    field={f}
+                    options={optionsByField[f.id] ?? []}
+                    ar={ar}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PreviewField({
+  field, options, ar,
+}: {
+  field: FieldDef;
+  options: FieldOption[];
+  ar: boolean;
+}) {
+  const span = Math.max(1, Math.min(12, field.col_span || 12));
+  const label = ar ? field.label_ar : field.label_en;
+  const placeholder = (ar ? field.placeholder_ar : field.placeholder_en) ?? "";
+  const t = field.field_type;
+
+  return (
+    <div style={{ gridColumn: `span ${span} / span ${span}` }} className="space-y-1">
+      <Label className="text-xs flex items-center gap-1">
+        {label}
+        {field.is_required && <span className="text-destructive">*</span>}
+      </Label>
+      {t === "textarea" ? (
+        <Textarea disabled placeholder={placeholder} rows={2} className="text-xs" />
+      ) : t === "checkbox" ? (
+        <div className="flex items-center gap-2 h-8"><Checkbox disabled /><span className="text-xs text-muted-foreground">{placeholder || label}</span></div>
+      ) : t === "dropdown" || t === "multiselect" ? (
+        <Select disabled>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={placeholder || (ar ? "اختر..." : "Select...")} /></SelectTrigger>
+          <SelectContent>
+            {options.slice(0, 5).map((o) => (
+              <SelectItem key={o.id} value={o.value}>{ar ? o.label_ar : o.label_en}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : t === "bilingual_text" ? (
+        <div className="grid grid-cols-2 gap-1">
+          <Input disabled placeholder="AR" className="h-8 text-xs" />
+          <Input disabled placeholder="EN" className="h-8 text-xs" />
+        </div>
+      ) : (
+        <Input
+          disabled
+          type={t === "number" ? "number" : t === "date" ? "date" : t === "email" ? "email" : "text"}
+          placeholder={placeholder || label}
+          className="h-8 text-xs"
+        />
+      )}
+    </div>
+  );
+}
+
