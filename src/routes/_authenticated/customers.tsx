@@ -3,7 +3,26 @@ import { useAccess } from "@/hooks/useAccess";
 import { useCustomers, useCustomerRelations, useSoftDeleteCustomer } from "@/features/customers/queries";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  currentUserId,
+  requireUserId,
+  findCustomerByTaxId,
+  updateCustomer,
+  insertCustomer,
+  insertContacts,
+  insertBanks,
+  insertContact,
+  updateContactRow,
+  softDeleteContact,
+  insertBank,
+  updateBankRow,
+  softDeleteBank,
+  insertAttachment,
+  insertAttachmentSilent,
+  softDeleteAttachment,
+  uploadAttachmentFile,
+  createAttachmentSignedUrl,
+} from "@/features/customers/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
