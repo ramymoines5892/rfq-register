@@ -340,7 +340,7 @@ function OrganizationPage() {
                   {ar ? "رسمة الهيكل التنظيمي" : "Organization Chart"}
                 </DialogTitle>
               </DialogHeader>
-              <div className="rounded-lg border bg-white overflow-auto max-h-[70vh]">
+              <div className="rounded-lg border bg-white p-2">
                 {rootDepts.length === 0 ? (
                   <div className="py-16 text-center text-sm text-muted-foreground">
                     {ar ? "أضف إدارة لعرض الرسمة" : "Add a department to see the chart"}
