@@ -81,7 +81,7 @@ export function GlobalSearch() {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const router = useRouter();
-  const access = (require("@/hooks/useAccess") as typeof import("@/hooks/useAccess")).useAccess();
+  const access = useAccess();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
