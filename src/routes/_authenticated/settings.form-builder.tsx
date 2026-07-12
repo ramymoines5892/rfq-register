@@ -1,24 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
-  LayoutGrid, Save, Info, Check, X,
+  LayoutGrid, Save, Info, Check, X, Undo2, Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Database } from "@/integrations/supabase/types";
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
-  type DragEndEvent, closestCenter, useDroppable,
+  type DragEndEvent, type CollisionDetection, closestCenter, pointerWithin, useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates,
