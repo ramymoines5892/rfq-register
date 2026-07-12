@@ -372,8 +372,8 @@ function OrganizationPage() {
           <p className="mb-2 text-[11px] text-muted-foreground flex items-center gap-1">
             <Info className="h-3 w-3" />
             {ar
-              ? "اسحب أي إدارة وأفلتها فوق إدارة أخرى لجعلها فرعية، أو على الحافة اليسرى لإعادة الترتيب."
-              : "Drag a department onto another to nest it, or onto its left edge to reorder."}
+              ? "اسحب أي إدارة وأفلتها على المنتصف لجعلها فرعية، أو على الحافة اليسرى/اليمنى لوضعها قبل/بعد الإدارة."
+              : "Drag onto the middle to nest, or onto the left/right edge to place before/after."}
           </p>
 
           {loading ? (
