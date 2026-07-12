@@ -1,24 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
-  LayoutGrid, Save, Info, Check, X,
+  LayoutGrid, Save, Info, Check, X, Undo2, Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Database } from "@/integrations/supabase/types";
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
-  type DragEndEvent, closestCenter, useDroppable,
+  type DragEndEvent, type CollisionDetection, closestCenter, pointerWithin, useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates,
@@ -61,11 +63,14 @@ function FormBuilderPage() {
   const [canManage, setCanManage] = useState<boolean | null>(null);
   const [entity, setEntity] = useState<string>("customers");
   const [fields, setFields] = useState<FieldDef[]>([]);
+  const originalFieldsRef = useRef<FieldDef[]>([]);
+  const [dirty, setDirty] = useState(false);
   const [optionsByField, setOptionsByField] = useState<Record<string, FieldOption[]>>({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<FieldDef | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [savingLayout, setSavingLayout] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
 
   async function loadAll() {
     setLoading(true);
@@ -78,7 +83,10 @@ function FormBuilderPage() {
         .order("position", { ascending: true }),
       supabase.from("customer_field_options").select("*").is("deleted_at", null).order("position", { ascending: true }),
     ]);
-    setFields(defs ?? []);
+    const list = defs ?? [];
+    setFields(list);
+    originalFieldsRef.current = list.map((f) => ({ ...f }));
+    setDirty(false);
     const grouped: Record<string, FieldOption[]> = {};
     for (const o of opts ?? []) (grouped[o.field_id] ??= []).push(o);
     setOptionsByField(grouped);
@@ -89,7 +97,6 @@ function FormBuilderPage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) { setCanManage(false); return; }
-      // Accept either the legacy or the new unified permission
       const [{ data: legacy }, { data: unified }] = await Promise.all([
         supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_customer_fields" }),
         supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_form_fields" }),
@@ -99,6 +106,15 @@ function FormBuilderPage() {
   }, []);
 
   useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warn on unload if dirty
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+
 
   const sections = useMemo(() => {
     // Group by the visible (current-language) name so a missing translation
@@ -128,22 +144,14 @@ function FormBuilderPage() {
   }, [fields, ar]);
 
 
-  async function updateColSpan(f: FieldDef, span: number) {
+  function updateColSpan(f: FieldDef, span: number) {
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, col_span: span } : x)));
-    const { error } = await supabase.from("customer_field_definitions").update({ col_span: span }).eq("id", f.id);
-    if (error) toast.error(error.message);
+    setDirty(true);
   }
 
-  async function toggleActive(f: FieldDef) {
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id ?? null;
-    const hide = f.is_active;
+  function toggleActive(f: FieldDef) {
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, is_active: !x.is_active } : x)));
-    await supabase.from("customer_field_definitions").update({
-      is_active: !f.is_active,
-      hidden_at: hide ? new Date().toISOString() : null,
-      hidden_by: hide ? uid : null,
-    }).eq("id", f.id);
+    setDirty(true);
   }
 
   async function removeField(f: FieldDef) {
@@ -162,11 +170,7 @@ function FormBuilderPage() {
     loadAll();
   }
 
-  async function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
-    const affected = fields.filter(
-      (f) => (f.section_ar ?? "") === oldAr && (f.section_en ?? "") === oldEn,
-    );
-    if (!affected.length) return;
+  function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
     const nAr = newAr.trim() || null;
     const nEn = newEn.trim() || null;
     setFields((prev) =>
@@ -176,18 +180,10 @@ function FormBuilderPage() {
           : f,
       ),
     );
-    await Promise.all(
-      affected.map((f) =>
-        supabase
-          .from("customer_field_definitions")
-          .update({ section_ar: nAr, section_en: nEn })
-          .eq("id", f.id),
-      ),
-    );
-    toast.success(ar ? "تم تحديث اسم القسم" : "Section renamed");
+    setDirty(true);
   }
 
-  async function handleDragEnd(e: DragEndEvent) {
+  function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over) return;
     const activeId = String(active.id);
@@ -209,9 +205,6 @@ function FormBuilderPage() {
     } else {
       overField = fields.find((f) => f.id === overId);
       if (!overField) return;
-      // Take the destination section names from the section that CONTAINS
-      // overField (so we inherit both AR + EN even if overField itself has
-      // one language empty).
       const destSec = sections.find((s) => s.items.some((it) => it.id === overField!.id));
       destAr = (destSec?.sectionAr || overField.section_ar) || null;
       destEn = (destSec?.sectionEn || overField.section_en) || null;
@@ -222,37 +215,21 @@ function FormBuilderPage() {
       (srcSec?.sectionAr ?? activeField.section_ar ?? "") === (destAr ?? "") &&
       (srcSec?.sectionEn ?? activeField.section_en ?? "") === (destEn ?? "");
 
-    setSavingLayout(true);
     if (sameSection && overField) {
       const secItems = fields
-        .filter(
-          (f) =>
-            (f.section_ar ?? "") === (destAr ?? "") &&
-            (f.section_en ?? "") === (destEn ?? ""),
-        )
+        .filter((f) => (f.section_ar ?? "") === (destAr ?? "") && (f.section_en ?? "") === (destEn ?? ""))
         .sort((a, b) => a.position - b.position);
       const oldIdx = secItems.findIndex((f) => f.id === activeId);
       const newIdx = secItems.findIndex((f) => f.id === overId);
-      if (oldIdx < 0 || newIdx < 0) { setSavingLayout(false); return; }
+      if (oldIdx < 0 || newIdx < 0) return;
       const reordered = arrayMove(secItems, oldIdx, newIdx).map((f, i) => ({ ...f, position: (i + 1) * 10 }));
       setFields((prev) => {
         const others = prev.filter((f) => !secItems.some((s) => s.id === f.id));
         return [...others, ...reordered];
       });
-      await Promise.all(
-        reordered.map((f) =>
-          supabase.from("customer_field_definitions").update({ position: f.position }).eq("id", f.id),
-        ),
-      );
     } else {
-      // Move across sections
       const destItems = fields
-        .filter(
-          (f) =>
-            (f.section_ar ?? "") === (destAr ?? "") &&
-            (f.section_en ?? "") === (destEn ?? "") &&
-            f.id !== activeId,
-        )
+        .filter((f) => (f.section_ar ?? "") === (destAr ?? "") && (f.section_en ?? "") === (destEn ?? "") && f.id !== activeId)
         .sort((a, b) => a.position - b.position);
       const insertAt = overField ? destItems.findIndex((f) => f.id === overField!.id) : destItems.length;
       const idx = insertAt < 0 ? destItems.length : insertAt;
@@ -263,21 +240,61 @@ function FormBuilderPage() {
         const untouchedIds = new Set(newDest.map((f) => f.id));
         return [...prev.filter((f) => !untouchedIds.has(f.id)), ...newDest];
       });
-      await Promise.all(
-        newDest.map((f) =>
-          supabase
-            .from("customer_field_definitions")
-            .update(
-              f.id === activeField.id
-                ? { section_ar: destAr, section_en: destEn, position: f.position }
-                : { position: f.position },
-            )
-            .eq("id", f.id),
-        ),
-      );
     }
-    setSavingLayout(false);
+    setDirty(true);
   }
+
+  async function saveAll() {
+    setSaving(true);
+    const original = new Map(originalFieldsRef.current.map((f) => [f.id, f]));
+    const changed = fields.filter((f) => {
+      const o = original.get(f.id);
+      if (!o) return false;
+      return (
+        o.position !== f.position ||
+        o.col_span !== f.col_span ||
+        o.is_active !== f.is_active ||
+        (o.section_ar ?? "") !== (f.section_ar ?? "") ||
+        (o.section_en ?? "") !== (f.section_en ?? "")
+      );
+    });
+    if (changed.length === 0) {
+      setSaving(false); setDirty(false);
+      toast.info(ar ? "لا يوجد تغييرات" : "No changes to save");
+      return;
+    }
+    const { data: u } = await supabase.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const results = await Promise.all(
+      changed.map((f) => {
+        const o = original.get(f.id)!;
+        const hidChanged = o.is_active !== f.is_active;
+        return supabase.from("customer_field_definitions").update({
+          position: f.position,
+          col_span: f.col_span,
+          is_active: f.is_active,
+          section_ar: f.section_ar,
+          section_en: f.section_en,
+          ...(hidChanged
+            ? { hidden_at: !f.is_active ? new Date().toISOString() : null, hidden_by: !f.is_active ? uid : null }
+            : {}),
+        }).eq("id", f.id);
+      }),
+    );
+    setSaving(false);
+    const failed = results.find((r) => r.error);
+    if (failed?.error) { toast.error(failed.error.message); return; }
+    toast.success(ar ? `تم حفظ ${changed.length} تعديل` : `Saved ${changed.length} change(s)`);
+    originalFieldsRef.current = fields.map((f) => ({ ...f }));
+    setDirty(false);
+  }
+
+  function discardChanges() {
+    if (!confirm(ar ? "التراجع عن كل التغييرات؟" : "Discard all changes?")) return;
+    setFields(originalFieldsRef.current.map((f) => ({ ...f })));
+    setDirty(false);
+  }
+
 
   if (canManage === null) {
     return <div className="p-8 text-center text-muted-foreground">{ar ? "جاري التحقق..." : "Checking..."}</div>;
@@ -304,13 +321,17 @@ function FormBuilderPage() {
       <div className="flex flex-wrap items-center gap-3">
         <LayoutGrid className="h-5 w-5 text-primary" />
         <h2 className="text-xl font-bold">{ar ? "منشئ الحقول" : "Form Builder"}</h2>
-        {savingLayout && (
-          <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-            <Save className="h-3 w-3 animate-pulse" /> {ar ? "حفظ..." : "Saving..."}
-          </span>
+        {dirty && (
+          <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600 gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            {ar ? "تغييرات غير محفوظة" : "Unsaved changes"}
+          </Badge>
         )}
         <div className="ms-auto flex items-center gap-2">
-          <Select value={entity} onValueChange={setEntity}>
+          <Select value={entity} onValueChange={(v) => {
+            if (dirty && !confirm(ar ? "فيه تغييرات غير محفوظة. متأكد؟" : "You have unsaved changes. Continue?")) return;
+            setEntity(v);
+          }}>
             <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {ENTITIES.map((e) => (
@@ -318,6 +339,15 @@ function FormBuilderPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button size="sm" variant="outline" onClick={() => setShowPreview((v) => !v)}>
+            <Sparkles className="h-4 w-4 me-1" /> {showPreview ? (ar ? "إخفاء المعاينة" : "Hide Preview") : (ar ? "معاينة" : "Preview")}
+          </Button>
+          <Button size="sm" variant="outline" disabled={!dirty || saving} onClick={discardChanges}>
+            <Undo2 className="h-4 w-4 me-1" /> {ar ? "تراجع" : "Discard"}
+          </Button>
+          <Button size="sm" disabled={!dirty || saving} onClick={saveAll}>
+            <Save className="h-4 w-4 me-1" /> {saving ? (ar ? "حفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}
+          </Button>
           <Button size="sm" onClick={() => { setEditing(null); setDrawerOpen(true); }}>
             <Plus className="h-4 w-4 me-1" /> {ar ? "حقل جديد" : "New Field"}
           </Button>
@@ -328,30 +358,40 @@ function FormBuilderPage() {
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           {ar
-            ? "اسحب الحقل من المقبض لأي مكان — نفس القسم أو قسم تاني. عدّل عرض الحقل من 3 لـ 12، ولو مجموع العرض في السطر عدّى 12 هيلف تلقائياً لسطر جديد. اضغط علامة القلم جنب اسم القسم عشان تغيّره."
-            : "Drag any field anywhere — same section or another. Widths 3–12; when a row fills past 12, fields wrap to a new row automatically. Click the pencil next to a section title to rename it."}
+            ? "اسحب أي حقل لأي قسم (حتى القسم الفاضي). التعديلات مش بتتحفظ لحد ما تضغط «حفظ». المعاينة اللايف على اليمين بتوريك شكل الشاشة النهائي."
+            : "Drag any field into any section (including empty ones). Changes are NOT saved until you press Save. The live preview on the right shows the final form."}
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center py-16 text-muted-foreground">{ar ? "تحميل..." : "Loading..."}</div>
-      ) : fields.length === 0 ? (
-        <Card><CardContent className="p-8 text-center text-muted-foreground">
-          {ar ? "لا توجد حقول بعد. أضف أول حقل." : "No fields yet. Add your first."}
-        </CardContent></Card>
-      ) : (
-        <BuilderCanvas
-          sections={sections}
-          optionsByField={optionsByField}
-          ar={ar}
-          onDragEnd={handleDragEnd}
-          onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
-          onColSpan={updateColSpan}
-          onToggleActive={toggleActive}
-          onDelete={removeField}
-          onRenameSection={renameSection}
-        />
-      )}
+      <div className={`grid gap-4 ${showPreview ? "lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : "grid-cols-1"}`}>
+        <div>
+          {loading ? (
+            <div className="text-center py-16 text-muted-foreground">{ar ? "تحميل..." : "Loading..."}</div>
+          ) : fields.length === 0 ? (
+            <Card><CardContent className="p-8 text-center text-muted-foreground">
+              {ar ? "لا توجد حقول بعد. أضف أول حقل." : "No fields yet. Add your first."}
+            </CardContent></Card>
+          ) : (
+            <BuilderCanvas
+              sections={sections}
+              optionsByField={optionsByField}
+              ar={ar}
+              onDragEnd={handleDragEnd}
+              onEdit={(f) => { setEditing(f); setDrawerOpen(true); }}
+              onColSpan={updateColSpan}
+              onToggleActive={toggleActive}
+              onDelete={removeField}
+              onRenameSection={renameSection}
+            />
+          )}
+        </div>
+        {showPreview && !loading && fields.length > 0 && (
+          <div className="lg:sticky lg:top-4 lg:self-start">
+            <LivePreview sections={sections} optionsByField={optionsByField} ar={ar} />
+          </div>
+        )}
+      </div>
+
 
       <FieldEditor
         open={drawerOpen}
@@ -395,7 +435,7 @@ function BuilderCanvas({
   );
   const allIds = sections.flatMap((s) => s.items.map((f) => f.id));
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={sectionAwareCollision} onDragEnd={onDragEnd}>
       <SortableContext items={allIds} strategy={rectSortingStrategy}>
         <div className="space-y-4">
           {sections.map((sec) => (
@@ -841,3 +881,108 @@ function FieldEditor({
     </Sheet>
   );
 }
+
+// ---------- Custom collision: prefer field under pointer, then section droppable ----------
+
+const sectionAwareCollision: CollisionDetection = (args) => {
+  const pw = pointerWithin(args);
+  const fieldHit = pw.find((c) => !String(c.id).startsWith("__sec:"));
+  if (fieldHit) return [fieldHit];
+  const secHit = pw.find((c) => String(c.id).startsWith("__sec:"));
+  if (secHit) return [secHit];
+  return closestCenter(args);
+};
+
+// ---------- Live Preview of the final form ----------
+
+function LivePreview({
+  sections, optionsByField, ar,
+}: {
+  sections: Section[];
+  optionsByField: Record<string, FieldOption[]>;
+  ar: boolean;
+}) {
+  return (
+    <Card className="border-primary/30">
+      <CardContent className="p-4 space-y-5">
+        <div className="flex items-center gap-2 pb-2 border-b">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wide">
+            {ar ? "معاينة الشاشة" : "Form Preview"}
+          </span>
+          <span className="ms-auto text-[10px] text-muted-foreground">
+            {ar ? "شكل الشاشة النهائي" : "Live output"}
+          </span>
+        </div>
+        {sections.map((sec) => {
+          const visible = sec.items.filter((f) => f.is_active);
+          if (visible.length === 0) return null;
+          return (
+            <div key={sec.key} className="space-y-2">
+              <div className="text-xs font-bold text-primary/80">{sec.label}</div>
+              <div className="grid grid-cols-12 gap-2">
+                {visible.map((f) => (
+                  <PreviewField
+                    key={f.id}
+                    field={f}
+                    options={optionsByField[f.id] ?? []}
+                    ar={ar}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PreviewField({
+  field, options, ar,
+}: {
+  field: FieldDef;
+  options: FieldOption[];
+  ar: boolean;
+}) {
+  const span = Math.max(1, Math.min(12, field.col_span || 12));
+  const label = ar ? field.label_ar : field.label_en;
+  const placeholder = (ar ? field.placeholder_ar : field.placeholder_en) ?? "";
+  const t = field.field_type;
+
+  return (
+    <div style={{ gridColumn: `span ${span} / span ${span}` }} className="space-y-1">
+      <Label className="text-xs flex items-center gap-1">
+        {label}
+        {field.is_required && <span className="text-destructive">*</span>}
+      </Label>
+      {t === "textarea" ? (
+        <Textarea disabled placeholder={placeholder} rows={2} className="text-xs" />
+      ) : t === "checkbox" ? (
+        <div className="flex items-center gap-2 h-8"><Checkbox disabled /><span className="text-xs text-muted-foreground">{placeholder || label}</span></div>
+      ) : t === "dropdown" || t === "multiselect" ? (
+        <Select disabled>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={placeholder || (ar ? "اختر..." : "Select...")} /></SelectTrigger>
+          <SelectContent>
+            {options.slice(0, 5).map((o) => (
+              <SelectItem key={o.id} value={o.value}>{ar ? o.label_ar : o.label_en}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : t === "bilingual_text" ? (
+        <div className="grid grid-cols-2 gap-1">
+          <Input disabled placeholder="AR" className="h-8 text-xs" />
+          <Input disabled placeholder="EN" className="h-8 text-xs" />
+        </div>
+      ) : (
+        <Input
+          disabled
+          type={t === "number" ? "number" : t === "date" ? "date" : t === "email" ? "email" : "text"}
+          placeholder={placeholder || label}
+          className="h-8 text-xs"
+        />
+      )}
+    </div>
+  );
+}
+
