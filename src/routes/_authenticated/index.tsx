@@ -186,9 +186,15 @@ function Dashboard() {
 
           <TabsContent value="mine" className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" style={{insetInlineStart: '0.75rem'}} />
-                <Input placeholder={t("search")} value={search} onChange={(e) => setSearch(e.target.value)} className="ps-10" />
+              <div className="flex-1">
+                <InputIcon
+                  leftIcon={<Search />}
+                  placeholder={t("search")}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  clearable
+                  onClear={() => setSearch("")}
+                />
               </div>
               <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}>
                 <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={t("filterStatus")} /></SelectTrigger>
