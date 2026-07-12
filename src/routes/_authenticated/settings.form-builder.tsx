@@ -91,50 +91,37 @@ function FormBuilderPage() {
   const [entity, setEntity] = useState<string>(
     search.entity && ENTITIES.some((e) => e.key === search.entity) ? search.entity : "customers"
   );
+  const canManageQ = useCanManageFormFields();
+  const canManage = canManageQ.isFetched ? !!canManageQ.data : null;
   const [fields, setFields] = useState<FieldDef[]>([]);
   const originalFieldsRef = useRef<FieldDef[]>([]);
   const [dirty, setDirty] = useState(false);
   const [optionsByField, setOptionsByField] = useState<Record<string, FieldOption[]>>({});
-  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<FieldDef | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
 
-  async function loadAll() {
-    setLoading(true);
-    const [{ data: defs }, { data: opts }] = await Promise.all([
-      supabase
-        .from("customer_field_definitions")
-        .select("*")
-        .eq("entity_key", entity)
-        .is("deleted_at", null)
-        .order("position", { ascending: true }),
-      supabase.from("customer_field_options").select("*").is("deleted_at", null).order("position", { ascending: true }),
-    ]);
-    const list = defs ?? [];
-    setFields(list);
-    originalFieldsRef.current = list.map((f) => ({ ...f }));
-    setDirty(false);
-    const grouped: Record<string, FieldOption[]> = {};
-    for (const o of opts ?? []) (grouped[o.field_id] ??= []).push(o);
-    setOptionsByField(grouped);
-    setLoading(false);
-  }
+  const dataQ = useFormBuilderData(entity, !!canManage);
+  const loading = !canManageQ.isFetched || (!!canManage && dataQ.isLoading);
+  const softDeleteM = useSoftDeleteField(entity);
+  const softDeleteBulkM = useSoftDeleteFieldsBulk(entity);
+  const persistM = usePersistFieldChanges(entity);
+  const saveFieldM = useSaveFieldDefinition(entity);
+  const saving = persistM.isPending || saveFieldM.isPending;
 
+  // Hydrate local state from query. `dirty` guards against clobbering in-flight edits.
   useEffect(() => {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) { setCanManage(false); return; }
-      const [{ data: legacy }, { data: unified }] = await Promise.all([
-        supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_customer_fields" }),
-        supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_form_fields" }),
-      ]);
-      setCanManage(Boolean(legacy) || Boolean(unified));
-    })();
-  }, []);
+    if (!dataQ.data) return;
+    if (dirty) return;
+    setFields(dataQ.data.fields);
+    originalFieldsRef.current = dataQ.data.fields.map((f) => ({ ...f }));
+    setOptionsByField(dataQ.data.optionsByField);
+  }, [dataQ.data, dirty]);
 
-  useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function loadAll() {
+    setDirty(false);
+    await dataQ.refetch();
+  }
 
   // Warn on unload if dirty
   useEffect(() => {
