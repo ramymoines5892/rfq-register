@@ -145,19 +145,22 @@ function NotificationSettings() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">{ar ? "أنواع الإشعارات" : "Categories"}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {cats.map((c) => (
-              <Row key={c.key} label={ar ? c.ar : c.en}>
-                <Switch
-                  checked={prefs.categories[c.key] ?? true}
-                  onCheckedChange={(v) => setPrefs({ ...prefs, categories: { ...prefs.categories, [c.key]: v } })}
-                />
-              </Row>
-            ))}
-          </CardContent>
-        </Card>
+        {cats.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-base">{ar ? "أنواع الإشعارات" : "Categories"}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {cats.map((c) => (
+                <Row key={c.key} label={ar ? c.ar : c.en}>
+                  <Switch
+                    checked={prefs.categories[c.key] ?? true}
+                    onCheckedChange={(v) => setPrefs({ ...prefs, categories: { ...prefs.categories, [c.key]: v } })}
+                  />
+                </Row>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
 
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>
