@@ -18,6 +18,7 @@ import {
   LayoutGrid, Save, Info, Check, X, Undo2, Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 import type { Database } from "@/integrations/supabase/types";
 import {
   DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
