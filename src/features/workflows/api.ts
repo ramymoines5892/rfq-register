@@ -57,7 +57,7 @@ export async function fetchTeamProfiles(): Promise<Profile[]> {
   if (error) throw error;
   const seen = new Set<string>();
   const list: Profile[] = [];
-  (data ?? []).forEach((row: { profiles: Profile | null }) => {
+  (data as unknown as Array<{ profiles: Profile | null }> ?? []).forEach((row) => {
     const p = row.profiles;
     if (p && !seen.has(p.id)) {
       seen.add(p.id);
