@@ -211,7 +211,7 @@ function TreeNode({
               transform: "translateX(-50%)",
             }}
           />
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 8 }}>
             {children.map((c, i) => {
               const isFirst = i === 0;
               const isLast = i === children.length - 1;
@@ -225,6 +225,8 @@ function TreeNode({
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
+                    flex: "1 1 0",
+                    minWidth: 0,
                   }}
                 >
                   {/* Horizontal bus */}
