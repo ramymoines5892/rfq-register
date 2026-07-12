@@ -74,7 +74,8 @@ function TeamPage() {
   }
 
   async function removeFromTeam(userId: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
+    if (!ok) return;
     const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
     if (error) { toast.error(error.message); return; }
     load();
