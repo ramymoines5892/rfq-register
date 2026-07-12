@@ -79,12 +79,12 @@ type RoleFilter = "all" | AppRole;
 
 function HrPage() {
   const { t, lang } = useI18n();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [roles, setRoles] = useState<{ user_id: string; role: AppRole }[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [me, setMe] = useState<string>("");
+  const { data, isLoading: loading, refetch } = useHrDashboard();
+  const profiles = (data?.profiles ?? []) as Profile[];
+  const roles = data?.roles ?? [];
+  const departments = (data?.departments ?? []) as Department[];
+  const jobTitles = (data?.jobTitles ?? []) as JobTitle[];
+  const me = data?.me ?? "";
   const [drawerUser, setDrawerUser] = useState<Profile | null>(null);
 
   // table state
@@ -96,25 +96,8 @@ function HrPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    const { data: userData } = await supabase.auth.getUser();
-    setMe(userData.user?.id ?? "");
-    const [{ data: p }, { data: r }, { data: d }, { data: j }] = await Promise.all([
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      supabase.from("user_roles").select("user_id, role"),
-      supabase.from("departments").select("*").is("deleted_at", null).order("name"),
-      supabase.from("job_titles").select("*").is("deleted_at", null).order("name"),
-    ]);
-    setProfiles((p ?? []) as Profile[]);
-    setRoles((r ?? []) as { user_id: string; role: AppRole }[]);
-    setDepartments((d ?? []) as Department[]);
-    setJobTitles((j ?? []) as JobTitle[]);
-    setSelected(new Set());
-    setLoading(false);
-  }
+  // Backwards-compat helper: existing mutation code calls `load()` after writes.
+  const load = () => { void refetch(); setSelected(new Set()); };
 
   const roleOf = (uid: string): AppRole | null =>
     roles.find((r) => r.user_id === uid && r.role === "owner")?.role
