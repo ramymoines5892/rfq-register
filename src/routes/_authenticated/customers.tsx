@@ -199,7 +199,7 @@ type DraftAttachment = {
   label: string | null;
 };
 
-const ATTACHMENT_BUCKET = "customer-attachments";
+
 const ATTACHMENT_CATEGORIES: AttachmentCategory[] = [
   "company_profile",
   "commercial_register",
