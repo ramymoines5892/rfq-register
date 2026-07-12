@@ -18,6 +18,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
 import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
+import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -253,7 +254,13 @@ function HrPage() {
                     <SelectContent>
                       <SelectItem value="all">{lang === "ar" ? "كل الإدارات" : "All departments"}</SelectItem>
                       <SelectItem value="none">{t("none")}</SelectItem>
-                      {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
+                      {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          <span style={{ paddingInlineStart: depth * 14 }}>
+                            {depth > 0 ? "└ " : ""}{pickLangValue(d as any, "name", lang).value || d.name}
+                          </span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </CardContent>
@@ -447,7 +454,13 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("none")}</SelectItem>
-                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
+                    {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        <span style={{ paddingInlineStart: depth * 14 }}>
+                          {depth > 0 ? "└ " : ""}{pickLangValue(d as any, "name", lang).value || d.name}
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FieldRow>
@@ -688,7 +701,13 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
               <SelectTrigger><SelectValue placeholder={t("department")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("none")}</SelectItem>
-                {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
+                {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    <span style={{ paddingInlineStart: depth * 14 }}>
+                      {depth > 0 ? "└ " : ""}{pickLangValue(d as any, "name", lang).value || d.name}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button onClick={add}><Plus className="h-4 w-4 me-1" />{t("addJobTitle")}</Button>
