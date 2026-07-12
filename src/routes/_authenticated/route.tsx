@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
