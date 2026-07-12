@@ -546,7 +546,8 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
     onChanged();
   }
   async function renameDept(id: string, ar: string, en: string) {
-    const legacy = ar.trim() || en.trim() || null;
+    const legacy = ar.trim() || en.trim();
+    if (!legacy) return;
     await supabase.from("departments").update({
       name: legacy,
       name_ar: ar.trim() || null,
@@ -642,7 +643,8 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
     onChanged();
   }
   async function renameJob(id: string, ar: string, en: string) {
-    const legacy = ar.trim() || en.trim() || null;
+    const legacy = ar.trim() || en.trim();
+    if (!legacy) return;
     await supabase.from("job_titles").update({
       name: legacy,
       name_ar: ar.trim() || null,
