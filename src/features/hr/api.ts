@@ -62,6 +62,68 @@ export async function removeUserFromTeam(userId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Approve a pending user: set profile active and grant `member` role. */
+export async function approveUser(userId: string): Promise<void> {
+  const { error: e1 } = await supabase.from("profiles").update({ status: "active" }).eq("id", userId);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase.from("user_roles").insert({ user_id: userId, role: "member" as AppRole });
+  if (e2) throw e2;
+}
+
+/** Bulk-approve a set of pending users. */
+export async function bulkApproveUsers(userIds: string[]): Promise<void> {
+  if (!userIds.length) return;
+  const { error: e1 } = await supabase.from("profiles").update({ status: "active" }).in("id", userIds);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase.from("user_roles").insert(
+    userIds.map((id) => ({ user_id: id, role: "member" as AppRole })),
+  );
+  if (e2) throw e2;
+}
+
+export async function setProfileStatus(userId: string, status: "active" | "suspended"): Promise<void> {
+  const { error } = await supabase.from("profiles").update({ status }).eq("id", userId);
+  if (error) throw error;
+}
+
+export async function bulkSetProfileStatus(userIds: string[], status: "active" | "suspended"): Promise<void> {
+  if (!userIds.length) return;
+  const { error } = await supabase.from("profiles").update({ status }).in("id", userIds);
+  if (error) throw error;
+}
+
+/** Update arbitrary profile fields. */
+export async function updateProfileFields(
+  userId: string,
+  patch: Partial<import("@/integrations/supabase/types").Database["public"]["Tables"]["profiles"]["Update"]>,
+): Promise<void> {
+  const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+  if (error) throw error;
+}
+
+export async function fetchUserPermissions(userId: string): Promise<AppPermission[]> {
+  const { data, error } = await supabase
+    .from("user_permissions")
+    .select("permission")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []).map((r) => r.permission as AppPermission);
+}
+
+export async function grantUserPermission(userId: string, permission: AppPermission): Promise<void> {
+  const { error } = await supabase.from("user_permissions").insert({ user_id: userId, permission });
+  if (error) throw error;
+}
+
+export async function revokeUserPermission(userId: string, permission: AppPermission): Promise<void> {
+  const { error } = await supabase
+    .from("user_permissions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("permission", permission);
+  if (error) throw error;
+}
+
 /** Current auth uid (or empty string when signed out). */
 export async function fetchCurrentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser();
