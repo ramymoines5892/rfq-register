@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
@@ -911,20 +913,18 @@ function FieldEditor({
     if (!editing && existingKeys.includes(finalKey)) { toast.error(ar ? "المفتاح مستخدم" : "Key already used"); return; }
     if (needsOptions(fieldType) && localOptions.length === 0) { toast.error(ar ? "أضف قيمة واحدة على الأقل" : "Add at least one option"); return; }
 
-    // Duplicate-option guard (value / AR label / EN label must all be unique within the field).
+    // Duplicate-label guard (AR + EN labels must be unique). Value is system-generated.
     if (needsOptions(fieldType)) {
-      const filled = localOptions.filter((o) => o.value.trim() || o.label_ar.trim() || o.label_en.trim());
-      const incomplete = filled.find((o) => !o.value.trim() || !o.label_ar.trim() || !o.label_en.trim());
-      if (incomplete) { toast.error(ar ? "املأ القيمة والاسم العربي والإنجليزي لكل خيار" : "Fill value + AR + EN for every option"); return; }
-      const seen = { v: new Set<string>(), ar: new Set<string>(), en: new Set<string>() };
+      const filled = localOptions.filter((o) => o.label_ar.trim() || o.label_en.trim());
+      const incomplete = filled.find((o) => !o.label_ar.trim() || !o.label_en.trim());
+      if (incomplete) { toast.error(ar ? "املأ الاسم بالعربي والإنجليزي لكل خيار" : "Fill AR + EN for every option"); return; }
+      const seen = { ar: new Set<string>(), en: new Set<string>() };
       for (const o of filled) {
-        const v = o.value.trim().toLowerCase();
         const la = o.label_ar.trim();
         const le = o.label_en.trim().toLowerCase();
-        if (seen.v.has(v)) { toast.error(ar ? `القيمة "${o.value}" مكررة` : `Value "${o.value}" is duplicated`); return; }
         if (seen.ar.has(la)) { toast.error(ar ? `الاسم العربي "${o.label_ar}" مكرر` : `Arabic label "${o.label_ar}" is duplicated`); return; }
         if (seen.en.has(le)) { toast.error(ar ? `الاسم الإنجليزي "${o.label_en}" مكرر` : `English label "${o.label_en}" is duplicated`); return; }
-        seen.v.add(v); seen.ar.add(la); seen.en.add(le);
+        seen.ar.add(la); seen.en.add(le);
       }
     }
 
@@ -959,10 +959,19 @@ function FieldEditor({
 
     if (fieldId && needsOptions(fieldType) && !isReferenceField(editing)) {
       await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
+      const usedValues = new Set<string>();
+      const genValue = (labelEn: string, labelAr: string) => {
+        const base = slugify(labelEn) || slugify(labelAr) || "option";
+        let v = base;
+        let n = 2;
+        while (usedValues.has(v)) v = `${base}_${n++}`;
+        usedValues.add(v);
+        return v;
+      };
       const rows = localOptions
-        .filter((o) => o.value.trim() && o.label_ar.trim() && o.label_en.trim())
+        .filter((o) => o.label_ar.trim() && o.label_en.trim())
         .map((o, i) => ({
-          field_id: fieldId!, value: o.value.trim(),
+          field_id: fieldId!, value: genValue(o.label_en, o.label_ar),
           label_ar: o.label_ar.trim(), label_en: o.label_en.trim(),
           position: (i + 1) * 10, is_active: o.is_active,
         }));
@@ -1097,8 +1106,11 @@ function FieldEditor({
                 <Input type="number" value={validation.maxLength ?? ""} onChange={(e) => setValidation((v) => ({ ...v, maxLength: e.target.value }))} />
               </div>
               <div className="col-span-2">
-                <Label>{ar ? "Regex Pattern (اختياري)" : "Regex pattern (optional)"}</Label>
-                <Input value={validation.pattern ?? ""} onChange={(e) => setValidation((v) => ({ ...v, pattern: e.target.value }))} placeholder="^[0-9]{14}$" className="font-mono text-sm" />
+                <Label className="flex items-center gap-1.5">
+                  {ar ? "Regex Pattern (اختياري)" : "Regex pattern (optional)"}
+                  <RegexHelper ar={ar} onPick={(p) => setValidation((v) => ({ ...v, pattern: p }))} />
+                </Label>
+                <Input value={validation.pattern ?? ""} onChange={(e) => setValidation((v) => ({ ...v, pattern: e.target.value }))} placeholder="^[0-9]{14}$" className="font-mono text-sm" dir="ltr" />
               </div>
             </div>
           )}
@@ -1119,17 +1131,21 @@ function FieldEditor({
           {needsOptions(fieldType) && !isReferenceField(editing) && (
             <div className="border rounded p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="font-bold">{ar ? "قيم القائمة" : "List Options"}</Label>
+                <Label className="font-bold flex items-center gap-1.5">
+                  {ar ? "قيم القائمة" : "List Options"}
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    {ar ? "(القيمة التقنية تُولَّد تلقائيًا)" : "(technical value auto-generated)"}
+                  </span>
+                </Label>
                 <Button size="sm" variant="outline" onClick={() => setLocalOptions((o) => [...o, { value: "", label_ar: "", label_en: "", is_active: true }])}>
                   <Plus className="h-3 w-3 me-1" /> {ar ? "قيمة" : "Option"}
                 </Button>
               </div>
               {localOptions.length === 0 && <p className="text-xs text-muted-foreground">{ar ? "لا توجد قيم بعد." : "No options yet."}</p>}
               {localOptions.map((opt, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1 items-center">
-                  <Input placeholder={ar ? "القيمة" : "value"} value={opt.value} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, value: e.target.value } : o))} className="text-xs font-mono h-8" />
-                  <Input placeholder="AR" value={opt.label_ar} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_ar: e.target.value } : o))} className="text-xs h-8" />
-                  <Input placeholder="EN" value={opt.label_en} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_en: e.target.value } : o))} className="text-xs h-8" />
+                <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-1 items-center">
+                  <Input autoFocus={i === localOptions.length - 1 && !opt.label_ar} placeholder={ar ? "بالعربي" : "AR"} value={opt.label_ar} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_ar: e.target.value } : o))} className="text-xs h-8" dir="rtl" />
+                  <Input placeholder={ar ? "بالإنجليزي" : "EN"} value={opt.label_en} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_en: e.target.value } : o))} className="text-xs h-8" dir="ltr" />
                   <Button size="icon" variant="ghost" onClick={() => setLocalOptions((list) => list.filter((_, j) => j !== i))} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
                 </div>
               ))}
@@ -1277,4 +1293,56 @@ function PreviewField({
     </div>
   );
 }
+
+// ---------- Regex Helper Popover ----------
+
+const REGEX_PRESETS: { ar: string; en: string; pattern: string; example: string }[] = [
+  { ar: "أرقام فقط", en: "Digits only", pattern: "^[0-9]+$", example: "12345" },
+  { ar: "حروف فقط (عربي/إنجليزي)", en: "Letters only (AR/EN)", pattern: "^[\\p{L}\\s]+$", example: "أحمد / Ahmed" },
+  { ar: "موبايل مصري (11 رقم)", en: "Egyptian mobile (11 digits)", pattern: "^01[0125][0-9]{8}$", example: "01012345678" },
+  { ar: "رقم قومي مصري (14 رقم)", en: "Egyptian National ID (14 digits)", pattern: "^[0-9]{14}$", example: "29001011234567" },
+  { ar: "بريد إلكتروني", en: "Email", pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", example: "name@example.com" },
+  { ar: "رابط ويب (URL)", en: "URL", pattern: "^https?://.+", example: "https://example.com" },
+  { ar: "كود بريدي (5 أرقام)", en: "Postal code (5 digits)", pattern: "^[0-9]{5}$", example: "11511" },
+  { ar: "IBAN مصري", en: "Egyptian IBAN", pattern: "^EG[0-9]{27}$", example: "EG380019000500000000263180002" },
+];
+
+function RegexHelper({ ar, onPick }: { ar: boolean; onPick: (pattern: string) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="text-muted-foreground hover:text-primary" title={ar ? "أمثلة جاهزة" : "Ready examples"}>
+          <HelpCircle className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-2" align="start">
+        <div className="text-xs font-bold mb-1.5 px-1">
+          {ar ? "اختر نمط جاهز" : "Pick a ready pattern"}
+        </div>
+        <div className="max-h-72 overflow-y-auto space-y-1">
+          {REGEX_PRESETS.map((p) => (
+            <button
+              key={p.pattern}
+              type="button"
+              onClick={() => onPick(p.pattern)}
+              className="w-full text-start rounded p-1.5 hover:bg-muted transition-colors"
+            >
+              <div className="text-xs font-medium">{ar ? p.ar : p.en}</div>
+              <div className="text-[10px] font-mono text-muted-foreground truncate" dir="ltr">{p.pattern}</div>
+              <div className="text-[10px] text-muted-foreground" dir="ltr">
+                {ar ? "مثال: " : "e.g. "}<span className="font-mono">{p.example}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="text-[10px] text-muted-foreground mt-2 px-1 border-t pt-1.5">
+          {ar
+            ? "الـ Regex بيتحقق من شكل النص. مثلاً ^[0-9]+$ يعني أرقام بس."
+            : "Regex validates the text shape. e.g. ^[0-9]+$ means digits only."}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
