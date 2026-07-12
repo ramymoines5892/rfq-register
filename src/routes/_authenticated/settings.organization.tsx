@@ -506,8 +506,7 @@ function pick(row: { name_ar?: string | null; name_en?: string | null; name: str
   return row.name_en || row.name;
 }
 
-// Hierarchical flatten helper for dropdowns
-import { flattenDeptsHierarchy } from "@/lib/orgTree";
+
 
 
 function deepMatchesDept(
