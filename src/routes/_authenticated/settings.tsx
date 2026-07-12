@@ -80,13 +80,16 @@ function SettingsLayout() {
               const active = pathname === tab.to || (tab.to !== "/settings" && pathname.startsWith(tab.to));
               const visible = canSee(tab);
               const Icon = tab.icon;
-              if (tab.disabled || !visible) {
+              // Hide unauthorized tabs entirely — never show "not authorized".
+              if (!visible) return null;
+              if (tab.disabled) {
                 return (
                   <div
                     key={tab.to}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground/60 cursor-not-allowed"
-                    title={!visible ? (ar ? "غير مصرح" : "Not authorized") : (ar ? "قريبًا" : "Coming soon")}
+                    title={ar ? "قريبًا" : "Coming soon"}
                   >
+
                     <Icon className="h-4 w-4" />
                     <span className="flex-1 truncate">{ar ? tab.labelAr : tab.labelEn}</span>
                     {tab.disabled && <span className="text-[9px] uppercase">{ar ? "قريبًا" : "Soon"}</span>}
