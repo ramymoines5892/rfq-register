@@ -488,14 +488,28 @@ function DeptCard({
           >
             <span
               className={`grid place-items-center rounded-full border-2 bg-background shadow-sm transition-all group-hover:-translate-y-1 group-hover:shadow-md ${
-                depth === 0 ? "h-16 w-16" : depth === 1 ? "h-12 w-12" : "h-10 w-10"
+                depth === 0
+                  ? "h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16"
+                  : depth === 1
+                  ? "h-9 w-9 sm:h-10 sm:w-10 md:h-12 md:w-12"
+                  : "h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10"
               } ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}`}
               style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
-              <Building2 className={depth === 0 ? "h-7 w-7" : depth === 1 ? "h-5 w-5" : "h-4 w-4"} />
+              <Building2 className={
+                depth === 0
+                  ? "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7"
+                  : depth === 1
+                  ? "h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5"
+                  : "h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4"
+              } />
             </span>
             <span className={`text-center font-semibold leading-tight line-clamp-2 ${
-              depth === 0 ? "max-w-24 text-xs" : depth === 1 ? "max-w-20 text-[11px]" : "max-w-16 text-[10px]"
+              depth === 0
+                ? "max-w-20 text-[10px] sm:max-w-24 sm:text-xs"
+                : depth === 1
+                ? "max-w-16 text-[9px] sm:max-w-20 sm:text-[11px]"
+                : "max-w-14 text-[9px] sm:max-w-16 sm:text-[10px]"
             }`}>{label}</span>
           </button>
         </TooltipTrigger>
@@ -558,7 +572,7 @@ function DeptCard({
       </Tooltip>
 
       {children.length > 0 && (
-        <div className="relative flex flex-wrap items-start justify-center gap-x-6 gap-y-8 border-t pt-6 before:absolute before:left-1/2 before:top-0 before:h-6 before:border-l before:border-border">
+        <div className="relative flex flex-nowrap items-start justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 gap-y-6 border-t pt-6 overflow-x-auto max-w-full before:absolute before:left-1/2 before:top-0 before:h-6 before:border-l before:border-border">
           {children.map((c) => (
             <DeptCard
               key={c.id}
