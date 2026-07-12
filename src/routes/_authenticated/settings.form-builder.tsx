@@ -198,12 +198,87 @@ function FormBuilderPage() {
     setDirty(true);
   }
 
+  function reorderSections(activeKey: string, overKey: string) {
+    if (activeKey === overKey) return;
+    const orderedKeys = sections.map((s) => s.key);
+    const from = orderedKeys.indexOf(activeKey);
+    const to = orderedKeys.indexOf(overKey);
+    if (from < 0 || to < 0) return;
+    const newOrder = arrayMove(orderedKeys, from, to);
+    // Rebuild extraSections order + renumber every field's position so
+    // sections persist in the new order after save/reload.
+    const byKey = new Map(sections.map((s) => [s.key, s]));
+    let pos = 0;
+    const updatedById = new Map<string, FieldDef>();
+    for (const k of newOrder) {
+      const sec = byKey.get(k);
+      if (!sec) continue;
+      for (const f of sec.items) {
+        pos += 10;
+        updatedById.set(f.id, { ...f, position: pos });
+      }
+    }
+    setFields((prev) => prev.map((f) => updatedById.get(f.id) ?? f));
+    setExtraSections((prev) => {
+      const secByKey = new Map(sections.map((s) => [s.key, s]));
+      return newOrder
+        .filter((k) => (secByKey.get(k)?.items.length ?? 0) === 0)
+        .map((k) => ({ sectionAr: secByKey.get(k)!.sectionAr, sectionEn: secByKey.get(k)!.sectionEn }));
+    });
+    setDirty(true);
+  }
+
+  async function deleteSection(secKey: string) {
+    const sec = sections.find((s) => s.key === secKey);
+    if (!sec) return;
+    if (sec.items.some((f) => f.is_system)) {
+      toast.error(ar ? "القسم يحتوي على حقول نظام لا يمكن حذفها" : "Section contains system fields that cannot be deleted");
+      return;
+    }
+    const label = sec.label;
+    if (!confirm(
+      sec.items.length === 0
+        ? (ar ? `حذف القسم "${label}"؟` : `Delete section "${label}"?`)
+        : (ar
+            ? `حذف القسم "${label}" مع ${sec.items.length} حقل جواه؟ (الحقول هتروح سلة المحذوفات)`
+            : `Delete section "${label}" and its ${sec.items.length} field(s)? (Fields go to Trash)`)
+    )) return;
+
+    if (sec.items.length > 0) {
+      const { data: u } = await supabase.auth.getUser();
+      const now = new Date().toISOString();
+      const uid = u.user?.id ?? null;
+      const results = await Promise.all(
+        sec.items.map((f) =>
+          supabase.from("customer_field_definitions").update({
+            deleted_at: now, deleted_by: uid, is_active: false,
+          }).eq("id", f.id),
+        ),
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) { toast.error(failed.error.message); return; }
+    }
+    setExtraSections((prev) =>
+      prev.filter((es) => ((ar ? es.sectionAr : es.sectionEn) || es.sectionAr || es.sectionEn || "") !== secKey),
+    );
+    toast.success(ar ? "تم حذف القسم" : "Section deleted");
+    if (sec.items.length > 0) loadAll();
+  }
+
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over) return;
     const activeId = String(active.id);
     const overId = String(over.id);
     if (activeId === overId) return;
+
+    // Section-level reorder
+    if (activeId.startsWith("SEC::") && overId.startsWith("SEC::")) {
+      reorderSections(activeId.slice(5), overId.slice(5));
+      return;
+    }
+    // Ignore mixed section/field drags (e.g. dragging a field over a section header handle)
+    if (activeId.startsWith("SEC::") || overId.startsWith("SEC::")) return;
 
     const activeField = fields.find((f) => f.id === activeId);
     if (!activeField) return;
@@ -258,6 +333,7 @@ function FormBuilderPage() {
     }
     setDirty(true);
   }
+
 
   async function saveAll() {
     setSaving(true);
