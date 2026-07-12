@@ -74,8 +74,9 @@ function FormBuilderPage() {
         .from("customer_field_definitions")
         .select("*")
         .eq("entity_key", entity)
+        .is("deleted_at", null)
         .order("position", { ascending: true }),
-      supabase.from("customer_field_options").select("*").order("position", { ascending: true }),
+      supabase.from("customer_field_options").select("*").is("deleted_at", null).order("position", { ascending: true }),
     ]);
     setFields(defs ?? []);
     const grouped: Record<string, FieldOption[]> = {};
