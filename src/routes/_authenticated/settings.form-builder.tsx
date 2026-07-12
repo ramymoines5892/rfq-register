@@ -144,22 +144,14 @@ function FormBuilderPage() {
   }, [fields, ar]);
 
 
-  async function updateColSpan(f: FieldDef, span: number) {
+  function updateColSpan(f: FieldDef, span: number) {
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, col_span: span } : x)));
-    const { error } = await supabase.from("customer_field_definitions").update({ col_span: span }).eq("id", f.id);
-    if (error) toast.error(error.message);
+    setDirty(true);
   }
 
-  async function toggleActive(f: FieldDef) {
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id ?? null;
-    const hide = f.is_active;
+  function toggleActive(f: FieldDef) {
     setFields((prev) => prev.map((x) => (x.id === f.id ? { ...x, is_active: !x.is_active } : x)));
-    await supabase.from("customer_field_definitions").update({
-      is_active: !f.is_active,
-      hidden_at: hide ? new Date().toISOString() : null,
-      hidden_by: hide ? uid : null,
-    }).eq("id", f.id);
+    setDirty(true);
   }
 
   async function removeField(f: FieldDef) {
@@ -178,11 +170,7 @@ function FormBuilderPage() {
     loadAll();
   }
 
-  async function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
-    const affected = fields.filter(
-      (f) => (f.section_ar ?? "") === oldAr && (f.section_en ?? "") === oldEn,
-    );
-    if (!affected.length) return;
+  function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
     const nAr = newAr.trim() || null;
     const nEn = newEn.trim() || null;
     setFields((prev) =>
@@ -192,18 +180,10 @@ function FormBuilderPage() {
           : f,
       ),
     );
-    await Promise.all(
-      affected.map((f) =>
-        supabase
-          .from("customer_field_definitions")
-          .update({ section_ar: nAr, section_en: nEn })
-          .eq("id", f.id),
-      ),
-    );
-    toast.success(ar ? "تم تحديث اسم القسم" : "Section renamed");
+    setDirty(true);
   }
 
-  async function handleDragEnd(e: DragEndEvent) {
+  function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over) return;
     const activeId = String(active.id);
@@ -225,9 +205,6 @@ function FormBuilderPage() {
     } else {
       overField = fields.find((f) => f.id === overId);
       if (!overField) return;
-      // Take the destination section names from the section that CONTAINS
-      // overField (so we inherit both AR + EN even if overField itself has
-      // one language empty).
       const destSec = sections.find((s) => s.items.some((it) => it.id === overField!.id));
       destAr = (destSec?.sectionAr || overField.section_ar) || null;
       destEn = (destSec?.sectionEn || overField.section_en) || null;
@@ -238,37 +215,21 @@ function FormBuilderPage() {
       (srcSec?.sectionAr ?? activeField.section_ar ?? "") === (destAr ?? "") &&
       (srcSec?.sectionEn ?? activeField.section_en ?? "") === (destEn ?? "");
 
-    setSavingLayout(true);
     if (sameSection && overField) {
       const secItems = fields
-        .filter(
-          (f) =>
-            (f.section_ar ?? "") === (destAr ?? "") &&
-            (f.section_en ?? "") === (destEn ?? ""),
-        )
+        .filter((f) => (f.section_ar ?? "") === (destAr ?? "") && (f.section_en ?? "") === (destEn ?? ""))
         .sort((a, b) => a.position - b.position);
       const oldIdx = secItems.findIndex((f) => f.id === activeId);
       const newIdx = secItems.findIndex((f) => f.id === overId);
-      if (oldIdx < 0 || newIdx < 0) { setSavingLayout(false); return; }
+      if (oldIdx < 0 || newIdx < 0) return;
       const reordered = arrayMove(secItems, oldIdx, newIdx).map((f, i) => ({ ...f, position: (i + 1) * 10 }));
       setFields((prev) => {
         const others = prev.filter((f) => !secItems.some((s) => s.id === f.id));
         return [...others, ...reordered];
       });
-      await Promise.all(
-        reordered.map((f) =>
-          supabase.from("customer_field_definitions").update({ position: f.position }).eq("id", f.id),
-        ),
-      );
     } else {
-      // Move across sections
       const destItems = fields
-        .filter(
-          (f) =>
-            (f.section_ar ?? "") === (destAr ?? "") &&
-            (f.section_en ?? "") === (destEn ?? "") &&
-            f.id !== activeId,
-        )
+        .filter((f) => (f.section_ar ?? "") === (destAr ?? "") && (f.section_en ?? "") === (destEn ?? "") && f.id !== activeId)
         .sort((a, b) => a.position - b.position);
       const insertAt = overField ? destItems.findIndex((f) => f.id === overField!.id) : destItems.length;
       const idx = insertAt < 0 ? destItems.length : insertAt;
@@ -279,21 +240,61 @@ function FormBuilderPage() {
         const untouchedIds = new Set(newDest.map((f) => f.id));
         return [...prev.filter((f) => !untouchedIds.has(f.id)), ...newDest];
       });
-      await Promise.all(
-        newDest.map((f) =>
-          supabase
-            .from("customer_field_definitions")
-            .update(
-              f.id === activeField.id
-                ? { section_ar: destAr, section_en: destEn, position: f.position }
-                : { position: f.position },
-            )
-            .eq("id", f.id),
-        ),
-      );
     }
-    setSavingLayout(false);
+    setDirty(true);
   }
+
+  async function saveAll() {
+    setSaving(true);
+    const original = new Map(originalFieldsRef.current.map((f) => [f.id, f]));
+    const changed = fields.filter((f) => {
+      const o = original.get(f.id);
+      if (!o) return false;
+      return (
+        o.position !== f.position ||
+        o.col_span !== f.col_span ||
+        o.is_active !== f.is_active ||
+        (o.section_ar ?? "") !== (f.section_ar ?? "") ||
+        (o.section_en ?? "") !== (f.section_en ?? "")
+      );
+    });
+    if (changed.length === 0) {
+      setSaving(false); setDirty(false);
+      toast.info(ar ? "لا يوجد تغييرات" : "No changes to save");
+      return;
+    }
+    const { data: u } = await supabase.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const results = await Promise.all(
+      changed.map((f) => {
+        const o = original.get(f.id)!;
+        const hidChanged = o.is_active !== f.is_active;
+        return supabase.from("customer_field_definitions").update({
+          position: f.position,
+          col_span: f.col_span,
+          is_active: f.is_active,
+          section_ar: f.section_ar,
+          section_en: f.section_en,
+          ...(hidChanged
+            ? { hidden_at: !f.is_active ? new Date().toISOString() : null, hidden_by: !f.is_active ? uid : null }
+            : {}),
+        }).eq("id", f.id);
+      }),
+    );
+    setSaving(false);
+    const failed = results.find((r) => r.error);
+    if (failed?.error) { toast.error(failed.error.message); return; }
+    toast.success(ar ? `تم حفظ ${changed.length} تعديل` : `Saved ${changed.length} change(s)`);
+    originalFieldsRef.current = fields.map((f) => ({ ...f }));
+    setDirty(false);
+  }
+
+  function discardChanges() {
+    if (!confirm(ar ? "التراجع عن كل التغييرات؟" : "Discard all changes?")) return;
+    setFields(originalFieldsRef.current.map((f) => ({ ...f })));
+    setDirty(false);
+  }
+
 
   if (canManage === null) {
     return <div className="p-8 text-center text-muted-foreground">{ar ? "جاري التحقق..." : "Checking..."}</div>;
