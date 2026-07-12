@@ -14,7 +14,7 @@ type Props = React.InputHTMLAttributes<HTMLInputElement> & {
 /**
  * Input with leftIcon / rightIcon / clearable X.
  * Reserves proper padding on each side so text never sits under an icon.
- * RTL-safe via logical padding (ps-*/pe-*).
+ * RTL-safe via logical padding (ps and pe).
  */
 export const InputIcon = React.forwardRef<HTMLInputElement, Props>(function InputIcon(
   { leftIcon, rightIcon, clearable, onClear, className, containerClassName, value, ...props },
