@@ -15,8 +15,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  Network, Building2, Briefcase, Plus, Trash2, Pencil, Search, Save, Sparkles, Settings,
+  Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles, Settings,
 } from "lucide-react";
+
 import { OrgChart } from "@/components/organization/OrgChart";
 import type { Database } from "@/integrations/supabase/types";
 
