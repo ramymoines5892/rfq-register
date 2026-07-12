@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { Bell, Loader2 } from "lucide-react";
+import { useAccess, type NotifCategory } from "@/hooks/useAccess";
 
 export const Route = createFileRoute("/_authenticated/settings/notifications")({
   component: NotificationSettings,
@@ -35,6 +36,7 @@ const DEFAULT: Prefs = {
 function NotificationSettings() {
   const { lang } = useI18n();
   const ar = lang === "ar";
+  const access = useAccess();
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,12 +86,14 @@ function NotificationSettings() {
 
   if (loading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
 
-  const cats: { key: string; ar: string; en: string }[] = [
+  const allCats: { key: NotifCategory; ar: string; en: string }[] = [
     { key: "pending_users", ar: "المستخدمين الجدد بانتظار التفعيل", en: "New users pending approval" },
     { key: "approvals", ar: "طلبات الموافقة على العروض والمهام", en: "Approvals & tasks" },
     { key: "tasks", ar: "المهام والتذكيرات", en: "Tasks & reminders" },
     { key: "system", ar: "إشعارات النظام", en: "System notifications" },
   ];
+  // Only show categories the user is actually authorized to receive.
+  const cats = access.ready ? allCats.filter((c) => access.notifCategories.has(c.key)) : [];
 
   return (
     <div className="max-w-2xl">
@@ -141,19 +145,22 @@ function NotificationSettings() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">{ar ? "أنواع الإشعارات" : "Categories"}</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {cats.map((c) => (
-              <Row key={c.key} label={ar ? c.ar : c.en}>
-                <Switch
-                  checked={prefs.categories[c.key] ?? true}
-                  onCheckedChange={(v) => setPrefs({ ...prefs, categories: { ...prefs.categories, [c.key]: v } })}
-                />
-              </Row>
-            ))}
-          </CardContent>
-        </Card>
+        {cats.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-base">{ar ? "أنواع الإشعارات" : "Categories"}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {cats.map((c) => (
+                <Row key={c.key} label={ar ? c.ar : c.en}>
+                  <Switch
+                    checked={prefs.categories[c.key] ?? true}
+                    onCheckedChange={(v) => setPrefs({ ...prefs, categories: { ...prefs.categories, [c.key]: v } })}
+                  />
+                </Row>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
 
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>

@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useAccess } from "@/hooks/useAccess";
+
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -214,7 +216,9 @@ const CURRENCIES = ["EGP", "USD", "EUR", "SAR", "AED", "GBP"];
 
 function CustomersPage() {
   const { t, lang } = useI18n();
+  const access = useAccess();
   const [customers, setCustomers] = useState<Customer[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
@@ -297,11 +301,14 @@ function CustomersPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/settings/form-builder">
-              <Button variant="outline" size="sm" className="gap-1.5" title={lang === "ar" ? "إعدادات حقول العميل" : "Customer Field Settings"}>
-                <Settings2 className="h-4 w-4" /> {lang === "ar" ? "إعدادات الحقول" : "Field Settings"}
-              </Button>
-            </Link>
+            {access.canManageFormFields && (
+              <Link to="/settings/form-builder">
+                <Button variant="outline" size="sm" className="gap-1.5" title={lang === "ar" ? "إعدادات حقول العميل" : "Customer Field Settings"}>
+                  <Settings2 className="h-4 w-4" /> {lang === "ar" ? "إعدادات الحقول" : "Field Settings"}
+                </Button>
+              </Link>
+            )}
+
             <Button onClick={openNew} className="gap-1.5">
               <Plus className="h-4 w-4" /> {t("addCustomer")}
             </Button>
