@@ -572,7 +572,7 @@ function DeptCard({
       </Tooltip>
 
       {children.length > 0 && (
-        <div className="relative flex flex-wrap items-start justify-center gap-x-6 gap-y-8 border-t pt-6 before:absolute before:left-1/2 before:top-0 before:h-6 before:border-l before:border-border">
+        <div className="relative flex flex-nowrap items-start justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 gap-y-6 border-t pt-6 overflow-x-auto max-w-full before:absolute before:left-1/2 before:top-0 before:h-6 before:border-l before:border-border">
           {children.map((c) => (
             <DeptCard
               key={c.id}
