@@ -96,7 +96,7 @@ function TreeNode({
   const size = depth === 0 ? 72 : depth === 1 ? 60 : 48;
   const iconSize = depth === 0 ? 32 : depth === 1 ? 26 : 20;
   const nameSize = depth === 0 ? 13 : depth === 1 ? 12 : 11;
-  const Icon = iconFor(depth);
+  const Icon = getDeptIcon((dept as any).icon, depth);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", flex: "1 1 0", minWidth: 0 }}>
