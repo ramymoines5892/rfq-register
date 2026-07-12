@@ -21,6 +21,15 @@ function SettingsHome() {
       enabled: true,
     },
     {
+      to: "/settings/notifications",
+      titleAr: "الإشعارات",
+      titleEn: "Notifications",
+      descAr: "فعّل/أوقف الإشعارات، حدد فترة التذكير الدورى، والصوت، وأنواع الإشعارات.",
+      descEn: "Enable/disable notifications, set reminder interval, sound, and categories.",
+      icon: Bell,
+      enabled: true,
+    },
+    {
       to: "/settings/language",
       titleAr: "اللغة والتوطين",
       titleEn: "Language & Locale",
