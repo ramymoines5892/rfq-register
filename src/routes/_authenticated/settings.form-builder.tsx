@@ -1115,7 +1115,16 @@ function FieldEditor({
             </div>
           )}
 
-          {needsOptions(fieldType) && (
+          {needsOptions(fieldType) && isReferenceField(editing) && (
+            <div className="border rounded p-3 bg-muted/40 flex items-center gap-2 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              {ar
+                ? "قيم هذا الحقل تُحمَّل تلقائيًا من قاعدة البيانات — لا حاجة لإدخالها يدويًا."
+                : "This field's values load automatically from the database — no manual entry needed."}
+            </div>
+          )}
+
+          {needsOptions(fieldType) && !isReferenceField(editing) && (
             <div className="border rounded p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="font-bold">{ar ? "قيم القائمة" : "List Options"}</Label>
