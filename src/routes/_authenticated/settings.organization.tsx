@@ -1011,9 +1011,14 @@ function RecordEditor({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{ar ? "بدون" : "None"}</SelectItem>
-                  {departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{pick(d, lang)}</SelectItem>
+                  {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      <span style={{ paddingInlineStart: depth * 14 }}>
+                        {depth > 0 ? "└ " : ""}{pick(d, lang)}
+                      </span>
+                    </SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             </div>
