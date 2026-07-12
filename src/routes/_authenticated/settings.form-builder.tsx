@@ -283,18 +283,9 @@ function FormBuilderPage() {
     if (!ok) return;
 
     if (sec.items.length > 0) {
-      const { data: u } = await supabase.auth.getUser();
-      const now = new Date().toISOString();
-      const uid = u.user?.id ?? null;
-      const results = await Promise.all(
-        sec.items.map((f) =>
-          supabase.from("customer_field_definitions").update({
-            deleted_at: now, deleted_by: uid, is_active: false,
-          }).eq("id", f.id),
-        ),
-      );
-      const failed = results.find((r) => r.error);
-      if (failed?.error) { toast.error(failed.error.message); return; }
+      try {
+        await softDeleteBulkM.mutateAsync(sec.items.map((f) => f.id));
+      } catch (e) { toast.error((e as Error).message); return; }
     }
     setExtraSections((prev) =>
       prev.filter((es) => ((ar ? es.sectionAr : es.sectionEn) || es.sectionAr || es.sectionEn || "") !== secKey),
