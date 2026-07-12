@@ -1,6 +1,13 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  useCanManageFormFields,
+  useFormBuilderData,
+  usePersistFieldChanges,
+  useSaveFieldDefinition,
+  useSoftDeleteField,
+  useSoftDeleteFieldsBulk,
+} from "@/features/formBuilder/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
