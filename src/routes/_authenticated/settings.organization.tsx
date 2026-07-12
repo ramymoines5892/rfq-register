@@ -257,7 +257,7 @@ function OrganizationPage() {
   const deptMatches = (d: Department) => matches(pick(d, lang)) || matches(d.code || "");
   const jobMatches = (j: JobTitle) => matches(pick(j, lang)) || matches(j.code || "");
 
-  const rootDepts = depts.filter((d) => !d.parent_id);
+  const rootDepts = depts.filter((d) => !d.parent_id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const unassignedJobs = jobs.filter((j) => !j.department_id);
 
   const totalDepts = depts.length;
@@ -372,8 +372,8 @@ function OrganizationPage() {
           <p className="mb-2 text-[11px] text-muted-foreground flex items-center gap-1">
             <Info className="h-3 w-3" />
             {ar
-              ? "اسحب أي إدارة وأفلتها فوق إدارة أخرى لجعلها فرعية، أو على الحافة اليسرى لإعادة الترتيب."
-              : "Drag a department onto another to nest it, or onto its left edge to reorder."}
+              ? "اسحب أي إدارة وأفلتها على المنتصف لجعلها فرعية، أو على الحافة اليسرى/اليمنى لوضعها قبل/بعد الإدارة."
+              : "Drag onto the middle to nest, or onto the left/right edge to place before/after."}
           </p>
 
           {loading ? (
@@ -526,7 +526,7 @@ function DeptCard({
   const isSelected = selected?.id === dept.id && selected.kind === "department";
   const label = pick(dept, lang);
   const members = memberCounts[dept.id] || 0;
-  const [dropMode, setDropMode] = useState<null | "child" | "before">(null);
+  const [dropMode, setDropMode] = useState<null | "child" | "before" | "after">(null);
 
 
   const q = query;
@@ -538,6 +538,13 @@ function DeptCard({
   })();
   if (!matchesDeep) return null;
 
+  // Find the sibling that comes after this dept (used to translate "after" → insertBefore)
+  const siblings = depts
+    .filter((d) => (d.parent_id ?? null) === parentId)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const myIdx = siblings.findIndex((s) => s.id === dept.id);
+  const nextSiblingId = myIdx >= 0 && myIdx < siblings.length - 1 ? siblings[myIdx + 1].id : null;
+
   return (
     <div
       className="relative flex flex-col items-center gap-4"
@@ -548,17 +555,21 @@ function DeptCard({
         e.dataTransfer.dropEffect = "move";
         const rect = e.currentTarget.getBoundingClientRect();
         const relX = e.clientX - rect.left;
-        setDropMode(relX < rect.width * 0.25 ? "before" : "child");
+        const ratio = relX / rect.width;
+        setDropMode(ratio < 0.25 ? "before" : ratio > 0.75 ? "after" : "child");
       }}
       onDragLeave={(e) => { e.stopPropagation(); setDropMode(null); }}
       onDrop={(e) => {
         const sourceId = e.dataTransfer.getData("text/dept-id");
+        const mode = dropMode;
         setDropMode(null);
         if (!sourceId || sourceId === dept.id) return;
         e.preventDefault();
         e.stopPropagation();
-        if (dropMode === "before") {
+        if (mode === "before") {
           onMove(sourceId, parentId, dept.id);
+        } else if (mode === "after") {
+          onMove(sourceId, parentId, nextSiblingId);
         } else {
           onMove(sourceId, dept.id, null);
         }
@@ -566,6 +577,9 @@ function DeptCard({
     >
       {dropMode === "before" && (
         <div className="absolute -start-1 top-0 bottom-0 w-1 rounded bg-primary" />
+      )}
+      {dropMode === "after" && (
+        <div className="absolute -end-1 top-0 bottom-0 w-1 rounded bg-primary" />
       )}
       <Tooltip>
         <TooltipTrigger asChild>
