@@ -956,7 +956,7 @@ function FieldEditor({
       fieldId = data.id;
     }
 
-    if (fieldId && needsOptions(fieldType)) {
+    if (fieldId && needsOptions(fieldType) && !isReferenceField(editing)) {
       await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
       const rows = localOptions
         .filter((o) => o.value.trim() && o.label_ar.trim() && o.label_en.trim())
