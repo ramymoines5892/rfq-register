@@ -51,7 +51,7 @@ export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChart
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
         {roots.map((r) => (
           <TreeNode
             key={r.id}
