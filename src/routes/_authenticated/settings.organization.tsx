@@ -172,16 +172,13 @@ function OrganizationPage() {
       const u = updates.find((x) => x.id === d.id);
       return u ? { ...d, parent_id: u.parent_id ?? null, position: u.position } : d;
     }));
-    // Persist row-by-row (small trees, safe & simple)
-    const results = await Promise.all(
-      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
-    );
-    const err = results.find((r) => r.error)?.error;
-    if (err) {
-      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
+    try {
+      await reorderMutation.mutateAsync(updates);
+    } catch (err: any) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err?.message });
       await load();
     }
-  }, [depts, isDescendant, ar, load]);
+  }, [depts, isDescendant, ar, load, reorderMutation]);
 
   // Promote a department to the top: it becomes the only root and adopts all
   // other current roots as its children.
