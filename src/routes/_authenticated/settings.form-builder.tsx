@@ -1079,12 +1079,40 @@ function FieldEditor({
 // ---------- Custom collision: prefer field under pointer, then section droppable ----------
 
 const sectionAwareCollision: CollisionDetection = (args) => {
+  const activeId = String(args.active.id);
+  const draggingSection = activeId.startsWith("SEC::");
+
+  if (draggingSection) {
+    // When reordering sections, only consider section sortables.
+    const filtered = {
+      ...args,
+      droppableContainers: args.droppableContainers.filter((c) =>
+        String(c.id).startsWith("SEC::"),
+      ),
+    };
+    const pw = pointerWithin(filtered);
+    if (pw.length) return pw;
+    return closestCenter(filtered);
+  }
+
+  // Dragging a field: prefer another field under the pointer, then the
+  // section drop zone (`__sec:`), never the outer section sortable (`SEC::`).
   const pw = pointerWithin(args);
-  const fieldHit = pw.find((c) => !String(c.id).startsWith("__sec:"));
+  const fieldHit = pw.find((c) => {
+    const id = String(c.id);
+    return !id.startsWith("__sec:") && !id.startsWith("SEC::");
+  });
   if (fieldHit) return [fieldHit];
   const secHit = pw.find((c) => String(c.id).startsWith("__sec:"));
   if (secHit) return [secHit];
-  return closestCenter(args);
+
+  const fieldOnly = {
+    ...args,
+    droppableContainers: args.droppableContainers.filter(
+      (c) => !String(c.id).startsWith("SEC::"),
+    ),
+  };
+  return closestCenter(fieldOnly);
 };
 
 // ---------- Live Preview of the final form ----------
