@@ -95,22 +95,10 @@ function AuthenticatedLayout() {
 
   return (
     <div className="min-h-screen flex bg-background" dir={dir}>
-      {/* Hover edge strip (only when unpinned) — brings the sidebar back on approach */}
-      {!pinned && (
-        <div
-          className={`hidden md:block fixed top-0 ${dir === "rtl" ? "right-0" : "left-0"} h-screen w-2 z-30`}
-          onMouseEnter={() => setHovered(true)}
-        />
-      )}
-
-      {/* Sidebar — sticky when pinned (in-flow), overlay when unpinned */}
+      {/* Sidebar — always sticky, width controlled by pin only */}
       <aside
-        onMouseEnter={() => !pinned && setHovered(true)}
-        onMouseLeave={() => !pinned && setHovered(false)}
-        className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out ${
-          pinned
-            ? `sticky top-0 h-screen ${expanded ? "md:w-64 lg:w-72" : "md:w-16"}`
-            : `sticky top-0 h-screen ${expanded ? "md:w-64 lg:w-72 shadow-xl z-40" : "md:w-16"}`
+        className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out sticky top-0 h-screen ${
+          pinned ? "md:w-64 lg:w-72" : "md:w-16"
         }`}
       >
         {/* Pin toggle (floats on the edge) */}
