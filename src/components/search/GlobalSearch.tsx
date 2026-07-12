@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { semanticSearch } from "@/lib/semantic-search.functions";
+import { useAccess } from "@/hooks/useAccess";
 import {
   Users,
   FileText,
@@ -44,20 +45,23 @@ type PageEntry = {
   keywords: string;
   icon: typeof Settings2;
   group: "data" | "settings" | "admin";
+  /** Optional gate — page hidden from search when it returns false. */
+  when?: (a: import("@/hooks/useAccess").Access) => boolean;
 };
 
 const PAGES: PageEntry[] = [
   { to: "/", labelAr: "لوحة التحكم", labelEn: "Dashboard", keywords: "home overview dashboard الرئيسية", icon: LayoutGrid, group: "data" },
   { to: "/customers", labelAr: "العملاء", labelEn: "Customers", keywords: "clients customers عملاء زبائن", icon: Users, group: "data" },
   { to: "/workflows", labelAr: "عروض الأسعار وسير العمل", labelEn: "Quotes & Workflows", keywords: "quotes workflow approvals عروض اسعار موافقات", icon: Workflow, group: "data" },
-  { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", keywords: "hr users employees موظفين موارد بشرية", icon: Building2, group: "admin" },
-  { to: "/team", labelAr: "الفريق", labelEn: "Team", keywords: "team members فريق", icon: UserRound, group: "admin" },
-  { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings" },
-  { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", keywords: "fields forms builder حقول تخصيص نماذج", icon: LayoutGrid, group: "settings" },
-  { to: "/settings/notifications", labelAr: "الإشعارات", labelEn: "Notifications", keywords: "notifications alerts إشعارات تنبيهات", icon: Bell, group: "settings" },
-  { to: "/settings/search", labelAr: "البحث الذكي", labelEn: "AI Search", keywords: "search semantic ai بحث ذكي دلالي embeddings", icon: Sparkles, group: "settings" },
-  { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", keywords: "trash deleted recycle bin سلة محذوفات", icon: Trash2, group: "settings" },
+  { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", keywords: "hr users employees موظفين موارد بشرية", icon: Building2, group: "admin", when: (a) => a.isAdmin },
+  { to: "/team", labelAr: "الفريق", labelEn: "Team", keywords: "team members فريق", icon: UserRound, group: "admin", when: (a) => a.isAdmin },
+  { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings", when: (a) => a.isAdmin || a.canManageFormFields },
+  { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", keywords: "fields forms builder حقول تخصيص نماذج", icon: LayoutGrid, group: "settings", when: (a) => a.canManageFormFields },
+  { to: "/settings/notifications", labelAr: "الإشعارات", labelEn: "Notifications", keywords: "notifications alerts إشعارات تنبيهات", icon: Bell, group: "settings", when: (a) => a.canManageNotifications },
+  { to: "/settings/search", labelAr: "البحث الذكي", labelEn: "AI Search", keywords: "search semantic ai بحث ذكي دلالي embeddings", icon: Sparkles, group: "settings", when: (a) => a.canManageSemanticSearch },
+  { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", keywords: "trash deleted recycle bin سلة محذوفات", icon: Trash2, group: "settings", when: (a) => a.canViewTrash },
 ];
+
 
 const ICONS: Record<Hit["entity"], typeof Users> = {
   customer: Users,
@@ -77,6 +81,7 @@ export function GlobalSearch() {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const router = useRouter();
+  const access = useAccess();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -87,6 +92,7 @@ export function GlobalSearch() {
     return localStorage.getItem("search.ai.enabled") === "1";
   });
   const runSemantic = useServerFn(semanticSearch);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -169,14 +175,19 @@ export function GlobalSearch() {
   }, [q, aiMode, runSemantic]);
 
   const filteredPages = useMemo(() => {
+    // Access gate FIRST: never show pages the user cannot open.
+    const allowed = access.ready
+      ? PAGES.filter((p) => !p.when || p.when(access))
+      : PAGES.filter((p) => !p.when); // before access loads, show only ungated
     const s = q.trim().toLowerCase();
-    if (!s) return PAGES;
-    return PAGES.filter((p) =>
+    if (!s) return allowed;
+    return allowed.filter((p) =>
       (ar ? p.labelAr : p.labelEn).toLowerCase().includes(s) ||
       p.keywords.toLowerCase().includes(s) ||
       p.to.toLowerCase().includes(s),
     );
-  }, [q, ar]);
+  }, [q, ar, access]);
+
 
   const go = async (link: string, entity: string, id?: string) => {
     setOpen(false);
