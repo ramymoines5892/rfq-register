@@ -682,13 +682,17 @@ function DeptCard({
               }`}
               style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
-              <Building2 className={
-                depth === 0
-                  ? "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7"
-                  : depth === 1
-                  ? "h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5"
-                  : "h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4"
-              } />
+              {(() => {
+                const DeptIco = getDeptIcon((dept as any).icon, depth);
+                return <DeptIco className={
+                  depth === 0
+                    ? "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7"
+                    : depth === 1
+                    ? "h-4 w-4 sm:h-4 sm:w-4 md:h-5 md:w-5"
+                    : "h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4"
+                } />;
+              })()}
+
             </span>
             <span className={`text-center font-semibold leading-tight line-clamp-2 ${
               depth === 0
