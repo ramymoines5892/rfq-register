@@ -15,6 +15,7 @@ import {
   Search, ArrowUpDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -115,8 +116,9 @@ function HrPage() {
     ?? roles.find((r) => r.user_id === uid)?.role
     ?? null;
 
-  const deptName = (id: string | null) => id ? departments.find((d) => d.id === id)?.name ?? "—" : "—";
-  const jobName = (id: string | null) => id ? jobTitles.find((j) => j.id === id)?.name ?? "—" : "—";
+  const deptName = (id: string | null) => id ? (pickLangValue(departments.find((d) => d.id === id) as any, "name", lang).value || departments.find((d) => d.id === id)?.name || "—") : "—";
+  const jobName = (id: string | null) => id ? (pickLangValue(jobTitles.find((j) => j.id === id) as any, "name", lang).value || jobTitles.find((j) => j.id === id)?.name || "—") : "—";
+
 
   const pendingCount = useMemo(() => profiles.filter((p) => p.status === "pending").length, [profiles]);
 
@@ -240,7 +242,7 @@ function HrPage() {
                     <SelectContent>
                       <SelectItem value="all">{lang === "ar" ? "كل الإدارات" : "All departments"}</SelectItem>
                       <SelectItem value="none">{t("none")}</SelectItem>
-                      {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </CardContent>
@@ -439,7 +441,7 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("none")}</SelectItem>
-                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    {departments.map((d) => <SelectItem key={d.id} value={d.id}>{pickLangValue(d as any, "name", lang).value || d.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FieldRow>
@@ -448,7 +450,7 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("none")}</SelectItem>
-                    {jobTitles.map((j) => <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>)}
+                    {jobTitles.map((j) => <SelectItem key={j.id} value={j.id}>{pickLangValue(j as any, "name", lang).value || j.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </FieldRow>
