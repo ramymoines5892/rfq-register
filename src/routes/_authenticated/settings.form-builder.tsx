@@ -63,11 +63,14 @@ function FormBuilderPage() {
   const [canManage, setCanManage] = useState<boolean | null>(null);
   const [entity, setEntity] = useState<string>("customers");
   const [fields, setFields] = useState<FieldDef[]>([]);
+  const originalFieldsRef = useRef<FieldDef[]>([]);
+  const [dirty, setDirty] = useState(false);
   const [optionsByField, setOptionsByField] = useState<Record<string, FieldOption[]>>({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<FieldDef | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [savingLayout, setSavingLayout] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
 
   async function loadAll() {
     setLoading(true);
@@ -80,7 +83,10 @@ function FormBuilderPage() {
         .order("position", { ascending: true }),
       supabase.from("customer_field_options").select("*").is("deleted_at", null).order("position", { ascending: true }),
     ]);
-    setFields(defs ?? []);
+    const list = defs ?? [];
+    setFields(list);
+    originalFieldsRef.current = list.map((f) => ({ ...f }));
+    setDirty(false);
     const grouped: Record<string, FieldOption[]> = {};
     for (const o of opts ?? []) (grouped[o.field_id] ??= []).push(o);
     setOptionsByField(grouped);
@@ -91,7 +97,6 @@ function FormBuilderPage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) { setCanManage(false); return; }
-      // Accept either the legacy or the new unified permission
       const [{ data: legacy }, { data: unified }] = await Promise.all([
         supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_customer_fields" }),
         supabase.rpc("has_permission", { _user_id: userData.user.id, _perm: "manage_form_fields" }),
@@ -101,6 +106,15 @@ function FormBuilderPage() {
   }, []);
 
   useEffect(() => { if (canManage) loadAll(); }, [canManage, entity]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Warn on unload if dirty
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
+
 
   const sections = useMemo(() => {
     // Group by the visible (current-language) name so a missing translation
