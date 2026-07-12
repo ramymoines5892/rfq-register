@@ -116,9 +116,10 @@ function FormBuilderPage() {
   }, [dirty]);
 
 
+  // User-added empty sections (client-only until a field is dropped into them).
+  const [extraSections, setExtraSections] = useState<{ sectionAr: string; sectionEn: string }[]>([]);
+
   const sections = useMemo(() => {
-    // Group by the visible (current-language) name so a missing translation
-    // in one field doesn't split the section into two buckets.
     const map = new Map<string, { sectionAr: string; sectionEn: string; items: FieldDef[] }>();
     for (const f of fields) {
       const sAr = f.section_ar ?? "";
@@ -126,12 +127,18 @@ function FormBuilderPage() {
       const displayKey = (ar ? sAr : sEn) || sAr || sEn || "";
       const existing = map.get(displayKey);
       if (existing) {
-        // First non-empty translation wins, so we always keep both names.
         if (!existing.sectionAr && sAr) existing.sectionAr = sAr;
         if (!existing.sectionEn && sEn) existing.sectionEn = sEn;
         existing.items.push(f);
       } else {
         map.set(displayKey, { sectionAr: sAr, sectionEn: sEn, items: [f] });
+      }
+    }
+    // Merge in user-added empty sections that aren't already represented.
+    for (const es of extraSections) {
+      const displayKey = (ar ? es.sectionAr : es.sectionEn) || es.sectionAr || es.sectionEn || "";
+      if (!map.has(displayKey)) {
+        map.set(displayKey, { sectionAr: es.sectionAr, sectionEn: es.sectionEn, items: [] });
       }
     }
     return Array.from(map.entries()).map(([key, v]) => ({
@@ -141,7 +148,15 @@ function FormBuilderPage() {
       label: (ar ? v.sectionAr : v.sectionEn) || v.sectionAr || v.sectionEn || (ar ? "بدون قسم" : "No section"),
       items: v.items.sort((a, b) => a.position - b.position),
     }));
-  }, [fields, ar]);
+  }, [fields, ar, extraSections]);
+
+  function addSection() {
+    const nAr = window.prompt(ar ? "اسم القسم بالعربي:" : "Section name (AR):", "")?.trim() ?? "";
+    const nEn = window.prompt(ar ? "اسم القسم بالإنجليزي:" : "Section name (EN):", "")?.trim() ?? "";
+    if (!nAr && !nEn) return;
+    setExtraSections((prev) => [...prev, { sectionAr: nAr, sectionEn: nEn }]);
+  }
+
 
 
   function updateColSpan(f: FieldDef, span: number) {
