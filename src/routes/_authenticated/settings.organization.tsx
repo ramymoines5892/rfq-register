@@ -130,6 +130,25 @@ function OrganizationPage() {
 
   const closeInspector = () => { setSelected(null); setDraft(null); };
 
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const downloadChart = async () => {
+    if (!chartRef.current) return;
+    try {
+      const dataUrl = await toPng(chartRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+      });
+      const link = document.createElement("a");
+      link.download = `organization-chart-${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success(ar ? "تم تحميل الصورة" : "Image downloaded");
+    } catch (e: any) {
+      toast.error(ar ? "تعذر إنشاء الصورة" : "Failed to export image", { description: e?.message });
+    }
+  };
+
   const remove = async (id: string, kind: "department" | "job_title") => {
     const label =
       kind === "department"
