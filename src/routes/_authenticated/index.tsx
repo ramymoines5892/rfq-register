@@ -3,7 +3,24 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendQuoteForApproval } from "@/lib/send-quote-email.functions";
 import { useEffect, useMemo, useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchDashboardBase,
+  fetchAttachmentsAndApprovals,
+  fetchStagesForTemplates,
+  softDeleteQuote,
+  createSignedAttachmentUrl,
+  fetchStageApprovers,
+  upsertQuoteApprovals,
+  updateQuoteApprovalState,
+  updateApprovalDecision,
+  fetchApprovalsForQuote,
+  fetchQuoteAttachments,
+  updateQuote,
+  insertQuote,
+  uploadQuoteAttachment,
+  softDeleteAttachment,
+  getCurrentUserId,
+} from "@/features/quotes/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
