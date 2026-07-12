@@ -487,14 +487,16 @@ function DeptCard({
             onDoubleClick={() => onSelect(dept.id, "department")}
           >
             <span
-              className={`grid h-16 w-16 place-items-center rounded-full border-2 bg-background shadow-sm transition-all group-hover:-translate-y-1 group-hover:shadow-md ${
-                isSelected ? "ring-2 ring-primary ring-offset-2" : ""
-              }`}
+              className={`grid place-items-center rounded-full border-2 bg-background shadow-sm transition-all group-hover:-translate-y-1 group-hover:shadow-md ${
+                depth === 0 ? "h-16 w-16" : depth === 1 ? "h-12 w-12" : "h-10 w-10"
+              } ${isSelected ? "ring-2 ring-primary ring-offset-2" : ""}`}
               style={{ borderColor: color, color, backgroundColor: `${color}12` }}
             >
-              <Building2 className="h-7 w-7" />
+              <Building2 className={depth === 0 ? "h-7 w-7" : depth === 1 ? "h-5 w-5" : "h-4 w-4"} />
             </span>
-            <span className="max-w-24 text-center text-xs font-semibold leading-tight line-clamp-2">{label}</span>
+            <span className={`text-center font-semibold leading-tight line-clamp-2 ${
+              depth === 0 ? "max-w-24 text-xs" : depth === 1 ? "max-w-20 text-[11px]" : "max-w-16 text-[10px]"
+            }`}>{label}</span>
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" align="center" className="max-w-72 text-start bg-popover text-popover-foreground border border-border shadow-md">
