@@ -956,7 +956,7 @@ function FieldEditor({
       fieldId = data.id;
     }
 
-    if (fieldId && needsOptions(fieldType)) {
+    if (fieldId && needsOptions(fieldType) && !isReferenceField(editing)) {
       await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
       const rows = localOptions
         .filter((o) => o.value.trim() && o.label_ar.trim() && o.label_en.trim())
@@ -969,7 +969,7 @@ function FieldEditor({
         const { error } = await supabase.from("customer_field_options").insert(rows);
         if (error) { setSaving(false); toast.error(error.message); return; }
       }
-    } else if (fieldId && !needsOptions(fieldType)) {
+    } else if (fieldId && !needsOptions(fieldType) && !isReferenceField(editing)) {
       await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
     }
 
@@ -1001,7 +1001,7 @@ function FieldEditor({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>{ar ? "الاسم بالعربي" : "Label (AR)"} *</Label>
-              <Input value={labelAr} onChange={(e) => setLabelAr(e.target.value)} />
+              <Input autoFocus value={labelAr} onChange={(e) => setLabelAr(e.target.value)} />
             </div>
             <div>
               <Label>{ar ? "الاسم بالإنجليزي" : "Label (EN)"} *</Label>
@@ -1115,7 +1115,16 @@ function FieldEditor({
             </div>
           )}
 
-          {needsOptions(fieldType) && (
+          {needsOptions(fieldType) && isReferenceField(editing) && (
+            <div className="border rounded p-3 bg-muted/40 flex items-center gap-2 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              {ar
+                ? "قيم هذا الحقل تُحمَّل تلقائيًا من قاعدة البيانات — لا حاجة لإدخالها يدويًا."
+                : "This field's values load automatically from the database — no manual entry needed."}
+            </div>
+          )}
+
+          {needsOptions(fieldType) && !isReferenceField(editing) && (
             <div className="border rounded p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="font-bold">{ar ? "قيم القائمة" : "List Options"}</Label>
