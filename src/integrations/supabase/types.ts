@@ -977,6 +977,7 @@ export type Database = {
         | "users.manage_roles"
         | "templates.manage"
         | "notifications.view"
+        | "manage_customer_fields"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
       customer_attachment_category:
@@ -1142,6 +1143,7 @@ export const Constants = {
         "users.manage_roles",
         "templates.manage",
         "notifications.view",
+        "manage_customer_fields",
       ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
