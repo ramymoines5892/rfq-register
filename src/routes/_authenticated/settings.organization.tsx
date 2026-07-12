@@ -685,35 +685,46 @@ function DeptCard({
 
       {children.length > 0 && (
         <div className="relative pt-6">
-          {/* vertical trunk from parent */}
-          <div className="absolute left-1/2 -top-0 h-6 w-px bg-border -translate-x-1/2" />
-          {/* horizontal bus across children (hidden when single child) */}
-          {children.length > 1 && (
-            <div className="absolute top-6 left-[calc(50%_-_(100%_-_3rem)/2)] right-[calc(50%_-_(100%_-_3rem)/2)] h-px bg-border" />
-          )}
+          {/* vertical trunk from parent down to the horizontal bus */}
+          <div className="absolute left-1/2 top-0 h-6 w-px bg-border -translate-x-1/2" />
           <div className="flex flex-nowrap items-start justify-center gap-6">
-            {children.map((c) => (
-              <div key={c.id} className="relative pt-6">
-                {/* vertical drop from bus to each child */}
-                <div className="absolute left-1/2 top-0 h-6 w-px bg-border -translate-x-1/2" />
-                <DeptCard
-                  dept={c}
-                  depth={depth + 1}
-                  depts={depts}
-                  jobs={jobs}
-                  memberCounts={memberCounts}
-                  lang={lang}
-                  query={query}
-                  selected={selected}
-                  onSelect={onSelect}
-                  onAddDept={onAddDept}
-                  onAddJob={onAddJob}
-                  onDelete={onDelete}
-                  onMove={onMove}
-                  parentId={dept.id}
-                />
-              </div>
-            ))}
+            {children.map((c, i) => {
+              const isFirst = i === 0;
+              const isLast = i === children.length - 1;
+              const only = children.length === 1;
+              return (
+                <div key={c.id} className="relative pt-6">
+                  {/* horizontal bus segment (half for edges, full for middle, none if only child) */}
+                  {!only && (
+                    <div
+                      className="absolute top-0 h-px bg-border"
+                      style={{
+                        left: isFirst ? "50%" : 0,
+                        right: isLast ? "50%" : 0,
+                      }}
+                    />
+                  )}
+                  {/* vertical drop from bus to each child */}
+                  <div className="absolute left-1/2 top-0 h-6 w-px bg-border -translate-x-1/2" />
+                  <DeptCard
+                    dept={c}
+                    depth={depth + 1}
+                    depts={depts}
+                    jobs={jobs}
+                    memberCounts={memberCounts}
+                    lang={lang}
+                    query={query}
+                    selected={selected}
+                    onSelect={onSelect}
+                    onAddDept={onAddDept}
+                    onAddJob={onAddJob}
+                    onDelete={onDelete}
+                    onMove={onMove}
+                    parentId={dept.id}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
