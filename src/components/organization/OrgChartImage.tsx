@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { Building2, Briefcase, Users, Landmark, Crown } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -17,6 +18,13 @@ function pick(row: { name_ar?: string | null; name_en?: string | null; name: str
   return row.name_en || row.name;
 }
 
+function iconFor(depth: number) {
+  if (depth === 0) return Crown;
+  if (depth === 1) return Landmark;
+  if (depth === 2) return Building2;
+  return Briefcase;
+}
+
 export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChartImage(
   { departments, jobs, memberCounts = {}, companyName, lang },
   ref,
@@ -32,20 +40,21 @@ export const OrgChartImage = forwardRef<HTMLDivElement, Props>(function OrgChart
       dir={ar ? "rtl" : "ltr"}
       style={{
         padding: "clamp(16px, 3vw, 32px)",
-        background: "#ffffff",
+        background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
         fontFamily: ar
           ? "'Cairo', 'Tajawal', system-ui, sans-serif"
           : "system-ui, -apple-system, 'Segoe UI', sans-serif",
         color: "#0f172a",
         width: "100%",
+        borderRadius: 12,
       }}
     >
-      <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>
+      <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: ar ? 0 : "-0.01em" }}>
           {companyName || (ar ? "الهيكل التنظيمي" : "Organization Chart")}
         </div>
         {companyName && (
-          <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             {ar ? "الهيكل التنظيمي" : "Organization Chart"}
           </div>
         )}
@@ -72,9 +81,9 @@ function TreeNode({
   dept,
   depts,
   jobs,
-  memberCounts,
   lang,
   depth,
+  memberCounts,
 }: {
   dept: Department;
   depts: Department[];
@@ -83,132 +92,93 @@ function TreeNode({
   lang: "ar" | "en";
   depth: number;
 }) {
-  const ar = lang === "ar";
   const color = dept.color || "#3b6fa0";
   const children = depts
     .filter((c) => c.parent_id === dept.id)
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const deptJobs = jobs.filter((j) => j.department_id === dept.id);
-  const members = memberCounts[dept.id] || 0;
+  const primaryJob = deptJobs[0];
 
-  const size = depth === 0 ? 72 : depth === 1 ? 56 : 44;
-  const iconSize = depth === 0 ? 30 : depth === 1 ? 22 : 18;
+  const size = depth === 0 ? 72 : depth === 1 ? 60 : 48;
+  const iconSize = depth === 0 ? 32 : depth === 1 ? 26 : 20;
   const nameSize = depth === 0 ? 13 : depth === 1 ? 12 : 11;
+  const Icon = iconFor(depth);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-      {/* Node card */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 80, flex: "1 1 0", maxWidth: 180 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", flex: "1 1 0", minWidth: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0, maxWidth: 180 }}>
         <div
           style={{
             width: size,
             height: size,
             borderRadius: "50%",
-            border: `2px solid ${color}`,
-            background: `${color}14`,
-            color,
+            background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+            color: "#ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: iconSize,
-            fontWeight: 800,
-            boxShadow: "0 1px 2px rgba(15,23,42,0.06)",
+            boxShadow: `0 6px 16px -6px ${color}80, 0 2px 4px rgba(15,23,42,0.06), inset 0 -2px 4px rgba(0,0,0,0.08)`,
+            border: "3px solid #ffffff",
           }}
         >
-          {(pick(dept, lang) || "?").trim().charAt(0)}
+          <Icon size={iconSize} strokeWidth={2.25} />
         </div>
         <div
           style={{
             fontSize: nameSize,
             fontWeight: 700,
             textAlign: "center",
-            maxWidth: 120,
-            lineHeight: 1.2,
+            maxWidth: 140,
+            lineHeight: 1.25,
+            color: "#0f172a",
           }}
         >
           {pick(dept, lang)}
         </div>
-        {(dept.code || deptJobs.length > 0 || members > 0) && (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "center" }}>
-            {dept.code && (
-              <span
-                style={{
-                  fontSize: 9,
-                  fontFamily: "monospace",
-                  color: "#64748b",
-                  background: "#f1f5f9",
-                  padding: "1px 6px",
-                  borderRadius: 4,
-                }}
-              >
-                {dept.code}
-              </span>
-            )}
-            {deptJobs.length > 0 && (
-              <span
-                style={{
-                  fontSize: 9,
-                  color,
-                  background: `${color}14`,
-                  padding: "1px 6px",
-                  borderRadius: 999,
-                }}
-              >
-                {deptJobs.length} {ar ? "مسمى" : "jobs"}
-              </span>
-            )}
-            {members > 0 && (
-              <span
-                style={{
-                  fontSize: 9,
-                  color: "#334155",
-                  background: "#e2e8f0",
-                  padding: "1px 6px",
-                  borderRadius: 999,
-                }}
-              >
-                {members} {ar ? "موظف" : "members"}
-              </span>
-            )}
-          </div>
+        {dept.code && (
+          <span
+            style={{
+              fontSize: 9,
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              color,
+              background: `${color}12`,
+              border: `1px solid ${color}33`,
+              padding: "1px 8px",
+              borderRadius: 999,
+              letterSpacing: "0.05em",
+            }}
+          >
+            {dept.code}
+          </span>
         )}
-        {deptJobs.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 3, maxWidth: 140, marginTop: 2 }}>
-            {deptJobs.slice(0, 3).map((j) => (
-              <span
-                key={j.id}
-                style={{
-                  fontSize: 9,
-                  color: "#475569",
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  padding: "1px 5px",
-                  borderRadius: 999,
-                }}
-              >
-                {pick(j, lang)}
-              </span>
-            ))}
-            {deptJobs.length > 3 && (
-              <span style={{ fontSize: 9, color: "#94a3b8" }}>+{deptJobs.length - 3}</span>
-            )}
+        {primaryJob && (
+          <div
+            style={{
+              fontSize: 10,
+              color: "#64748b",
+              textAlign: "center",
+              maxWidth: 140,
+              lineHeight: 1.3,
+              fontStyle: "italic",
+            }}
+          >
+            {pick(primaryJob, lang)}
           </div>
         )}
       </div>
 
-      {/* Children with connector lines */}
       {children.length > 0 && (
-        <div style={{ position: "relative", paddingTop: 24, marginTop: 12 }}>
-          {/* Vertical trunk from parent */}
+        <div style={{ position: "relative", paddingTop: 24, marginTop: 12, width: "100%" }}>
           <div
             style={{
               position: "absolute",
               left: "50%",
               top: 0,
-              width: 1,
+              width: 2,
               height: 24,
-              background: "#cbd5e1",
+              background: "linear-gradient(180deg, #cbd5e1, #e2e8f0)",
               transform: "translateX(-50%)",
+              borderRadius: 2,
             }}
           />
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 8 }}>
@@ -229,7 +199,6 @@ function TreeNode({
                     minWidth: 0,
                   }}
                 >
-                  {/* Horizontal bus */}
                   {!only && (
                     <div
                       style={{
@@ -237,21 +206,22 @@ function TreeNode({
                         top: 0,
                         insetInlineStart: isFirst ? "50%" : 0,
                         insetInlineEnd: isLast ? "50%" : 0,
-                        height: 1,
-                        background: "#cbd5e1",
+                        height: 2,
+                        background: "#e2e8f0",
+                        borderRadius: 2,
                       }}
                     />
                   )}
-                  {/* Vertical drop to child */}
                   <div
                     style={{
                       position: "absolute",
                       left: "50%",
                       top: 0,
-                      width: 1,
+                      width: 2,
                       height: 24,
-                      background: "#cbd5e1",
+                      background: "#e2e8f0",
                       transform: "translateX(-50%)",
+                      borderRadius: 2,
                     }}
                   />
                   <TreeNode
