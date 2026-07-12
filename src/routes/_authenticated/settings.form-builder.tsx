@@ -23,7 +23,7 @@ import {
   type DragEndEvent, type CollisionDetection, closestCenter, pointerWithin, useDroppable,
 } from "@dnd-kit/core";
 import {
-  SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates,
+  SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
