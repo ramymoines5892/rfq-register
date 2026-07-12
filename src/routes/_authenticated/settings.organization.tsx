@@ -422,7 +422,9 @@ function OrganizationPage() {
             </div>
           ) : (
             <TooltipProvider delayDuration={120}>
+              <TopDropZone ar={ar} onPromote={promoteToTop} />
               <div className="flex flex-nowrap items-start justify-center gap-2 sm:gap-3 py-4 max-w-full">
+
               {rootDepts
                 .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                 .map((d) => (
