@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,9 @@ type FieldType = Database["public"]["Enums"]["customer_field_type"];
 export const Route = createFileRoute("/_authenticated/settings/form-builder")({
   component: FormBuilderPage,
   head: () => ({ meta: [{ title: "منشئ الحقول | Form Builder" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    entity: typeof s.entity === "string" ? s.entity : undefined,
+  }),
 });
 
 const FIELD_TYPES: { value: FieldType; ar: string; en: string }[] = [
@@ -57,6 +60,8 @@ const needsOptions = (t: FieldType) => t === "dropdown" || t === "multiselect";
 
 const ENTITIES = [
   { key: "customers", ar: "شاشة العميل", en: "Customer" },
+  { key: "department", ar: "شاشة الإدارات", en: "Departments" },
+  { key: "job_title", ar: "شاشة المسميات الوظيفية", en: "Job Titles" },
 ] as const;
 
 function FormBuilderPage() {
@@ -64,7 +69,10 @@ function FormBuilderPage() {
   const ar = lang === "ar";
   const confirm = useConfirm();
   const [canManage, setCanManage] = useState<boolean | null>(null);
-  const [entity, setEntity] = useState<string>("customers");
+  const search = useSearch({ from: "/_authenticated/settings/form-builder" });
+  const [entity, setEntity] = useState<string>(
+    search.entity && ENTITIES.some((e) => e.key === search.entity) ? search.entity : "customers"
+  );
   const [fields, setFields] = useState<FieldDef[]>([]);
   const originalFieldsRef = useRef<FieldDef[]>([]);
   const [dirty, setDirty] = useState(false);

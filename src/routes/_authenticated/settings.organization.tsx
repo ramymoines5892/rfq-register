@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
@@ -10,12 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles, Settings,
+  Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
+  ChevronRight, ChevronDown, LayoutGrid,
 } from "lucide-react";
 
 import { OrgChart } from "@/components/organization/OrgChart";
@@ -23,7 +22,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
 type JobTitle = Database["public"]["Tables"]["job_titles"]["Row"];
-type FieldTemplate = Database["public"]["Tables"]["org_field_templates"]["Row"];
+type FieldDef = Database["public"]["Tables"]["customer_field_definitions"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 const DEPT_COLORS = [
@@ -45,38 +44,41 @@ function OrganizationPage() {
   const ar = lang === "ar";
   const confirm = useConfirm();
 
-  const [tab, setTab] = useState<"departments" | "jobs">("departments");
   const [depts, setDepts] = useState<Department[]>([]);
   const [jobs, setJobs] = useState<JobTitle[]>([]);
-  const [templates, setTemplates] = useState<FieldTemplate[]>([]);
+  const [customFields, setCustomFields] = useState<FieldDef[]>([]);
   const [profiles, setProfiles] = useState<Pick<Profile, "id" | "full_name" | "email" | "department_id">[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ id: string; kind: "department" | "job_title" } | null>(null);
-  const [showFieldsDialog, setShowFieldsDialog] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [d, j, t, p, roles, userRes] = await Promise.all([
+    const [d, j, f, p] = await Promise.all([
       supabase.from("departments").select("*").is("deleted_at", null).order("position"),
       supabase.from("job_titles").select("*").is("deleted_at", null).order("position"),
-      supabase.from("org_field_templates").select("*").order("position"),
+      supabase
+        .from("customer_field_definitions")
+        .select("*")
+        .in("entity_key", ["department", "job_title"])
+        .is("deleted_at", null)
+        .eq("is_active", true)
+        .order("position"),
       supabase.from("profiles").select("id, full_name, email, department_id"),
-      supabase.auth.getUser().then(async ({ data }) => {
-        if (!data.user) return { admin: false };
-        const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
-        return { admin: !!r?.some((x) => x.role === "owner" || x.role === "admin") };
-      }),
-      supabase.auth.getUser(),
     ]);
     setDepts((d.data ?? []) as Department[]);
     setJobs((j.data ?? []) as JobTitle[]);
-    setTemplates((t.data ?? []) as FieldTemplate[]);
+    setCustomFields((f.data ?? []) as FieldDef[]);
     setProfiles(p.data ?? []);
-    setIsAdmin(roles.admin);
     setLoading(false);
-    void userRes;
+    // auto-expand top-level departments
+    setExpanded((prev) => {
+      if (prev.size > 0) return prev;
+      const next = new Set<string>();
+      (d.data ?? []).forEach((x: any) => { if (!x.parent_id) next.add(x.id); });
+      return next;
+    });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -86,26 +88,6 @@ function OrganizationPage() {
     profiles.forEach((p) => { if (p.department_id) m[p.department_id] = (m[p.department_id] || 0) + 1; });
     return m;
   }, [profiles]);
-
-  const filteredDepts = useMemo(() => {
-    if (!query.trim()) return depts;
-    const q = query.toLowerCase();
-    return depts.filter((d) =>
-      (d.name_ar || "").toLowerCase().includes(q) ||
-      (d.name_en || "").toLowerCase().includes(q) ||
-      (d.code || "").toLowerCase().includes(q)
-    );
-  }, [depts, query]);
-
-  const filteredJobs = useMemo(() => {
-    if (!query.trim()) return jobs;
-    const q = query.toLowerCase();
-    return jobs.filter((j) =>
-      (j.name_ar || "").toLowerCase().includes(q) ||
-      (j.name_en || "").toLowerCase().includes(q) ||
-      (j.code || "").toLowerCase().includes(q)
-    );
-  }, [jobs, query]);
 
   const chartDepts = useMemo(
     () => depts.map((d) => ({ id: d.id, name: pick(d, lang), code: d.code, color: d.color, parent_id: d.parent_id })),
@@ -122,29 +104,33 @@ function OrganizationPage() {
     return jobs.find((j) => j.id === selected.id) ?? null;
   }, [selected, depts, jobs]);
 
-  const addDept = async () => {
-    const nextPos = (depts.at(-1)?.position ?? 0) + 1;
-    const color = DEPT_COLORS[depts.length % DEPT_COLORS.length];
+  const addDept = async (parentId: string | null = null) => {
+    const siblings = depts.filter((d) => (d.parent_id ?? null) === parentId);
+    const nextPos = (siblings.at(-1)?.position ?? 0) + 1;
+    const color = parentId
+      ? (depts.find((x) => x.id === parentId)?.color || DEPT_COLORS[0])
+      : DEPT_COLORS[depts.length % DEPT_COLORS.length];
     const { data, error } = await supabase.from("departments").insert({
       name: ar ? "إدارة جديدة" : "New Department",
       name_ar: "إدارة جديدة", name_en: "New Department",
-      color, position: nextPos,
+      color, position: nextPos, parent_id: parentId,
     }).select().single();
     if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    toast.success(ar ? "تمت الإضافة" : "Added");
+    if (parentId) setExpanded((s) => new Set(s).add(parentId));
     await load();
     setSelected({ id: data.id, kind: "department" });
   };
 
-  const addJob = async () => {
-    const nextPos = (jobs.at(-1)?.position ?? 0) + 1;
+  const addJob = async (deptId: string | null = null) => {
+    const siblings = jobs.filter((j) => (j.department_id ?? null) === deptId);
+    const nextPos = (siblings.at(-1)?.position ?? 0) + 1;
     const { data, error } = await supabase.from("job_titles").insert({
       name: ar ? "مسمى جديد" : "New Title",
       name_ar: "مسمى جديد", name_en: "New Title",
-      level: 3, position: nextPos,
+      level: 3, position: nextPos, department_id: deptId,
     }).select().single();
     if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    toast.success(ar ? "تمت الإضافة" : "Added");
+    if (deptId) setExpanded((s) => new Set(s).add(deptId));
     await load();
     setSelected({ id: data.id, kind: "job_title" });
   };
@@ -159,9 +145,16 @@ function OrganizationPage() {
     const table = kind === "department" ? "departments" : "job_titles";
     const { error } = await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) return toast.error(ar ? "تعذر الحذف" : "Failed", { description: error.message });
-    toast.success(ar ? "تم الحذف" : "Deleted");
     if (selected?.id === id) setSelected(null);
     await load();
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   return (
@@ -180,60 +173,25 @@ function OrganizationPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setShowFieldsDialog(true)}>
-              <Settings className="h-4 w-4 me-1" />
-              {ar ? "حقول مخصصة" : "Custom fields"}
+          <Link to="/settings/form-builder" search={{ entity: "department" }}>
+            <Button variant="outline" size="sm">
+              <LayoutGrid className="h-4 w-4 me-1" />
+              {ar ? "حقول الإدارات" : "Dept fields"}
             </Button>
-          )}
-          <Button size="sm" onClick={tab === "departments" ? addDept : addJob}>
-            <Plus className="h-4 w-4 me-1" />
-            {tab === "departments" ? (ar ? "إدارة جديدة" : "New department") : (ar ? "مسمى جديد" : "New title")}
-          </Button>
+          </Link>
+          <Link to="/settings/form-builder" search={{ entity: "job_title" }}>
+            <Button variant="outline" size="sm">
+              <LayoutGrid className="h-4 w-4 me-1" />
+              {ar ? "حقول المسميات" : "Job fields"}
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Org Chart */}
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="h-[400px] flex items-center justify-center text-muted-foreground text-sm">
-              {ar ? "جارٍ التحميل..." : "Loading..."}
-            </div>
-          ) : depts.length === 0 ? (
-            <div className="h-[300px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <Sparkles className="h-8 w-8" />
-              <p className="text-sm">{ar ? "ابدأ بإضافة إدارة" : "Start by adding a department"}</p>
-              <Button size="sm" onClick={addDept}><Plus className="h-4 w-4 me-1" />{ar ? "إضافة" : "Add"}</Button>
-            </div>
-          ) : (
-            <OrgChart
-              departments={chartDepts}
-              jobTitles={chartJobs}
-              memberCounts={memberCounts}
-              selectedId={selected?.id ?? null}
-              onSelect={(id, kind) => setSelected({ id, kind })}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Tabs + Lists */}
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={tab} onValueChange={(v) => setTab(v as "departments" | "jobs")} className="flex-1">
-              <TabsList>
-                <TabsTrigger value="departments" className="gap-1">
-                  <Building2 className="h-4 w-4" />{ar ? "الإدارات" : "Departments"}
-                  <Badge variant="secondary" className="ms-1">{depts.length}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="jobs" className="gap-1">
-                  <Briefcase className="h-4 w-4" />{ar ? "المسميات" : "Job Titles"}
-                  <Badge variant="secondary" className="ms-1">{jobs.length}</Badge>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-4">
+        {/* LEFT: Tree */}
+        <Card className="lg:sticky lg:top-20 lg:self-start">
+          <CardContent className="p-3 space-y-2">
             <InputIcon
               leftIcon={<Search />}
               value={query}
@@ -241,61 +199,71 @@ function OrganizationPage() {
               placeholder={ar ? "بحث..." : "Search..."}
               clearable
               onClear={() => setQuery("")}
-              className="h-9 w-48"
+              className="h-9"
             />
-          </div>
+            <div className="flex gap-1">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => addDept(null)}>
+                <Plus className="h-3.5 w-3.5 me-1" />
+                <Building2 className="h-3.5 w-3.5 me-1" />
+                {ar ? "إدارة" : "Dept"}
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => addJob(null)}>
+                <Plus className="h-3.5 w-3.5 me-1" />
+                <Briefcase className="h-3.5 w-3.5 me-1" />
+                {ar ? "مسمى" : "Job"}
+              </Button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto -mx-1 px-1">
+              {loading ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">{ar ? "تحميل..." : "Loading..."}</div>
+              ) : depts.length === 0 && jobs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  {ar ? "ابدأ بإضافة إدارة" : "Start by adding a department"}
+                </div>
+              ) : (
+                <TreeView
+                  depts={depts}
+                  jobs={jobs}
+                  memberCounts={memberCounts}
+                  query={query.trim().toLowerCase()}
+                  expanded={expanded}
+                  onToggle={toggleExpand}
+                  selected={selected}
+                  onSelect={(id, kind) => setSelected({ id, kind })}
+                  onAddDept={addDept}
+                  onAddJob={addJob}
+                  onDelete={remove}
+                  lang={lang}
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "departments" | "jobs")}>
-            <TabsContent value="departments" className="mt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {filteredDepts.map((d) => (
-                  <RecordCard
-                    key={d.id}
-                    label={pick(d, lang)}
-                    subtitle={d.code}
-                    color={d.color}
-                    active={selected?.id === d.id && selected?.kind === "department"}
-                    icon={<Building2 className="h-4 w-4" />}
-                    onClick={() => setSelected({ id: d.id, kind: "department" })}
-                    onDelete={!d.is_system ? () => remove(d.id, "department") : undefined}
-                    right={<span className="text-[11px] text-muted-foreground">{memberCounts[d.id] || 0} {ar ? "عضو" : "members"}</span>}
-                  />
-                ))}
-                {filteredDepts.length === 0 && (
-                  <div className="col-span-full text-center py-8 text-sm text-muted-foreground">
-                    {ar ? "لا يوجد" : "No results"}
-                  </div>
-                )}
+        {/* RIGHT: Chart */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="h-[600px] flex items-center justify-center text-muted-foreground text-sm">
+                {ar ? "جارٍ التحميل..." : "Loading..."}
               </div>
-            </TabsContent>
-            <TabsContent value="jobs" className="mt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {filteredJobs.map((j) => {
-                  const dept = depts.find((d) => d.id === j.department_id);
-                  return (
-                    <RecordCard
-                      key={j.id}
-                      label={pick(j, lang)}
-                      subtitle={j.code || (dept ? pick(dept, lang) : "")}
-                      color={dept?.color}
-                      active={selected?.id === j.id && selected?.kind === "job_title"}
-                      icon={<Briefcase className="h-4 w-4" />}
-                      onClick={() => setSelected({ id: j.id, kind: "job_title" })}
-                      onDelete={!j.is_system ? () => remove(j.id, "job_title") : undefined}
-                      right={<Badge variant="outline" className="text-[10px]">L{j.level}</Badge>}
-                    />
-                  );
-                })}
-                {filteredJobs.length === 0 && (
-                  <div className="col-span-full text-center py-8 text-sm text-muted-foreground">
-                    {ar ? "لا يوجد" : "No results"}
-                  </div>
-                )}
+            ) : depts.length === 0 ? (
+              <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Sparkles className="h-8 w-8" />
+                <p className="text-sm">{ar ? "ابدأ بإضافة إدارة من الشجرة" : "Add a department from the tree"}</p>
               </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            ) : (
+              <OrgChart
+                departments={chartDepts}
+                jobTitles={chartJobs}
+                memberCounts={memberCounts}
+                selectedId={selected?.id ?? null}
+                onSelect={(id, kind) => setSelected({ id, kind })}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Inspector Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
@@ -306,23 +274,13 @@ function OrganizationPage() {
               kind={selected.kind}
               record={selectedRecord}
               departments={depts}
-              templates={templates.filter((t) => t.entity === (selected.kind === "department" ? "department" : "job_title"))}
+              customFields={customFields.filter((f) => f.entity_key === (selected.kind === "department" ? "department" : "job_title"))}
               onSaved={load}
               onClose={() => setSelected(null)}
             />
           )}
         </SheetContent>
       </Sheet>
-
-      {/* Custom field templates dialog */}
-      {isAdmin && (
-        <FieldTemplatesDialog
-          open={showFieldsDialog}
-          onOpenChange={setShowFieldsDialog}
-          templates={templates}
-          onChanged={load}
-        />
-      )}
     </div>
   );
 }
@@ -332,50 +290,208 @@ function pick(row: { name_ar?: string | null; name_en?: string | null; name: str
   return row.name_en || row.name;
 }
 
-function RecordCard({
-  label, subtitle, color, active, icon, onClick, onDelete, right,
+/* ------------------------------- TREE VIEW ------------------------------- */
+
+function TreeView({
+  depts, jobs, memberCounts, query, expanded, onToggle, selected, onSelect,
+  onAddDept, onAddJob, onDelete, lang,
 }: {
-  label: string; subtitle?: string | null; color?: string | null; active?: boolean;
-  icon: React.ReactNode; onClick: () => void; onDelete?: () => void; right?: React.ReactNode;
+  depts: Department[];
+  jobs: JobTitle[];
+  memberCounts: Record<string, number>;
+  query: string;
+  expanded: Set<string>;
+  onToggle: (id: string) => void;
+  selected: { id: string; kind: "department" | "job_title" } | null;
+  onSelect: (id: string, kind: "department" | "job_title") => void;
+  onAddDept: (parentId: string | null) => void;
+  onAddJob: (deptId: string | null) => void;
+  onDelete: (id: string, kind: "department" | "job_title") => void;
+  lang: string;
+}) {
+  const rootDepts = depts.filter((d) => !d.parent_id);
+  const unassignedJobs = jobs.filter((j) => !j.department_id);
+
+  const matches = (text: string) => !query || text.toLowerCase().includes(query);
+
+  const renderDept = (d: Department, depth: number): React.ReactNode => {
+    const label = pick(d, lang);
+    const children = depts.filter((c) => c.parent_id === d.id);
+    const deptJobs = jobs.filter((j) => j.department_id === d.id);
+    const selfMatch = matches(label) || matches(d.code || "");
+    const childrenNodes = children.map((c) => renderDept(c, depth + 1)).filter(Boolean);
+    const jobNodes = deptJobs.filter((j) => selfMatch || matches(pick(j, lang)) || matches(j.code || ""));
+    if (query && !selfMatch && childrenNodes.length === 0 && jobNodes.length === 0) return null;
+
+    const isOpen = expanded.has(d.id) || !!query;
+    const isSelected = selected?.id === d.id && selected.kind === "department";
+
+    return (
+      <div key={d.id}>
+        <TreeRow
+          depth={depth}
+          color={d.color}
+          icon={<Building2 className="h-3.5 w-3.5" />}
+          label={label}
+          code={d.code}
+          badge={memberCounts[d.id] ? `${memberCounts[d.id]}` : undefined}
+          hasChildren={children.length + deptJobs.length > 0}
+          isOpen={isOpen}
+          onToggle={() => onToggle(d.id)}
+          selected={isSelected}
+          onClick={() => onSelect(d.id, "department")}
+          actions={
+            <>
+              <TreeAction title="Sub-dept" onClick={() => onAddDept(d.id)}>
+                <Plus className="h-3 w-3" /><Building2 className="h-3 w-3" />
+              </TreeAction>
+              <TreeAction title="Job" onClick={() => onAddJob(d.id)}>
+                <Plus className="h-3 w-3" /><Briefcase className="h-3 w-3" />
+              </TreeAction>
+              {!d.is_system && (
+                <TreeAction title="Delete" destructive onClick={() => onDelete(d.id, "department")}>
+                  <Trash2 className="h-3 w-3" />
+                </TreeAction>
+              )}
+            </>
+          }
+        />
+        {isOpen && (
+          <div>
+            {childrenNodes}
+            {jobNodes.map((j) => (
+              <TreeRow
+                key={j.id}
+                depth={depth + 1}
+                color={d.color}
+                icon={<Briefcase className="h-3.5 w-3.5" />}
+                label={pick(j, lang)}
+                code={j.code}
+                badge={`L${j.level}`}
+                selected={selected?.id === j.id && selected.kind === "job_title"}
+                onClick={() => onSelect(j.id, "job_title")}
+                actions={
+                  !j.is_system ? (
+                    <TreeAction title="Delete" destructive onClick={() => onDelete(j.id, "job_title")}>
+                      <Trash2 className="h-3 w-3" />
+                    </TreeAction>
+                  ) : null
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-0.5">
+      {rootDepts.map((d) => renderDept(d, 0))}
+      {unassignedJobs.length > 0 && (
+        <div className="mt-2 pt-2 border-t">
+          <div className="text-[10px] uppercase text-muted-foreground px-2 py-1">
+            {lang === "ar" ? "بدون إدارة" : "Unassigned"}
+          </div>
+          {unassignedJobs
+            .filter((j) => !query || matches(pick(j, lang)) || matches(j.code || ""))
+            .map((j) => (
+              <TreeRow
+                key={j.id}
+                depth={0}
+                icon={<Briefcase className="h-3.5 w-3.5" />}
+                label={pick(j, lang)}
+                code={j.code}
+                badge={`L${j.level}`}
+                selected={selected?.id === j.id && selected.kind === "job_title"}
+                onClick={() => onSelect(j.id, "job_title")}
+                actions={
+                  !j.is_system ? (
+                    <TreeAction title="Delete" destructive onClick={() => onDelete(j.id, "job_title")}>
+                      <Trash2 className="h-3 w-3" />
+                    </TreeAction>
+                  ) : null
+                }
+              />
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TreeRow({
+  depth, color, icon, label, code, badge, hasChildren, isOpen, onToggle, selected, onClick, actions,
+}: {
+  depth: number;
+  color?: string | null;
+  icon: React.ReactNode;
+  label: string;
+  code?: string | null;
+  badge?: string;
+  hasChildren?: boolean;
+  isOpen?: boolean;
+  onToggle?: () => void;
+  selected?: boolean;
+  onClick: () => void;
+  actions?: React.ReactNode;
 }) {
   return (
     <div
-      onClick={onClick}
-      className={`group rounded-lg border-2 bg-card p-2.5 cursor-pointer transition-all hover:shadow-sm ${
-        active ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+      className={`group flex items-center gap-1 rounded-md text-sm cursor-pointer transition-colors ${
+        selected ? "bg-primary/10 text-primary" : "hover:bg-muted"
       }`}
-      style={color && !active ? { borderInlineStartWidth: "4px", borderInlineStartColor: color } : undefined}
+      style={{ paddingInlineStart: 4 + depth * 14 }}
+      onClick={onClick}
     >
-      <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-md shrink-0" style={{ backgroundColor: `${color || "#94a3b8"}20`, color: color || undefined }}>
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold truncate">{label}</div>
-          {subtitle && <div className="text-[11px] text-muted-foreground truncate font-mono">{subtitle}</div>}
-        </div>
-        {right}
-        {onDelete && (
-          <Button
-            variant="ghost" size="icon"
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
+      {hasChildren ? (
+        <button
+          type="button"
+          className="p-0.5 shrink-0 hover:bg-muted rounded"
+          onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+        >
+          {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3 rtl:rotate-180" />}
+        </button>
+      ) : (
+        <span className="w-4 shrink-0" />
+      )}
+      <span className="shrink-0" style={{ color: color || undefined }}>{icon}</span>
+      <span className="flex-1 truncate py-1.5">{label}</span>
+      {code && <span className="text-[10px] font-mono text-muted-foreground uppercase">{code}</span>}
+      {badge && <Badge variant="outline" className="h-4 text-[9px] px-1">{badge}</Badge>}
+      <div className="flex items-center opacity-0 group-hover:opacity-100 pe-1">
+        {actions}
       </div>
     </div>
   );
 }
 
+function TreeAction({
+  children, onClick, title, destructive,
+}: { children: React.ReactNode; onClick: () => void; title: string; destructive?: boolean }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`inline-flex items-center gap-0.5 h-5 px-1 rounded hover:bg-background ${
+        destructive ? "text-destructive" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ------------------------------- INSPECTOR ------------------------------- */
+
 function RecordEditor({
-  kind, record, departments, templates, onSaved, onClose,
+  kind, record, departments, customFields, onSaved, onClose,
 }: {
   kind: "department" | "job_title";
   record: Department | JobTitle;
   departments: Department[];
-  templates: FieldTemplate[];
+  customFields: FieldDef[];
   onSaved: () => void;
   onClose: () => void;
 }) {
@@ -529,22 +645,43 @@ function RecordEditor({
           </>
         )}
 
-        {/* Custom fields from templates */}
-        {templates.length > 0 && (
+        {/* Custom fields defined via Form Builder */}
+        {customFields.length > 0 && (
           <div className="space-y-2 pt-2 border-t">
-            <div className="text-xs font-semibold text-muted-foreground uppercase">
-              {ar ? "حقول إضافية" : "Additional fields"}
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-muted-foreground uppercase">
+                {ar ? "حقول إضافية" : "Additional fields"}
+              </div>
+              <Link
+                to="/settings/form-builder"
+                search={{ entity: isDept ? "department" : "job_title" }}
+                className="text-[10px] text-primary hover:underline"
+              >
+                {ar ? "إدارة الحقول" : "Manage fields"}
+              </Link>
             </div>
-            {templates.map((tpl) => (
-              <div key={tpl.id} className="space-y-1">
-                <Label className="text-xs">{ar ? tpl.label_ar : (tpl.label_en || tpl.label_ar)}</Label>
+            {customFields.map((f) => (
+              <div key={f.id} className="space-y-1">
+                <Label className="text-xs">{ar ? f.label_ar : (f.label_en || f.label_ar)}</Label>
                 <Input
-                  type={tpl.field_type === "number" ? "number" : tpl.field_type === "email" ? "email" : tpl.field_type === "date" ? "date" : "text"}
-                  value={metadata[tpl.key] ?? ""}
-                  onChange={(e) => setMetadata({ ...metadata, [tpl.key]: e.target.value })}
+                  type={f.field_type === "number" ? "number" : f.field_type === "email" ? "email" : f.field_type === "date" ? "date" : "text"}
+                  value={metadata[f.key] ?? ""}
+                  onChange={(e) => setMetadata({ ...metadata, [f.key]: e.target.value })}
                 />
               </div>
             ))}
+          </div>
+        )}
+        {customFields.length === 0 && (
+          <div className="pt-2 border-t">
+            <Link
+              to="/settings/form-builder"
+              search={{ entity: isDept ? "department" : "job_title" }}
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              <LayoutGrid className="h-3 w-3" />
+              {ar ? "أضف حقول مخصصة من منشئ الحقول" : "Add custom fields from Form Builder"}
+            </Link>
           </div>
         )}
       </div>
@@ -555,119 +692,5 @@ function RecordEditor({
         </Button>
       </SheetFooter>
     </>
-  );
-}
-
-function FieldTemplatesDialog({
-  open, onOpenChange, templates, onChanged,
-}: {
-  open: boolean; onOpenChange: (v: boolean) => void;
-  templates: FieldTemplate[]; onChanged: () => void;
-}) {
-  const { lang } = useI18n();
-  const ar = lang === "ar";
-  const confirm = useConfirm();
-  const [entity, setEntity] = useState<"department" | "job_title">("department");
-  const [labelAr, setLabelAr] = useState("");
-  const [labelEn, setLabelEn] = useState("");
-  const [key, setKey] = useState("");
-  const [type, setType] = useState<FieldTemplate["field_type"]>("text");
-
-  const filtered = templates.filter((t) => t.entity === entity);
-
-  const add = async () => {
-    if (!labelAr.trim() || !key.trim()) {
-      return toast.error(ar ? "املأ الحقول" : "Fill required fields");
-    }
-    const { error } = await supabase.from("org_field_templates").insert({
-      entity, key: key.trim().toLowerCase().replace(/\s+/g, "_"),
-      label_ar: labelAr.trim(), label_en: labelEn.trim() || null,
-      field_type: type,
-      position: (filtered.at(-1)?.position ?? 0) + 1,
-    });
-    if (error) return toast.error(ar ? "تعذر الإضافة" : "Failed", { description: error.message });
-    toast.success(ar ? "تم" : "Added");
-    setLabelAr(""); setLabelEn(""); setKey("");
-    onChanged();
-  };
-
-  const del = async (id: string) => {
-    const ok = await confirm({
-      title: ar ? "حذف الحقل" : "Delete field",
-      description: ar ? "لن يحذف البيانات المخزنة، لكن لن يظهر الحقل في النموذج." : "Stored values remain but the field is hidden.",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    const { error } = await supabase.from("org_field_templates").delete().eq("id", id);
-    if (error) return toast.error(ar ? "تعذر الحذف" : "Failed", { description: error.message });
-    toast.success(ar ? "تم" : "Deleted");
-    onChanged();
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{ar ? "الحقول المخصصة" : "Custom fields"}</DialogTitle>
-          <DialogDescription>
-            {ar ? "أضف حقول إضافية تظهر تلقائيًا عند تعديل الإدارة أو المسمى." : "Add extra fields shown in the edit panel."}
-          </DialogDescription>
-        </DialogHeader>
-        <Tabs value={entity} onValueChange={(v) => setEntity(v as any)}>
-          <TabsList className="w-full">
-            <TabsTrigger value="department" className="flex-1">{ar ? "الإدارات" : "Departments"}</TabsTrigger>
-            <TabsTrigger value="job_title" className="flex-1">{ar ? "المسميات" : "Job titles"}</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {filtered.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-4">{ar ? "لا يوجد حقول" : "No fields yet"}</div>
-          )}
-          {filtered.map((t) => (
-            <div key={t.id} className="flex items-center gap-2 p-2 rounded-md border bg-muted/20">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{ar ? t.label_ar : (t.label_en || t.label_ar)}</div>
-                <div className="text-[11px] font-mono text-muted-foreground">{t.key} · {t.field_type}</div>
-              </div>
-              {t.is_system && <Badge variant="secondary" className="text-[10px]">{ar ? "نظام" : "system"}</Badge>}
-              {!t.is_system && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => del(t.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="space-y-2 pt-2 border-t">
-          <div className="text-xs font-semibold uppercase text-muted-foreground">{ar ? "إضافة حقل" : "Add field"}</div>
-          <div className="grid grid-cols-2 gap-2">
-            <Input placeholder={ar ? "الاسم عربي" : "Label AR"} value={labelAr} onChange={(e) => setLabelAr(e.target.value)} />
-            <Input placeholder={ar ? "الاسم إنجليزي" : "Label EN"} value={labelEn} onChange={(e) => setLabelEn(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="key_name" className="font-mono" value={key} onChange={(e) => setKey(e.target.value)} />
-            <Select value={type} onValueChange={(v) => setType(v as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="text">{ar ? "نص" : "Text"}</SelectItem>
-                <SelectItem value="number">{ar ? "رقم" : "Number"}</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="phone">{ar ? "تليفون" : "Phone"}</SelectItem>
-                <SelectItem value="url">URL</SelectItem>
-                <SelectItem value="date">{ar ? "تاريخ" : "Date"}</SelectItem>
-                <SelectItem value="textarea">{ar ? "نص طويل" : "Textarea"}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{ar ? "إغلاق" : "Close"}</Button>
-          <Button onClick={add}><Plus className="h-4 w-4 me-1" />{ar ? "إضافة" : "Add"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
