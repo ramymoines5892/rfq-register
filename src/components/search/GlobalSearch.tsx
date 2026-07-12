@@ -79,7 +79,7 @@ export function GlobalSearch() {
   const [recent, setRecent] = useState<{ link: string; title: string; entity: string; hits: number }[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Cmd/Ctrl+K
+  // Cmd/Ctrl+K + custom open event
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
@@ -87,8 +87,13 @@ export function GlobalSearch() {
         setOpen((v) => !v);
       }
     };
+    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("open-global-search", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("open-global-search", onOpen);
+    };
   }, []);
 
   // Recent frequently-visited items (personalization signal)
