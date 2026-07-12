@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
-  LayoutGrid, Save, Info,
+  LayoutGrid, Save, Info, Check, X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { Database } from "@/integrations/supabase/types";
