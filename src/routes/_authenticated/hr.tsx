@@ -1,9 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useHrDashboard } from "@/features/hr/queries";
+import {
+  useApproveUser,
+  useBulkApproveUsers,
+  useBulkSetProfileStatus,
+  useGrantPermission,
+  useHrDashboard,
+  useRevokePermission,
+  useSetProfileStatus,
+  useSetUserRole,
+  useUpdateProfile,
+  useUserPermissions,
+} from "@/features/hr/queries";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,12 +22,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Building2, Briefcase, Trash2, UserCheck, Users, Plus, Ban, Play,
+  ArrowLeft, Building2, UserCheck, Users, Ban, Play,
   Search, ArrowUpDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { useConfirm } from "@/hooks/useConfirm";
-import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
+import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import type { Database } from "@/integrations/supabase/types";
 
