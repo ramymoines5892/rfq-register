@@ -175,14 +175,19 @@ export function GlobalSearch() {
   }, [q, aiMode, runSemantic]);
 
   const filteredPages = useMemo(() => {
+    // Access gate FIRST: never show pages the user cannot open.
+    const allowed = access.ready
+      ? PAGES.filter((p) => !p.when || p.when(access))
+      : PAGES.filter((p) => !p.when); // before access loads, show only ungated
     const s = q.trim().toLowerCase();
-    if (!s) return PAGES;
-    return PAGES.filter((p) =>
+    if (!s) return allowed;
+    return allowed.filter((p) =>
       (ar ? p.labelAr : p.labelEn).toLowerCase().includes(s) ||
       p.keywords.toLowerCase().includes(s) ||
       p.to.toLowerCase().includes(s),
     );
-  }, [q, ar]);
+  }, [q, ar, access]);
+
 
   const go = async (link: string, entity: string, id?: string) => {
     setOpen(false);
