@@ -505,6 +505,50 @@ function FormBuilderPage() {
       </div>
 
 
+      <Dialog open={newSectionOpen} onOpenChange={setNewSectionOpen}>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{ar ? "قسم جديد" : "New Section"}</DialogTitle>
+            <DialogDescription className="text-xs">
+              {ar
+                ? "اكتب اسم القسم بالعربي والإنجليزي، وبعدين اسحب الحقول جواه. مش هيتحفظ إلا لما تدوس «حفظ»."
+                : "Enter AR/EN names, then drag fields into it. It's not persisted until you press Save."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div>
+              <Label className="text-xs">{ar ? "الاسم بالعربي" : "Name (AR)"}</Label>
+              <Input
+                dir="rtl"
+                value={newSectionAr}
+                onChange={(e) => setNewSectionAr(e.target.value)}
+                placeholder={ar ? "مثلاً: بيانات الدفع" : "مثلاً: بيانات الدفع"}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") submitNewSection(); }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">{ar ? "الاسم بالإنجليزي" : "Name (EN)"}</Label>
+              <Input
+                dir="ltr"
+                value={newSectionEn}
+                onChange={(e) => setNewSectionEn(e.target.value)}
+                placeholder="e.g. Payment Info"
+                onKeyDown={(e) => { if (e.key === "Enter") submitNewSection(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setNewSectionOpen(false)}>
+              {ar ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button onClick={submitNewSection}>
+              <Plus className="h-4 w-4 me-1" /> {ar ? "إضافة" : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <FieldEditor
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
