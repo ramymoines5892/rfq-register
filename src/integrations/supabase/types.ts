@@ -245,6 +245,158 @@ export type Database = {
           },
         ]
       }
+      customer_field_definitions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          field_type: Database["public"]["Enums"]["customer_field_type"]
+          help_text_ar: string | null
+          help_text_en: string | null
+          id: string
+          is_active: boolean
+          is_required: boolean
+          is_system: boolean
+          key: string
+          label_ar: string
+          label_en: string
+          placeholder_ar: string | null
+          placeholder_en: string | null
+          position: number
+          section_ar: string | null
+          section_en: string | null
+          updated_at: string
+          validation_rules: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          field_type: Database["public"]["Enums"]["customer_field_type"]
+          help_text_ar?: string | null
+          help_text_en?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          is_system?: boolean
+          key: string
+          label_ar: string
+          label_en: string
+          placeholder_ar?: string | null
+          placeholder_en?: string | null
+          position?: number
+          section_ar?: string | null
+          section_en?: string | null
+          updated_at?: string
+          validation_rules?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          field_type?: Database["public"]["Enums"]["customer_field_type"]
+          help_text_ar?: string | null
+          help_text_en?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          is_system?: boolean
+          key?: string
+          label_ar?: string
+          label_en?: string
+          placeholder_ar?: string | null
+          placeholder_en?: string | null
+          position?: number
+          section_ar?: string | null
+          section_en?: string | null
+          updated_at?: string
+          validation_rules?: Json
+        }
+        Relationships: []
+      }
+      customer_field_options: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          is_active: boolean
+          label_ar: string
+          label_en: string
+          position: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          is_active?: boolean
+          label_ar: string
+          label_en: string
+          position?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          is_active?: boolean
+          label_ar?: string
+          label_en?: string
+          position?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_field_options_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "customer_field_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_field_values: {
+        Row: {
+          created_at: string
+          customer_id: string
+          field_id: string
+          id: string
+          updated_at: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          field_id: string
+          id?: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          field_id?: string
+          id?: string
+          updated_at?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_field_values_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "customer_field_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -986,6 +1138,18 @@ export type Database = {
         | "tax_card"
         | "bank_letter"
         | "other"
+      customer_field_type:
+        | "text"
+        | "number"
+        | "email"
+        | "phone"
+        | "date"
+        | "dropdown"
+        | "textarea"
+        | "checkbox"
+        | "file"
+        | "multiselect"
+        | "bilingual_text"
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -1153,6 +1317,19 @@ export const Constants = {
         "tax_card",
         "bank_letter",
         "other",
+      ],
+      customer_field_type: [
+        "text",
+        "number",
+        "email",
+        "phone",
+        "date",
+        "dropdown",
+        "textarea",
+        "checkbox",
+        "file",
+        "multiselect",
+        "bilingual_text",
       ],
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
