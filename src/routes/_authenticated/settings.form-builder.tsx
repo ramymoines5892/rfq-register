@@ -212,15 +212,11 @@ function FormBuilderPage() {
       variant: "destructive",
     });
     if (!ok) return;
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_field_definitions").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-      is_active: false,
-    }).eq("id", f.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(ar ? "تم النقل لسلة المحذوفات" : "Moved to trash");
-    loadAll();
+    try {
+      await softDeleteM.mutateAsync(f.id);
+      toast.success(ar ? "تم النقل لسلة المحذوفات" : "Moved to trash");
+      loadAll();
+    } catch (e) { toast.error((e as Error).message); }
   }
 
   function renameSection(oldAr: string, oldEn: string, newAr: string, newEn: string) {
