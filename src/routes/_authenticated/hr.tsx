@@ -656,7 +656,8 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
     onChanged();
   }
   async function remove(id: string) {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({ description: t("confirmDelete"), variant: "destructive" });
+    if (!ok) return;
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("job_titles").update({
       deleted_at: new Date().toISOString(),
