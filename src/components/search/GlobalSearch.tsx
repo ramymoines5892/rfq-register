@@ -238,18 +238,10 @@ export function GlobalSearch() {
 export function GlobalSearchTrigger({ className = "" }: { className?: string }) {
   const { lang } = useI18n();
   const ar = lang === "ar";
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    // Trigger on click by dispatching a keyboard event handled by GlobalSearch
-    if (!open) return;
-    const ev = new KeyboardEvent("keydown", { key: "k", ctrlKey: true });
-    window.dispatchEvent(ev);
-    setOpen(false);
-  }, [open]);
   return (
     <button
       type="button"
-      onClick={() => setOpen(true)}
+      onClick={() => window.dispatchEvent(new Event("open-global-search"))}
       className={`inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-sidebar-accent/60 hover:bg-sidebar-accent text-xs text-sidebar-foreground/80 ${className}`}
       title={ar ? "بحث سريع (Ctrl+K)" : "Quick search (Ctrl+K)"}
     >
