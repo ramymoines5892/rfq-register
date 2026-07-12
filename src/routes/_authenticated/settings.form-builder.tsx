@@ -209,13 +209,18 @@ function FormBuilderPage() {
     } else {
       overField = fields.find((f) => f.id === overId);
       if (!overField) return;
-      destAr = overField.section_ar;
-      destEn = overField.section_en;
+      // Take the destination section names from the section that CONTAINS
+      // overField (so we inherit both AR + EN even if overField itself has
+      // one language empty).
+      const destSec = sections.find((s) => s.items.some((it) => it.id === overField!.id));
+      destAr = (destSec?.sectionAr || overField.section_ar) || null;
+      destEn = (destSec?.sectionEn || overField.section_en) || null;
     }
 
+    const srcSec = sections.find((s) => s.items.some((it) => it.id === activeField.id));
     const sameSection =
-      (activeField.section_ar ?? "") === (destAr ?? "") &&
-      (activeField.section_en ?? "") === (destEn ?? "");
+      (srcSec?.sectionAr ?? activeField.section_ar ?? "") === (destAr ?? "") &&
+      (srcSec?.sectionEn ?? activeField.section_en ?? "") === (destEn ?? "");
 
     setSavingLayout(true);
     if (sameSection && overField) {
