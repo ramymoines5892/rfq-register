@@ -80,6 +80,7 @@ export function GlobalSearch() {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const router = useRouter();
+  const access = (require("@/hooks/useAccess") as typeof import("@/hooks/useAccess")).useAccess();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -90,6 +91,7 @@ export function GlobalSearch() {
     return localStorage.getItem("search.ai.enabled") === "1";
   });
   const runSemantic = useServerFn(semanticSearch);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
