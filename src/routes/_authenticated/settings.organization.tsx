@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -12,9 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { toPng } from "html-to-image";
+import { OrgChartImage } from "@/components/organization/OrgChartImage";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  LayoutGrid, Users, ChevronRight, Pencil, Info,
+  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon,
 } from "lucide-react";
 
 import type { Database } from "@/integrations/supabase/types";
