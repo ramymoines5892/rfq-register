@@ -667,23 +667,23 @@ function SectionGrid({
           <>
             <Input value={nAr} onChange={(e) => setNAr(e.target.value)} placeholder={ar ? "عربي" : "AR"} className="h-7 text-xs w-40" />
             <Input value={nEn} onChange={(e) => setNEn(e.target.value)} placeholder="EN" className="h-7 text-xs w-40" />
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={() => { onRenameSection(sectionAr, sectionEn, nAr, nEn); setRenaming(false); }}>
+            <Button size="icon" variant="outline" className="h-7 w-7 text-primary" onClick={() => { onRenameSection(sectionAr, sectionEn, nAr, nEn); setRenaming(false); }}>
               <Check className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setNAr(sectionAr); setNEn(sectionEn); setRenaming(false); }}>
+            <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => { setNAr(sectionAr); setNEn(sectionEn); setRenaming(false); }}>
               <X className="h-3.5 w-3.5" />
             </Button>
           </>
         ) : (
           <>
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">{label}</h3>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
+            <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
               <Pencil className="h-3 w-3" />
             </Button>
             <Button
               size="icon"
-              variant="ghost"
-              className="h-6 w-6 text-destructive disabled:text-muted-foreground"
+              variant="outline"
+              className="h-6 w-6 text-destructive hover:text-destructive disabled:text-muted-foreground"
               onClick={() => onDeleteSection(section.key)}
               disabled={hasSystem}
               title={hasSystem ? (ar ? "يحتوي على حقول نظام" : "Contains system fields") : (ar ? "حذف القسم" : "Delete section")}
