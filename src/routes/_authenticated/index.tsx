@@ -211,11 +211,55 @@ function Dashboard() {
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-6 -mt-6">
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("quotesCount")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.count}</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("totalValue")} ({t("accepted")})</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("expiringWeek")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-amber-600">{stats.expiringWeek}</div></CardContent></Card>
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            {kpiEditing ? (lang === "ar" ? "اسحب البطاقات لإعادة الترتيب" : "Drag cards to reorder") : ""}
+          </div>
+          <div className="flex items-center gap-1">
+            {kpiEditing && (
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => setKpiOrder(["count", "value", "expiring"])}>
+                <RotateCcw className="h-3.5 w-3.5 me-1" />{lang === "ar" ? "استعادة" : "Reset"}
+              </Button>
+            )}
+            <Button variant={kpiEditing ? "default" : "outline"} size="sm" className="h-8" onClick={() => setKpiEditing(v => !v)}>
+              <LayoutGrid className="h-3.5 w-3.5 me-1" />
+              {kpiEditing ? (lang === "ar" ? "تم" : "Done") : (lang === "ar" ? "تخصيص" : "Customize")}
+            </Button>
+          </div>
         </div>
+
+        <DndContext
+          sensors={kpiSensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e: DragEndEvent) => {
+            const { active, over } = e;
+            if (!over || active.id === over.id) return;
+            setKpiOrder(prev => {
+              const oi = prev.indexOf(String(active.id));
+              const ni = prev.indexOf(String(over.id));
+              if (oi < 0 || ni < 0) return prev;
+              const next = [...prev];
+              next.splice(oi, 1);
+              next.splice(ni, 0, String(active.id));
+              return next;
+            });
+          }}
+        >
+          <SortableContext items={kpiOrder} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {kpiOrder.map((id) => {
+                const map: Record<string, { title: string; value: React.ReactNode }> = {
+                  count: { title: t("quotesCount"), value: <div className="text-2xl font-bold">{stats.count}</div> },
+                  value: { title: `${t("totalValue")} (${t("accepted")})`, value: <div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div> },
+                  expiring: { title: t("expiringWeek"), value: <div className="text-2xl font-bold text-amber-600">{stats.expiringWeek}</div> },
+                };
+                const cfg = map[id];
+                if (!cfg) return null;
+                return <KpiCard key={id} id={id} editing={kpiEditing} title={cfg.title}>{cfg.value}</KpiCard>;
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
