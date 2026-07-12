@@ -1,6 +1,5 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
 import { Button } from "@/components/ui/button";
@@ -25,12 +24,16 @@ import {
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import { DEPT_ICONS, getDeptIcon } from "@/lib/deptIcons";
 
-import type { Database } from "@/integrations/supabase/types";
+import {
+  useOrganizationData,
+  useReorderDepartments,
+  useSoftDeleteOrgRow,
+  useUpsertDepartment,
+  useUpsertJobTitle,
+} from "@/features/organization/queries";
+import type { Department, JobTitle, FieldDef, ProfileLite } from "@/features/organization/api";
 
-type Department = Database["public"]["Tables"]["departments"]["Row"];
-type JobTitle = Database["public"]["Tables"]["job_titles"]["Row"];
-type FieldDef = Database["public"]["Tables"]["customer_field_definitions"]["Row"];
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type Profile = ProfileLite;
 
 const DEPT_COLORS = [
   "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ec4899",
@@ -40,10 +43,6 @@ const DEPT_COLORS = [
 export const Route = createFileRoute("/_authenticated/settings/organization")({
   component: OrganizationPage,
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization" }] }),
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-  },
 });
 
 function OrganizationPage() {
