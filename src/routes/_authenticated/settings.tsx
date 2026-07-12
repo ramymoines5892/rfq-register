@@ -10,17 +10,8 @@ export const Route = createFileRoute("/_authenticated/settings")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
-    // Require at least one settings-related access. Otherwise bounce to home
-    // so the URL is never reachable via direct navigation or search click.
-    const uid = data.user.id;
-    const [{ data: roles }, { data: legacy }, { data: unified }] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", uid),
-      supabase.rpc("has_permission", { _user_id: uid, _perm: "manage_customer_fields" }),
-      supabase.rpc("has_permission", { _user_id: uid, _perm: "manage_form_fields" }),
-    ]);
-    const isAdmin = !!roles?.some((r) => r.role === "owner" || r.role === "admin");
-    const hasAny = isAdmin || Boolean(legacy) || Boolean(unified);
-    if (!hasAny) throw redirect({ to: "/" });
+    // Any signed-in user can reach /settings — notification preferences are
+    // personal and always available. Individual tabs gate themselves.
   },
 });
 
