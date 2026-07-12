@@ -75,7 +75,7 @@ function NotificationSettings() {
     toast.success(ar ? "تم تفعيل إشعارات المتصفح" : "Browser notifications enabled");
   }
 
-  if (loading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  if (isLoading) return <div className="p-6"><Loader2 className="h-5 w-5 animate-spin" /></div>;
 
   const allCats: { key: NotifCategory; ar: string; en: string }[] = [
     { key: "pending_users", ar: "المستخدمين الجدد بانتظار التفعيل", en: "New users pending approval" },
