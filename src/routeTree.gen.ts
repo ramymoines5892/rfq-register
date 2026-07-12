@@ -20,6 +20,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
+import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -77,6 +78,12 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsFormBuilderRoute =
+  AuthenticatedSettingsFormBuilderRouteImport.update({
+    id: '/form-builder',
+    path: '/form-builder',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedAdminCustomerFieldsRoute =
   AuthenticatedAdminCustomerFieldsRouteImport.update({
     id: '/admin/customer-fields',
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
+  '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
+  '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
+  '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/workflows'
     | '/admin/customer-fields'
+    | '/settings/form-builder'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/'
     | '/admin/customer-fields'
+    | '/settings/form-builder'
     | '/settings'
   id:
     | '__root__'
@@ -163,6 +175,7 @@ export interface FileRouteTypes {
     | '/_authenticated/workflows'
     | '/_authenticated/'
     | '/_authenticated/admin/customer-fields'
+    | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/form-builder': {
+      id: '/_authenticated/settings/form-builder'
+      path: '/form-builder'
+      fullPath: '/settings/form-builder'
+      preLoaderRoute: typeof AuthenticatedSettingsFormBuilderRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/admin/customer-fields': {
       id: '/_authenticated/admin/customer-fields'
       path: '/admin/customer-fields'
@@ -263,10 +283,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
 }
 
