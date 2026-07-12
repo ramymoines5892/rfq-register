@@ -14,7 +14,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { layoutTree } from "./orgLayout";
-import { Building2, Briefcase, Users, Hash } from "lucide-react";
+import { Building2, Briefcase, Users, Hash, Network } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export type OrgNodeData = {
