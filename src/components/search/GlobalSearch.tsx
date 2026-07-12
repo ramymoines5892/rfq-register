@@ -198,11 +198,30 @@ export function GlobalSearch() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput
-        placeholder={ar ? "ابحث عن أي شيء… (⌘K)" : "Search anything… (⌘K)"}
-        value={q}
-        onValueChange={setQ}
-      />
+      <div className="relative">
+        <CommandInput
+          placeholder={
+            aiMode
+              ? ar ? "اسأل بالمعنى… (AI)" : "Ask by meaning… (AI)"
+              : ar ? "ابحث عن أي شيء… (⌘K)" : "Search anything… (⌘K)"
+          }
+          value={q}
+          onValueChange={setQ}
+        />
+        <button
+          type="button"
+          onClick={() => setAiMode((v) => !v)}
+          className={`absolute top-1/2 -translate-y-1/2 ${ar ? "left-2" : "right-2"} inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-medium transition-colors ${
+            aiMode
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+          title={ar ? "بحث ذكي بالمعنى" : "Semantic AI search"}
+        >
+          <Sparkles className="h-3 w-3" />
+          AI
+        </button>
+      </div>
       <CommandList className="max-h-[420px]">
         <CommandEmpty>
           {loading ? (ar ? "جارٍ البحث…" : "Searching…") : (ar ? "لا نتائج" : "No results")}
