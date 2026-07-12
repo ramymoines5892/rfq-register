@@ -290,9 +290,16 @@ function CustomersPage() {
               </p>
             </div>
           </div>
-          <Button onClick={openNew} className="gap-1.5">
-            <Plus className="h-4 w-4" /> {t("addCustomer")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/admin/customer-fields">
+              <Button variant="outline" size="sm" className="gap-1.5" title={lang === "ar" ? "إعدادات حقول العميل" : "Customer Field Settings"}>
+                <Settings2 className="h-4 w-4" /> {lang === "ar" ? "إعدادات الحقول" : "Field Settings"}
+              </Button>
+            </Link>
+            <Button onClick={openNew} className="gap-1.5">
+              <Plus className="h-4 w-4" /> {t("addCustomer")}
+            </Button>
+          </div>
         </div>
       </div>
 
