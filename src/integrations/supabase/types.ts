@@ -564,45 +564,72 @@ export type Database = {
       }
       departments: {
         Row: {
+          code: string | null
+          color: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
+          extension: string | null
           hidden_at: string | null
           hidden_by: string | null
           id: string
+          is_system: boolean
+          location: string | null
           manager_id: string | null
+          metadata: Json
           name: string
           name_ar: string | null
           name_en: string | null
+          parent_id: string | null
+          phone: string | null
+          position: number
           updated_at: string
         }
         Insert: {
+          code?: string | null
+          color?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
+          extension?: string | null
           hidden_at?: string | null
           hidden_by?: string | null
           id?: string
+          is_system?: boolean
+          location?: string | null
           manager_id?: string | null
+          metadata?: Json
           name: string
           name_ar?: string | null
           name_en?: string | null
+          parent_id?: string | null
+          phone?: string | null
+          position?: number
           updated_at?: string
         }
         Update: {
+          code?: string | null
+          color?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
+          extension?: string | null
           hidden_at?: string | null
           hidden_by?: string | null
           id?: string
+          is_system?: boolean
+          location?: string | null
           manager_id?: string | null
+          metadata?: Json
           name?: string
           name_ar?: string | null
           name_en?: string | null
+          parent_id?: string | null
+          phone?: string | null
+          position?: number
           updated_at?: string
         }
         Relationships: [
@@ -613,46 +640,71 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "departments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
         ]
       }
       job_titles: {
         Row: {
+          code: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
           department_id: string | null
+          description: string | null
           hidden_at: string | null
           hidden_by: string | null
           id: string
+          is_system: boolean
+          level: number
+          metadata: Json
           name: string
           name_ar: string | null
           name_en: string | null
+          position: number
           updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           department_id?: string | null
+          description?: string | null
           hidden_at?: string | null
           hidden_by?: string | null
           id?: string
+          is_system?: boolean
+          level?: number
+          metadata?: Json
           name: string
           name_ar?: string | null
           name_en?: string | null
+          position?: number
           updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           department_id?: string | null
+          description?: string | null
           hidden_at?: string | null
           hidden_by?: string | null
           id?: string
+          is_system?: boolean
+          level?: number
+          metadata?: Json
           name?: string
           name_ar?: string | null
           name_en?: string | null
+          position?: number
           updated_at?: string
         }
         Relationships: [
@@ -743,6 +795,48 @@ export type Database = {
           read_at?: string | null
           title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      org_field_templates: {
+        Row: {
+          created_at: string
+          entity: string
+          field_type: string
+          id: string
+          is_system: boolean
+          key: string
+          label_ar: string
+          label_en: string | null
+          position: number
+          required: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity: string
+          field_type?: string
+          id?: string
+          is_system?: boolean
+          key: string
+          label_ar: string
+          label_en?: string | null
+          position?: number
+          required?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity?: string
+          field_type?: string
+          id?: string
+          is_system?: boolean
+          key?: string
+          label_ar?: string
+          label_en?: string | null
+          position?: number
+          required?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
