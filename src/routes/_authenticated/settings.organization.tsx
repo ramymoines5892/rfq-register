@@ -534,6 +534,38 @@ function StatTile({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
+/* -------------------------------- TOP DROP ZONE ----------------------------- */
+
+function TopDropZone({ ar, onPromote }: { ar: boolean; onPromote: (id: string) => void }) {
+  const [over, setOver] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("text/dept-id")) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        const id = e.dataTransfer.getData("text/dept-id");
+        setOver(false);
+        if (!id) return;
+        e.preventDefault();
+        onPromote(id);
+      }}
+      className={`mb-2 rounded-lg border-2 border-dashed py-2 text-center text-[11px] transition-colors ${
+        over ? "border-primary bg-primary/10 text-primary" : "border-border/60 text-muted-foreground"
+      }`}
+    >
+      {ar
+        ? "اسحب إدارة هنا لجعلها في الأعلى وتصبح باقي الإدارات فرعية منها"
+        : "Drop a department here to make it the top-level parent of all others"}
+    </div>
+  );
+}
+
+
 /* --------------------------------- DEPT CARD -------------------------------- */
 
 function DeptCard({
