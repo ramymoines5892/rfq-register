@@ -559,7 +559,7 @@ function BuilderCanvas({
 
 
 function SectionGrid({
-  section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection,
+  section, optionsByField, ar, onEdit, onColSpan, onToggleActive, onDelete, onRenameSection, onDeleteSection,
 }: {
   section: Section;
   optionsByField: Record<string, FieldOption[]>;
@@ -569,18 +569,39 @@ function SectionGrid({
   onToggleActive: (f: FieldDef) => void;
   onDelete: (f: FieldDef) => void;
   onRenameSection: (oldAr: string, oldEn: string, newAr: string, newEn: string) => void;
+  onDeleteSection: (secKey: string) => void;
 }) {
   const { items, sectionAr, sectionEn, label } = section;
-  const { setNodeRef, isOver } = useDroppable({ id: `__sec:${section.key}` });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `__sec:${section.key}` });
+  const {
+    attributes, listeners, setNodeRef: setSortRef, transform, transition, isDragging,
+  } = useSortable({ id: `SEC::${section.key}` });
   const [renaming, setRenaming] = useState(false);
   const [nAr, setNAr] = useState(sectionAr);
   const [nEn, setNEn] = useState(sectionEn);
 
   useEffect(() => { setNAr(sectionAr); setNEn(sectionEn); }, [sectionAr, sectionEn]);
 
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  const hasSystem = items.some((f) => f.is_system);
+
   return (
-    <div className="space-y-2">
+    <div ref={setSortRef} style={style} className="space-y-2">
       <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          type="button"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+          aria-label={ar ? "اسحب القسم" : "Drag section"}
+          title={ar ? "اسحب لإعادة ترتيب الأقسام" : "Drag to reorder sections"}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
         {renaming ? (
           <>
             <Input value={nAr} onChange={(e) => setNAr(e.target.value)} placeholder={ar ? "عربي" : "AR"} className="h-7 text-xs w-40" />
@@ -598,11 +619,21 @@ function SectionGrid({
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setRenaming(true)} title={ar ? "إعادة تسمية القسم" : "Rename section"}>
               <Pencil className="h-3 w-3" />
             </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 text-destructive disabled:text-muted-foreground"
+              onClick={() => onDeleteSection(section.key)}
+              disabled={hasSystem}
+              title={hasSystem ? (ar ? "يحتوي على حقول نظام" : "Contains system fields") : (ar ? "حذف القسم" : "Delete section")}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
           </>
         )}
       </div>
       <div
-        ref={setNodeRef}
+        ref={setDropRef}
         className={`grid grid-cols-12 gap-2 rounded-lg border bg-background/60 p-2 min-h-[70px] transition-colors ${isOver ? "border-primary bg-primary/5" : ""}`}
       >
         {items.map((f) => (
@@ -625,6 +656,7 @@ function SectionGrid({
       </div>
     </div>
   );
+
 }
 
 function SortableFieldCard({
