@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useHrDashboard } from "@/features/hr/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
