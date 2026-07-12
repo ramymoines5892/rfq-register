@@ -219,9 +219,16 @@ function HrPage() {
               {/* Toolbar */}
               <Card>
                 <CardContent className="p-3 flex flex-wrap items-center gap-2">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute top-1/2 -translate-y-1/2 start-2 h-4 w-4 text-muted-foreground" />
-                    <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={lang === "ar" ? "بحث بالاسم أو الإيميل..." : "Search by name or email..."} className="ps-8 h-9" />
+                  <div className="flex-1 min-w-[200px]">
+                    <InputIcon
+                      leftIcon={<Search />}
+                      value={query}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+                      placeholder={lang === "ar" ? "بحث بالاسم أو الإيميل..." : "Search by name or email..."}
+                      clearable
+                      onClear={() => setQuery("")}
+                      className="h-9"
+                    />
                   </div>
                   <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
                     <SelectTrigger className="h-9 w-36"><SelectValue placeholder={t("status")} /></SelectTrigger>
