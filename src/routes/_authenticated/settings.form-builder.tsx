@@ -58,6 +58,15 @@ const FIELD_TYPES: { value: FieldType; ar: string; en: string }[] = [
 const COL_OPTIONS = [3, 4, 6, 8, 12] as const;
 const needsOptions = (t: FieldType) => t === "dropdown" || t === "multiselect";
 
+// System fields that reference another table — displayed as a locked DB-linked dropdown.
+const REFERENCE_FIELDS: Record<string, { ar: string; en: string }> = {
+  parent_id: { ar: "الإدارة الأب (من قاعدة البيانات)", en: "Parent Department (from database)" },
+  department_id: { ar: "الإدارة (من قاعدة البيانات)", en: "Department (from database)" },
+  manager_id: { ar: "المدير (من قاعدة البيانات)", en: "Manager (from database)" },
+};
+const isReferenceField = (f: { key: string; is_system: boolean | null } | null | undefined) =>
+  !!f && !!f.is_system && f.key in REFERENCE_FIELDS;
+
 const ENTITIES = [
   { key: "customers", ar: "شاشة العميل", en: "Customer" },
   { key: "department", ar: "شاشة الإدارات", en: "Departments" },
