@@ -11,12 +11,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
 import { OrgChartImage } from "@/components/organization/OrgChartImage";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon,
+  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye,
 } from "lucide-react";
 
 import type { Database } from "@/integrations/supabase/types";
@@ -240,6 +241,42 @@ function OrganizationPage() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="h-8">
+                <Eye className="h-4 w-4 me-1" />
+                {ar ? "معاينة الرسمة" : "Preview chart"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-5xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  {ar ? "رسمة الهيكل التنظيمي" : "Organization Chart"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="rounded-lg border bg-white overflow-auto max-h-[70vh]">
+                {rootDepts.length === 0 ? (
+                  <div className="py-16 text-center text-sm text-muted-foreground">
+                    {ar ? "أضف إدارة لعرض الرسمة" : "Add a department to see the chart"}
+                  </div>
+                ) : (
+                  <div ref={chartRef}>
+                    <OrgChartImage departments={depts} jobs={jobs} lang={ar ? "ar" : "en"} />
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <p className="text-[11px] text-muted-foreground me-auto self-center">
+                  {ar ? "تتحدث تلقائيًا مع كل تعديل" : "Auto-updates as you edit"}
+                </p>
+                <Button onClick={downloadChart} disabled={loading || rootDepts.length === 0}>
+                  <Download className="h-4 w-4 me-1" />
+                  {ar ? "تحميل PNG" : "Download PNG"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Link to="/settings/form-builder" search={{ entity: "department" }}>
             <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
               <LayoutGrid className="h-3.5 w-3.5 me-1" />
@@ -255,130 +292,95 @@ function OrganizationPage() {
         </div>
       </div>
 
-      {/* Split: tree editor (left) + sticky chart image (right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-        {/* LEFT — Tree editor */}
-        <Card className="lg:col-span-3">
-          <CardContent className="p-3 sm:p-4">
-            {/* Toolbar inside editor: search + add actions */}
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <div className="flex-1 min-w-[180px]">
-                <InputIcon
-                  leftIcon={<Search />}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={ar ? "ابحث بالاسم أو الكود..." : "Search..."}
-                  clearable
-                  onClear={() => setQuery("")}
-                  className="h-9"
-                />
-              </div>
-              <Button size="sm" variant="outline" onClick={() => addDept(null)}>
+      {/* Full-width tree editor */}
+      <Card>
+        <CardContent className="p-3 sm:p-4">
+          {/* Toolbar: search + add actions */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="flex-1 min-w-[200px]">
+              <InputIcon
+                leftIcon={<Search />}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={ar ? "ابحث بالاسم أو الكود..." : "Search by name or code..."}
+                clearable
+                onClear={() => setQuery("")}
+                className="h-9"
+              />
+            </div>
+            <Button size="sm" variant="outline" onClick={() => addDept(null)}>
+              <Plus className="h-4 w-4 me-1" />
+              {ar ? "إدارة جديدة" : "New department"}
+            </Button>
+            <Button size="sm" onClick={() => addJob(null)}>
+              <Plus className="h-4 w-4 me-1" />
+              {ar ? "مسمى جديد" : "New job title"}
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="py-16 text-center text-sm text-muted-foreground">
+              {ar ? "جارٍ التحميل..." : "Loading..."}
+            </div>
+          ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+              <Sparkles className="h-8 w-8" />
+              <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
+              <Button size="sm" onClick={() => addDept(null)}>
                 <Plus className="h-4 w-4 me-1" />
-                {ar ? "إدارة" : "Dept"}
-              </Button>
-              <Button size="sm" onClick={() => addJob(null)}>
-                <Plus className="h-4 w-4 me-1" />
-                {ar ? "مسمى" : "Job"}
+                {ar ? "إضافة إدارة" : "Add Department"}
               </Button>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {rootDepts
+                .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
+                .map((d) => (
+                  <DeptCard
+                    key={d.id}
+                    dept={d}
+                    depth={0}
+                    depts={depts}
+                    jobs={jobs}
+                    memberCounts={memberCounts}
+                    lang={lang}
+                    query={q}
+                    selected={selected}
+                    onSelect={(id, kind) => setSelected({ id, kind })}
+                    onAddDept={addDept}
+                    onAddJob={addJob}
+                    onDelete={remove}
+                  />
+                ))}
 
-            {loading ? (
-              <div className="py-16 text-center text-sm text-muted-foreground">
-                {ar ? "جارٍ التحميل..." : "Loading..."}
-              </div>
-            ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
-              <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
-                <Sparkles className="h-8 w-8" />
-                <p className="text-sm">{ar ? "ابدأ بإضافة أول إدارة" : "Start by adding your first department"}</p>
-                <Button size="sm" onClick={() => addDept(null)}>
-                  <Plus className="h-4 w-4 me-1" />
-                  {ar ? "إضافة إدارة" : "Add Department"}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {rootDepts
-                  .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
-                  .map((d) => (
-                    <DeptCard
-                      key={d.id}
-                      dept={d}
-                      depth={0}
-                      depts={depts}
-                      jobs={jobs}
-                      memberCounts={memberCounts}
-                      lang={lang}
-                      query={q}
-                      selected={selected}
-                      onSelect={(id, kind) => setSelected({ id, kind })}
-                      onAddDept={addDept}
-                      onAddJob={addJob}
-                      onDelete={remove}
-                    />
-                  ))}
-
-                {unassignedJobs.length > 0 && (
-                  <div className="rounded-xl border border-dashed p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
-                      </div>
-                      <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
+              {unassignedJobs.length > 0 && (
+                <div className="rounded-xl border border-dashed p-3 md:col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {ar ? "مسميات بدون إدارة" : "Unassigned titles"}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {unassignedJobs
-                        .filter((j) => !q || jobMatches(j))
-                        .map((j) => (
-                          <JobChip
-                            key={j.id}
-                            job={j}
-                            lang={lang}
-                            selected={selected?.id === j.id && selected.kind === "job_title"}
-                            onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
-                            onDelete={() => remove(j.id, "job_title")}
-                          />
-                        ))}
-                    </div>
+                    <Badge variant="outline" className="text-[10px]">{unassignedJobs.length}</Badge>
                   </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* RIGHT — Sticky chart preview + download */}
-        <Card className="lg:col-span-2 lg:sticky lg:top-4">
-          <CardContent className="p-3 sm:p-4">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 mb-3">
-              <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5" />
-                  {ar ? "معاينة الرسمة" : "Chart preview"}
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                  {ar ? "تتحدث تلقائيًا — للاستخدام في بروفايل الشركة" : "Auto-updates — for company profile"}
-                </div>
-              </div>
-              <Button size="sm" onClick={downloadChart} disabled={loading || rootDepts.length === 0}>
-                <Download className="h-4 w-4 me-1" />
-                PNG
-              </Button>
-            </div>
-            <div className="rounded-lg border bg-white overflow-auto max-h-[70vh]">
-              {rootDepts.length === 0 ? (
-                <div className="py-16 text-center text-sm text-muted-foreground">
-                  {ar ? "أضف إدارة لعرض الرسمة" : "Add a department to see the chart"}
-                </div>
-              ) : (
-                <div ref={chartRef}>
-                  <OrgChartImage departments={depts} jobs={jobs} lang={ar ? "ar" : "en"} />
+                  <div className="flex flex-wrap gap-1.5">
+                    {unassignedJobs
+                      .filter((j) => !q || jobMatches(j))
+                      .map((j) => (
+                        <JobChip
+                          key={j.id}
+                          job={j}
+                          lang={lang}
+                          selected={selected?.id === j.id && selected.kind === "job_title"}
+                          onSelect={() => setSelected({ id: j.id, kind: "job_title" })}
+                          onDelete={() => remove(j.id, "job_title")}
+                        />
+                      ))}
+                  </div>
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Inspector Sheet */}
       <Sheet open={!!selected} onOpenChange={(o) => !o && closeInspector()}>
