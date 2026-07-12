@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2, UserPlus } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];

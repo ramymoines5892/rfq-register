@@ -16,6 +16,7 @@ import {
   Search, ArrowUpDown, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 import { BilingualInputs, BilingualText, pickLangValue } from "@/lib/bilingual";
 import type { Database } from "@/integrations/supabase/types";
 

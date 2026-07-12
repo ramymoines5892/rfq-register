@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronUp, ChevronDown, Pencil, ArrowLeft, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/hooks/useConfirm";
 
 export const Route = createFileRoute("/_authenticated/workflows")({
   component: WorkflowsPage,
