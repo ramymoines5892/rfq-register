@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText } from "lucide-react";
 import { useI18n, type TKey } from "@/lib/i18n";
 import { parseTerms, formatTermsPlain } from "@/lib/terms";
+import { pickLangValue, BilingualText } from "@/lib/bilingual";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -41,7 +42,15 @@ type Stage = { id: string; template_id: string; position: number; name: string }
 type StageApprover = { id: string; stage_id: string; approver_id: string };
 type Approval = { id: string; quote_id: string; stage_id: string; approver_id: string; decision: Decision; comment: string | null; decided_at: string | null };
 type Profile = { id: string; email: string; full_name: string | null };
-type Customer = { id: string; name: string; tax_id: string | null; currency: string; terms: string | null };
+type Customer = {
+  id: string;
+  name: string;
+  name_ar: string | null;
+  name_en: string | null;
+  tax_id: string | null;
+  currency: string;
+  terms: string | null;
+};
 
 const STATUSES: Quote["status"][] = ["new", "reviewing", "accepted", "rejected", "expired"];
 const statusColor: Record<Quote["status"], string> = {
@@ -86,7 +95,7 @@ function Dashboard() {
       supabase.from("quotes").select("*").order("received_date", { ascending: false }),
       supabase.from("workflow_templates").select("id, name"),
       supabase.from("profiles").select("id, email, full_name"),
-      supabase.from("customers").select("id, name, tax_id, currency, terms").order("name"),
+      supabase.from("customers").select("id, name, name_ar, name_en, tax_id, currency, terms").order("name"),
     ]);
     setCustomers((cus ?? []) as Customer[]);
     const allQuotes = (qs ?? []) as Quote[];
@@ -616,7 +625,10 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t("noCustomer")}</SelectItem>
-                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.tax_id ? ` — ${c.tax_id}` : ""}</SelectItem>)}
+                  {customers.map(c => {
+                    const disp = pickLangValue(c as any, "name", lang).value || c.name;
+                    return <SelectItem key={c.id} value={c.id}>{disp}{c.tax_id ? ` — ${c.tax_id}` : ""}</SelectItem>;
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -682,12 +694,16 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
                   const items = parseTerms(selectedCustomer.terms);
                   return items.length > 0 ? (
                     <ul className="space-y-1.5 bg-background rounded p-2 border">
-                      {items.map((it, i) => (
-                        <li key={i} className="text-xs">
-                          {it.title && <span className="font-semibold">{it.title}: </span>}
-                          <span className="whitespace-pre-wrap">{it.body}</span>
-                        </li>
-                      ))}
+                      {items.map((it, i) => {
+                        const title = lang === "ar" ? (it.title_ar || it.title_en) : (it.title_en || it.title_ar);
+                        const body = lang === "ar" ? (it.body_ar || it.body_en) : (it.body_en || it.body_ar);
+                        return (
+                          <li key={i} className="text-xs">
+                            {title && <span className="font-semibold">{title}: </span>}
+                            <span className="whitespace-pre-wrap">{body}</span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : (
                     <p className="text-xs text-muted-foreground italic">{lang === "ar" ? "لا شروط مسجلة لهذا العميل" : "No terms set for this customer"}</p>
@@ -697,7 +713,7 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
                   <input
                     type="checkbox"
                     checked={form.override_enabled}
-                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || formatTermsPlain(parseTerms(selectedCustomer.terms))) : "" })}
+                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || formatTermsPlain(parseTerms(selectedCustomer.terms), lang)) : "" })}
                   />
                   {t("overrideTerms")}
                 </label>
