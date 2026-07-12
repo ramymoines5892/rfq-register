@@ -1294,3 +1294,55 @@ function PreviewField({
   );
 }
 
+// ---------- Regex Helper Popover ----------
+
+const REGEX_PRESETS: { ar: string; en: string; pattern: string; example: string }[] = [
+  { ar: "أرقام فقط", en: "Digits only", pattern: "^[0-9]+$", example: "12345" },
+  { ar: "حروف فقط (عربي/إنجليزي)", en: "Letters only (AR/EN)", pattern: "^[\\p{L}\\s]+$", example: "أحمد / Ahmed" },
+  { ar: "موبايل مصري (11 رقم)", en: "Egyptian mobile (11 digits)", pattern: "^01[0125][0-9]{8}$", example: "01012345678" },
+  { ar: "رقم قومي مصري (14 رقم)", en: "Egyptian National ID (14 digits)", pattern: "^[0-9]{14}$", example: "29001011234567" },
+  { ar: "بريد إلكتروني", en: "Email", pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", example: "name@example.com" },
+  { ar: "رابط ويب (URL)", en: "URL", pattern: "^https?://.+", example: "https://example.com" },
+  { ar: "كود بريدي (5 أرقام)", en: "Postal code (5 digits)", pattern: "^[0-9]{5}$", example: "11511" },
+  { ar: "IBAN مصري", en: "Egyptian IBAN", pattern: "^EG[0-9]{27}$", example: "EG380019000500000000263180002" },
+];
+
+function RegexHelper({ ar, onPick }: { ar: boolean; onPick: (pattern: string) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="text-muted-foreground hover:text-primary" title={ar ? "أمثلة جاهزة" : "Ready examples"}>
+          <HelpCircle className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-2" align="start">
+        <div className="text-xs font-bold mb-1.5 px-1">
+          {ar ? "اختر نمط جاهز" : "Pick a ready pattern"}
+        </div>
+        <div className="max-h-72 overflow-y-auto space-y-1">
+          {REGEX_PRESETS.map((p) => (
+            <button
+              key={p.pattern}
+              type="button"
+              onClick={() => onPick(p.pattern)}
+              className="w-full text-start rounded p-1.5 hover:bg-muted transition-colors"
+            >
+              <div className="text-xs font-medium">{ar ? p.ar : p.en}</div>
+              <div className="text-[10px] font-mono text-muted-foreground truncate" dir="ltr">{p.pattern}</div>
+              <div className="text-[10px] text-muted-foreground" dir="ltr">
+                {ar ? "مثال: " : "e.g. "}<span className="font-mono">{p.example}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="text-[10px] text-muted-foreground mt-2 px-1 border-t pt-1.5">
+          {ar
+            ? "الـ Regex بيتحقق من شكل النص. مثلاً ^[0-9]+$ يعني أرقام بس."
+            : "Regex validates the text shape. e.g. ^[0-9]+$ means digits only."}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+
