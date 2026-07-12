@@ -571,10 +571,11 @@ function JobChip({
 /* ------------------------------- INSPECTOR ------------------------------- */
 
 function RecordEditor({
-  kind, record, departments, customFields, onSaved, onClose,
+  kind, record, isNew, departments, customFields, onSaved, onClose,
 }: {
   kind: "department" | "job_title";
-  record: Department | JobTitle;
+  record: Department | JobTitle | Partial<Department> | Partial<JobTitle>;
+  isNew: boolean;
   departments: Department[];
   customFields: FieldDef[];
   onSaved: () => void;
@@ -586,7 +587,7 @@ function RecordEditor({
   const dept = isDept ? (record as Department) : null;
   const job = !isDept ? (record as JobTitle) : null;
 
-  const [nameAr, setNameAr] = useState(record.name_ar || record.name);
+  const [nameAr, setNameAr] = useState(record.name_ar || record.name || "");
   const [nameEn, setNameEn] = useState(record.name_en || "");
   const [code, setCode] = useState((record as any).code || "");
   const [color, setColor] = useState(dept?.color || DEPT_COLORS[0]);
@@ -603,26 +604,35 @@ function RecordEditor({
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
+    if (!nameAr.trim() && !nameEn.trim()) {
+      return toast.error(ar ? "الاسم مطلوب" : "Name is required");
+    }
     setSaving(true);
     if (isDept) {
-      const payload = {
+      const payload: any = {
         name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
         code: code || null, color, parent_id: parentId, phone: phone || null,
         extension: extension || null, location: location || null, metadata,
       };
-      const { error } = await supabase.from("departments").update(payload).eq("id", record.id);
+      if (isNew) payload.position = (record as any).position ?? 0;
+      const { error } = isNew
+        ? await supabase.from("departments").insert(payload)
+        : await supabase.from("departments").update(payload).eq("id", (record as Department).id);
       setSaving(false);
       if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
     } else {
-      const payload = {
+      const payload: any = {
         name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
         code: code || null, level, department_id: departmentId, description: description || null, metadata,
       };
-      const { error } = await supabase.from("job_titles").update(payload).eq("id", record.id);
+      if (isNew) payload.position = (record as any).position ?? 0;
+      const { error } = isNew
+        ? await supabase.from("job_titles").insert(payload)
+        : await supabase.from("job_titles").update(payload).eq("id", (record as JobTitle).id);
       setSaving(false);
       if (error) return toast.error(ar ? "تعذر الحفظ" : "Failed", { description: error.message });
     }
-    toast.success(ar ? "تم الحفظ" : "Saved");
+    toast.success(isNew ? (ar ? "تم الإنشاء" : "Created") : (ar ? "تم الحفظ" : "Saved"));
     onSaved();
     onClose();
   };
@@ -631,7 +641,9 @@ function RecordEditor({
     <>
       <SheetHeader>
         <SheetTitle>
-          {isDept ? (ar ? "تعديل الإدارة" : "Edit Department") : (ar ? "تعديل المسمى" : "Edit Job Title")}
+          {isNew
+            ? (isDept ? (ar ? "إدارة جديدة" : "New Department") : (ar ? "مسمى وظيفي جديد" : "New Job Title"))
+            : (isDept ? (ar ? "تعديل الإدارة" : "Edit Department") : (ar ? "تعديل المسمى" : "Edit Job Title"))}
         </SheetTitle>
       </SheetHeader>
       <div className="flex-1 overflow-y-auto space-y-4 py-2">
