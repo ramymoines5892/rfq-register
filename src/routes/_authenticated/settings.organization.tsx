@@ -212,89 +212,81 @@ function OrganizationPage() {
   const totalMembers = Object.values(memberCounts).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-4" dir={dir}>
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
+    <div className="space-y-3" dir={dir}>
+      {/* Compact header: title + inline stats + form-builder menu */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
             <Network className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold">{ar ? "الهيكل التنظيمي" : "Organization Structure"}</h2>
-            <p className="text-xs text-muted-foreground">
-              {ar ? "معاينة حية لإدارات وأقسام الشركة" : "Live preview of departments and job titles"}
-            </p>
+          <div className="min-w-0">
+            <h2 className="truncate text-lg sm:text-xl font-bold">
+              {ar ? "الهيكل التنظيمي" : "Organization Structure"}
+            </h2>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <Building2 className="h-3 w-3" />
+                <b className="text-foreground">{totalDepts}</b> {ar ? "إدارة" : "depts"}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                <b className="text-foreground">{totalJobs}</b> {ar ? "مسمى" : "jobs"}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                <b className="text-foreground">{totalMembers}</b> {ar ? "موظف" : "members"}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Link to="/settings/form-builder" search={{ entity: "department" }}>
-            <Button variant="outline" size="sm">
-              <LayoutGrid className="h-4 w-4 me-1" />
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
+              <LayoutGrid className="h-3.5 w-3.5 me-1" />
               {ar ? "حقول الإدارات" : "Dept fields"}
             </Button>
           </Link>
           <Link to="/settings/form-builder" search={{ entity: "job_title" }}>
-            <Button variant="outline" size="sm">
-              <LayoutGrid className="h-4 w-4 me-1" />
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
+              <LayoutGrid className="h-3.5 w-3.5 me-1" />
               {ar ? "حقول المسميات" : "Job fields"}
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
-        <StatTile icon={<Building2 className="h-4 w-4" />} label={ar ? "إدارات" : "Departments"} value={totalDepts} />
-        <StatTile icon={<Briefcase className="h-4 w-4" />} label={ar ? "مسميات وظيفية" : "Job Titles"} value={totalJobs} />
-        <StatTile icon={<Users className="h-4 w-4" />} label={ar ? "الموظفون" : "Members"} value={totalMembers} />
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex-1 min-w-[200px]">
-          <InputIcon
-            leftIcon={<Search />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={ar ? "ابحث بالاسم أو الكود..." : "Search by name or code..."}
-            clearable
-            onClear={() => setQuery("")}
-            className="h-9"
-          />
-        </div>
-        <Button size="sm" variant="outline" onClick={() => addDept(null)}>
-          <Plus className="h-4 w-4 me-1" />
-          {ar ? "إدارة جديدة" : "New Department"}
-        </Button>
-        <Button size="sm" onClick={() => addJob(null)}>
-          <Plus className="h-4 w-4 me-1" />
-          {ar ? "مسمى جديد" : "New Job Title"}
-        </Button>
-      </div>
-
-      {/* Hint */}
-      <div className="rounded-lg border border-dashed p-3 flex gap-2 items-start text-xs text-muted-foreground bg-muted/30">
-        <Info className="h-4 w-4 mt-0.5 shrink-0" />
-        <div>
-          {ar
-            ? "دي معاينة حية للهيكل التنظيمي. اضغط على أي إدارة أو مسمى لتعديله، أو استخدم زر + لإضافة أقسام فرعية ومسميات تحته."
-            : "This is a live preview of your organization. Click any department or title to edit it, or use the + buttons to add nested departments and titles."}
-        </div>
-      </div>
-
-      {/* Split: tree editor + chart image */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Split: tree editor (left) + sticky chart image (right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
         {/* LEFT — Tree editor */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {ar ? "الشجرة — تعديل مباشر" : "Tree — live editing"}
+        <Card className="lg:col-span-3">
+          <CardContent className="p-3 sm:p-4">
+            {/* Toolbar inside editor: search + add actions */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="flex-1 min-w-[180px]">
+                <InputIcon
+                  leftIcon={<Search />}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={ar ? "ابحث بالاسم أو الكود..." : "Search..."}
+                  clearable
+                  onClear={() => setQuery("")}
+                  className="h-9"
+                />
               </div>
-              <Badge variant="outline" className="text-[10px]">{ar ? "تعديل" : "Edit"}</Badge>
+              <Button size="sm" variant="outline" onClick={() => addDept(null)}>
+                <Plus className="h-4 w-4 me-1" />
+                {ar ? "إدارة" : "Dept"}
+              </Button>
+              <Button size="sm" onClick={() => addJob(null)}>
+                <Plus className="h-4 w-4 me-1" />
+                {ar ? "مسمى" : "Job"}
+              </Button>
             </div>
+
             {loading ? (
-              <div className="py-16 text-center text-sm text-muted-foreground">{ar ? "جارٍ التحميل..." : "Loading..."}</div>
+              <div className="py-16 text-center text-sm text-muted-foreground">
+                {ar ? "جارٍ التحميل..." : "Loading..."}
+              </div>
             ) : rootDepts.length === 0 && unassignedJobs.length === 0 ? (
               <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
                 <Sparkles className="h-8 w-8" />
@@ -305,7 +297,7 @@ function OrganizationPage() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {rootDepts
                   .filter((d) => !q || deepMatchesDept(d, depts, jobs, deptMatches, jobMatches))
                   .map((d) => (
@@ -355,20 +347,25 @@ function OrganizationPage() {
           </CardContent>
         </Card>
 
-        {/* RIGHT — Chart image + download */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                <ImageIcon className="h-3.5 w-3.5" />
-                {ar ? "الصورة — للاستخدام في بروفايل الشركة" : "Image — for company profile"}
+        {/* RIGHT — Sticky chart preview + download */}
+        <Card className="lg:col-span-2 lg:sticky lg:top-4">
+          <CardContent className="p-3 sm:p-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 mb-3">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  {ar ? "معاينة الرسمة" : "Chart preview"}
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                  {ar ? "تتحدث تلقائيًا — للاستخدام في بروفايل الشركة" : "Auto-updates — for company profile"}
+                </div>
               </div>
-              <Button size="sm" variant="outline" onClick={downloadChart} disabled={loading || rootDepts.length === 0}>
+              <Button size="sm" onClick={downloadChart} disabled={loading || rootDepts.length === 0}>
                 <Download className="h-4 w-4 me-1" />
-                {ar ? "تحميل PNG" : "Download PNG"}
+                PNG
               </Button>
             </div>
-            <div className="rounded-lg border bg-white overflow-auto max-h-[600px]">
+            <div className="rounded-lg border bg-white overflow-auto max-h-[70vh]">
               {rootDepts.length === 0 ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">
                   {ar ? "أضف إدارة لعرض الرسمة" : "Add a department to see the chart"}
@@ -379,11 +376,6 @@ function OrganizationPage() {
                 </div>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-2">
-              {ar
-                ? "الرسمة تتحدث تلقائيًا مع كل تعديل. اضغط تحميل لحفظها كصورة."
-                : "The chart updates automatically as you edit. Click download to save as image."}
-            </p>
           </CardContent>
         </Card>
       </div>
