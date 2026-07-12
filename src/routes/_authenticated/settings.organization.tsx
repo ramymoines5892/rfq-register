@@ -198,17 +198,14 @@ function OrganizationPage() {
       const u = updates.find((x) => x.id === d.id);
       return u ? { ...d, parent_id: u.parent_id, position: u.position } : d;
     }));
-    const results = await Promise.all(
-      updates.map((u) => supabase.from("departments").update({ parent_id: u.parent_id, position: u.position }).eq("id", u.id))
-    );
-    const err = results.find((r) => r.error)?.error;
-    if (err) {
-      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err.message });
-      await load();
-    } else {
+    try {
+      await reorderMutation.mutateAsync(updates);
       toast.success(ar ? "تم الرفع للأعلى" : "Promoted to top");
+    } catch (err: any) {
+      toast.error(ar ? "تعذر النقل" : "Failed to move", { description: err?.message });
+      await load();
     }
-  }, [depts, ar, load]);
+  }, [depts, ar, load, reorderMutation]);
 
 
 
