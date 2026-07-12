@@ -15,6 +15,7 @@ import {
   softDeleteTemplate,
   swapStagePositions,
   type Stage,
+  type StageApprover,
   type Template,
 } from "./api";
 
