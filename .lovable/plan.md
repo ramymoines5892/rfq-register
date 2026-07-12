@@ -1,103 +1,73 @@
-# خطة: منشئ الشاشات العام + صفحة الإعدادات المركزية
+# خطة: شاشة الهيكل التنظيمي (Organization)
 
-## 1) تعميم منشئ الحقول على أي شاشة (مش بس العملاء)
+## الهدف
+شاشة موحّدة داخل الإعدادات لإدارة **الإدارات** و**المسميات الوظيفية** برسمة Org Chart حية، وحقول قابلة للتخصيص، وبيانات افتراضية جاهزة.
 
-بدل ما يكون فيه جداول خاصة بالعملاء، نعمل نظام عام:
+## المكان والتنقّل
+- شاشة جديدة: `/settings/organization` (تبويب داخل الإعدادات).
+- ننقل تبويبَي "الإدارات" و"المسميات" من `/hr` إلى هنا، ويبقى `/hr` لإدارة الموظفين فقط.
+- إضافة التبويب في `settings.tsx` بأيقونة Network.
 
-**جداول DB جديدة (تحل محل الحالية الخاصة بالعملاء):**
-- `form_entities` — يعرّف كل شاشة قابلة للتخصيص (customers, quotes, workflows, …). فيه `key`, `label_ar`, `label_en`, `is_system`.
-- `form_fields` — كل الحقول لكل الشاشات (يحل محل `customer_field_definitions`). زيادة على الحالي:
-  - `entity_key` (FK لـ form_entities)
-  - `row_index` (int) + `col_span` (1..12) → للتحكم في الـ layout grid
-  - `position` داخل الصف (order)
-- `form_field_options` — نفس الفكرة لكن عام.
-- `form_field_values` — القيم الفعلية، مرتبطة بـ `entity_key` + `record_id` (uuid) بدل ما تكون مربوطة بجدول واحد.
-
-**Migration path:** نرحّل بيانات `customer_field_*` الحالية للجداول الجديدة ثم نحذف القديمة.
-
-## 2) صلاحيات مرنة (مش الأدمن بس)
-
-- الصلاحية الحالية `manage_customer_fields` نغيّرها لـ `manage_form_fields` (تشمل كل الشاشات).
-- كل إدخال في `form_entities` ممكن يشير لـ permission مخصصة (مثلاً `manage_customer_fields`, `manage_quote_fields`) → المستخدم يقدر يعدّل شاشة معينة بس.
-- إدارة الصلاحيات نفسها تتم من صفحة Settings > Permissions.
-
-## 3) صفحة الإعدادات المركزية `/settings`
-
-route واحد بتبويبات جانبية:
+## تخطيط الشاشة (Layout)
+عمودان (2:1) مع toggle للموبايل:
 
 ```
-/settings
-├── /settings/general       — اللغة الافتراضية، اسم الشركة، الشعار
-├── /settings/form-builder  — منشئ الحقول لكل الشاشات (اختيار الشاشة من dropdown)
-├── /settings/permissions   — إدارة الأدوار والصلاحيات لكل مستخدم
-├── /settings/reports       — إعدادات التقارير (لاحقاً)
-├── /settings:الخ…
+┌─────────────────────────────────┬──────────────────┐
+│  Org Chart (react-flow)         │  Inspector       │
+│  - سحب/تكبير/تصغير              │  الاسم AR/EN     │
+│  - كل إدارة node ملوّن          │  الكود، المدير   │
+│  - أزرار: + قسم فرعي، +مسمى     │  الحقول المخصصة  │
+│  - Fit view، Export PNG          │  حذف/أرشفة      │
+│  - عرض تلقائى بالـ dagre layout │                  │
+└─────────────────────────────────┴──────────────────┘
+Tabs: [الإدارات] [المسميات الوظيفية]  (نفس الـ inspector يشتغل للاثنين)
 ```
 
-كل تبويب يظهر بس لو المستخدم عنده الصلاحية المناسبة.  
-البنود القديمة (admin/customer-fields, hr, team) نقلها تحت `/settings/*` تدريجياً.
+- كل node يعرض: اللون، الاسم، عدد الأقسام الفرعية، عدد المسميات المرتبطة، عدد الموظفين.
+- كليك على node → يفتح Inspector؛ dblclick → تعديل سريع للاسم inline.
+- زر عائم `+ إدارة جديدة` أعلى يمين الرسمة.
 
-## 4) منشئ الحقول التفاعلي (Drag & Drop حقيقي)
+## القوالب (Form Builder)
+- إضافة entity جديد في `form_entities`: `department` و `job_title` (system-seeded).
+- الحقول النظامية المحمية (لا تُحذف، تُخفى فقط):
+  - department: name_ar, name_en, code, color, parent_id, manager_id, status
+  - job_title: name_ar, name_en, code, department_id, level, status
+- الحقول الإضافية (تليفون داخلي، ميزانية، موقع، …) تُضاف من `/settings/form-builder?entity=department` وتظهر تلقائيًا في Inspector عبر `<DynamicForm />`.
 
-استخدام `@dnd-kit` (خفيف ومتوافق مع RTL):
+## البيانات الافتراضية
+Migration seed (idempotent — يعمل فقط لو الجدول فارغ):
+- **إدارات**: المبيعات، المشتريات، المخازن، المالية، الموارد البشرية.
+- **مسميات**: مدير النظام، مدير عام، مدير الموارد البشرية، مدير مبيعات، مدير مشتريات، أمين مخزن، محاسب.
+- كل إدارة لها لون ثابت (design tokens) وكود قصير.
+- زر "إعادة تعيين الافتراضيات" فى الـ header للـ owner.
 
-**واجهة الـ builder — عمودين:**
-- **يسار (Sidebar):** أنواع الحقول (text, number, dropdown, file, bilingual…) — تسحبها للـ canvas.
-- **يمين (Canvas — grid 12-column):**
-  - كل صف يقدر يحتوي أكتر من حقل جنب بعض حسب `col_span`.
-  - تسحب الحقل يمين/شمال داخل الصف = تغيير الترتيب.
-  - تسحبه لصف تاني = نقله.
-  - مقبض على حافة الحقل لتغيير العرض (col_span: 3/4/6/8/12).
-  - كليك على الحقل يفتح لوحة إعدادات على اليمين (label, required, validation, options).
-- **معاينة Live:** زرار "Preview" يعرض الشاشة بنفس الشكل اللى هيشوفه المستخدم النهائى.
+## سلاسة الاستخدام
+- إضافة سريعة: `Enter` بعد الاسم يحفظ ويفتح صف جديد.
+- Optimistic updates + toast محترم (بدل confirm/alert المتصفح).
+- Drag & drop لتغيير الأب (parent_id) داخل الـ chart.
+- بحث فورى فى الرسمة (يميّز الـ nodes المطابقة).
+- ألوان محددة من قائمة (لا color picker حر).
 
-## 5) عرض الشاشة النهائية للمستخدم
+## التفاصيل التقنية
 
-`<DynamicForm entityKey="customers" recordId={...} />`:
-- يجيب `form_fields` مرتبة حسب `row_index` ثم `position`.
-- يرسمها في CSS Grid (`grid-cols-12`) وكل حقل يأخذ `col-span-{col_span}`.
-- يقرأ/يكتب في `form_field_values` تلقائياً.
-- RTL/LTR يشتغل تلقائى من `dir`.
+**DB migration:**
+- `ALTER TABLE departments ADD COLUMN parent_id uuid REFERENCES departments(id), color text, code text`.
+- `ALTER TABLE job_titles ADD COLUMN department_id uuid, level int, code text`.
+- Seed rows للـ `form_entities` لـ `department` و`job_title`.
+- Seed للـ system fields فى `form_fields` لكل entity.
+- Seed للـ default departments/job_titles (بس لو الجداول فاضية).
 
-## 6) UX التفاصيل
+**Packages:**
+- `@xyflow/react` (react-flow الحديث) — للـ Org Chart.
+- `dagre` — للـ auto-layout الشجرى.
 
-- Undo/Redo داخل الـ builder (Ctrl+Z).
-- Auto-save كل تغيير + مؤشر "Saved ✓".
-- Duplicate field, hide field (soft), archive.
-- Sections/Tabs داخل الشاشة الواحدة (accordion groups).
-- Keyboard: Enter لتحرير label، Delete للحذف، Arrow keys للتنقل.
-- Mobile: الـ grid ينهار لعمود واحد تلقائى (`md:col-span-*`).
-
-## Technical details
-
-- **DB:** migration واحدة تنشئ الجداول الجديدة + ترحيل + drop للقديم.
-- **Component tree:**
-  - `src/routes/_authenticated/settings/route.tsx` — layout بتبويبات
-  - `src/routes/_authenticated/settings/form-builder.tsx`
-  - `src/components/form-builder/{FieldPalette, FormCanvas, FieldEditor, DynamicForm}.tsx`
-- **DnD lib:** `@dnd-kit/core` + `@dnd-kit/sortable`.
-- **إزالة:** صفحة `/admin/customer-fields` القديمة (redirect لـ `/settings/form-builder?entity=customers`).
-- **Existing customer form:** الحقول الأساسية (اسم/عنوان/تليفون…) تتحوّل لـ system-seeded rows في `form_fields` بحيث الأدمن يقدر يخفيها/يعيد ترتيبها بس مش يمسحها.
+**Files:**
+- `src/routes/_authenticated/settings.organization.tsx` — الشاشة.
+- `src/components/organization/OrgChart.tsx` — الرسمة.
+- `src/components/organization/OrgInspector.tsx` — لوحة التعديل.
+- `src/components/organization/orgLayout.ts` — منطق dagre.
+- تحديث `settings.tsx` لإضافة التبويب.
+- تنظيف tabs الإدارات/المسميات من `hr.tsx`.
 
 ## نطاق التنفيذ
-
-كبير — هعمله على مرحلتين:
-
-**Phase 1 (الآن):**
-- DB الجديد + الترحيل
-- `/settings` shell + التنقل
-- Form Builder بالـ DnD الحقيقى لشاشة العملاء بس
-- `DynamicForm` component + دمجه فى شاشة العملاء
-
-**Phase 2 (بعد ما تراجع):**
-- تعميمه على شاشة Quotes وHR
-- Sections/Tabs، Undo/Redo، Preview mode
-- نقل باقى الإعدادات (لغة، تقارير) لـ Settings
-
-## أسئلة قبل ما أبدأ
-
-1. **الحقول الأساسية للعميل** (name, tax_id, address…): تفضل تبقى system-seeded مع إمكانية إخفاء/إعادة ترتيب فقط، ولا مسموح للأدمن يحذفها نهائى؟
-2. **صلاحيات كل شاشة:** permission واحدة `manage_form_fields` تخلى صاحبها يعدل كل الشاشات، ولا permission لكل شاشة (`manage_customer_fields`, `manage_quote_fields`)؟
-3. **الحقول الحالية اللى موجودة فى الكود** (شاشة العملاء الحالية بكل حقولها الـ hardcoded): أستبدلها بالكامل بـ `<DynamicForm />` أم أخليها كما هى وأضيف قسم dynamic تحتها؟
-
-قوللى الإجابات وأبدأ Phase 1 على طول.
+جلسة واحدة كبيرة. هأبدأ بالـ migration، وأستنى موافقتك عليها، وبعدها أكوّد الشاشة والمكونات دفعة واحدة.
