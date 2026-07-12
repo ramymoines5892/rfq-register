@@ -975,9 +975,14 @@ function RecordEditor({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{ar ? "بدون (إدارة أساسية)" : "None (top level)"}</SelectItem>
-                  {departments.filter((d) => d.id !== record.id).map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{pick(d, lang)}</SelectItem>
+                  {flattenDeptsHierarchy(departments).filter((x) => x.dept.id !== record.id).map(({ dept: d, depth }) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      <span style={{ paddingInlineStart: depth * 14 }}>
+                        {depth > 0 ? "└ " : ""}{pick(d, lang)}
+                      </span>
+                    </SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             </div>
