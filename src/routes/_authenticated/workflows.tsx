@@ -24,6 +24,7 @@ type StageApprover = { id: string; stage_id: string; approver_id: string; positi
 
 function WorkflowsPage() {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Template | null>(null);
