@@ -37,18 +37,19 @@ function DeptNode({ data, selected }: NodeProps) {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="relative flex flex-col items-center" style={{ width: 72 }}>
+      <div className="relative flex items-center justify-center" style={{ width: 48, height: 48 }}>
         <Handle type="target" position={Position.Top} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
-              className={`h-11 w-11 rounded-xl border bg-card shadow-sm flex items-center justify-center transition-all hover:shadow-md hover:scale-105 cursor-pointer ${
-                selected ? "ring-2 ring-primary ring-offset-1" : ""
+              className={`h-11 w-11 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer ${
+                selected ? "ring-2 ring-primary ring-offset-2" : ""
               }`}
-              style={{ backgroundColor: `${color}14`, borderColor: `${color}55` }}
+              style={{ backgroundColor: `${color}20`, color }}
+              aria-label={d.label}
             >
-              <Icon className="h-5 w-5" style={{ color }} />
+              <Icon className="h-6 w-6" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[220px]">
@@ -66,9 +67,6 @@ function DeptNode({ data, selected }: NodeProps) {
             </div>
           </TooltipContent>
         </Tooltip>
-        <div className="mt-1 text-[10px] font-medium leading-tight text-center truncate w-full" title={d.label}>
-          {d.label}
-        </div>
         <Handle type="source" position={Position.Bottom} className="!w-1.5 !h-1.5 !bg-muted-foreground/40 !border-0" />
       </div>
     </TooltipProvider>
