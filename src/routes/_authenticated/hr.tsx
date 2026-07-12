@@ -634,6 +634,7 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
 
 function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTitle[]; departments: Department[]; onChanged: () => void }) {
   const { t, lang } = useI18n();
+  const confirm = useConfirm();
   const [nameAr, setNameAr] = useState("");
   const [nameEn, setNameEn] = useState("");
   const [depId, setDepId] = useState<string>("none");
