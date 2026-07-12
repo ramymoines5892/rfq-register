@@ -27,7 +27,9 @@ type TabDef = {
 
 const TABS: TabDef[] = [
   { to: "/settings", labelAr: "نظرة عامة", labelEn: "Overview", icon: Sliders },
+  { to: "/settings/organization", labelAr: "الهيكل التنظيمي", labelEn: "Organization", icon: Network },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", icon: LayoutGrid, perm: "manage_form_fields" },
+
   { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", icon: Trash2, ownerOnly: true },
   { to: "/settings/language", labelAr: "اللغة والتوطين", labelEn: "Language & Locale", icon: Languages, disabled: true },
   { to: "/settings/reports", labelAr: "التقارير", labelEn: "Reports", icon: FileText, disabled: true },
