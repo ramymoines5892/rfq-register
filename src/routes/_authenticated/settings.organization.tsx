@@ -23,6 +23,8 @@ import {
 
 
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
+import { DEPT_ICONS, getDeptIcon } from "@/lib/deptIcons";
+
 import type { Database } from "@/integrations/supabase/types";
 
 type Department = Database["public"]["Tables"]["departments"]["Row"];
@@ -866,6 +868,8 @@ function RecordEditor({
   const [nameEn, setNameEn] = useState(record.name_en || "");
   const [code, setCode] = useState((record as any).code || "");
   const [color, setColor] = useState(dept?.color || DEPT_COLORS[0]);
+  const [icon, setIcon] = useState<string>(((dept as any)?.icon as string) || "");
+
   const [parentId, setParentId] = useState<string | null>(dept?.parent_id ?? null);
   const [phone, setPhone] = useState(dept?.phone || "");
   const [extension, setExtension] = useState(dept?.extension || "");
@@ -886,8 +890,9 @@ function RecordEditor({
     if (isDept) {
       const payload: any = {
         name: nameAr || nameEn, name_ar: nameAr || null, name_en: nameEn || null,
-        code: code || null, color, parent_id: parentId, phone: phone || null,
+        code: code || null, color, icon: icon || null, parent_id: parentId, phone: phone || null,
         extension: extension || null, location: location || null, metadata,
+
       };
       if (isNew) payload.position = (record as any).position ?? 0;
       const { error } = isNew
