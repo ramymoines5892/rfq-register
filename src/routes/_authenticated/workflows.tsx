@@ -51,7 +51,11 @@ function WorkflowsPage() {
 
   async function deleteTemplate(id: string) {
     if (!confirm(t("confirmDelete"))) return;
-    const { error } = await supabase.from("workflow_templates").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("workflow_templates").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(t("saved"));
     load();
@@ -169,7 +173,11 @@ function TemplateEditor({ open, onOpenChange, template }: { open: boolean; onOpe
   }
 
   async function deleteStage(id: string) {
-    await supabase.from("workflow_stages").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("workflow_stages").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     reloadStages();
   }
 

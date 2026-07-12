@@ -540,7 +540,11 @@ function DepartmentsTab({ departments, profiles, onChanged }: { departments: Dep
   }
   async function remove(id: string) {
     if (!confirm(t("confirmDelete"))) return;
-    const { error } = await supabase.from("departments").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("departments").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     onChanged();
   }
@@ -641,7 +645,11 @@ function JobTitlesTab({ jobTitles, departments, onChanged }: { jobTitles: JobTit
   }
   async function remove(id: string) {
     if (!confirm(t("confirmDelete"))) return;
-    const { error } = await supabase.from("job_titles").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("job_titles").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     onChanged();
   }

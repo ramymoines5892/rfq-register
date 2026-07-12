@@ -257,9 +257,13 @@ function CustomersPage() {
   }, [customers, search, currencyFilter]);
 
   async function handleDelete(c: Customer) {
-    const { error } = await supabase.from("customers").delete().eq("id", c.id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("customers").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", c.id);
     if (error) return toast.error(error.message);
-    toast.success(lang === "ar" ? "تم الحذف" : "Deleted");
+    toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات (الـ Owner يقدر يرجّعه)" : "Moved to trash (Owner can restore)");
     load();
   }
 
@@ -794,7 +798,11 @@ function CustomerSheet({
     if (error) toast.error(error.message);
   }
   async function deleteContact(id: string) {
-    const { error } = await supabase.from("customer_contacts").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("customer_contacts").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) return toast.error(error.message);
     setContacts((prev) => prev.filter((c) => c.id !== id));
   }
@@ -846,7 +854,11 @@ function CustomerSheet({
     if (error) toast.error(error.message);
   }
   async function deleteBank(id: string) {
-    const { error } = await supabase.from("customer_banks").delete().eq("id", id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("customer_banks").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", id);
     if (error) return toast.error(error.message);
     setBanks((prev) => prev.filter((b) => b.id !== id));
   }
@@ -977,9 +989,11 @@ function CustomerSheet({
   }
 
   async function deleteAttachment(a: Attachment) {
-    const { error: sErr } = await supabase.storage.from(ATTACHMENT_BUCKET).remove([a.file_path]);
-    if (sErr) toast.error(sErr.message);
-    const { error } = await supabase.from("customer_attachments").delete().eq("id", a.id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("customer_attachments").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", a.id);
     if (error) return toast.error(error.message);
     setAttachments((p) => p.filter((x) => x.id !== a.id));
   }

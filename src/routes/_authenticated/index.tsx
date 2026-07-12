@@ -299,10 +299,13 @@ function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, u
   };
 
   async function handleDelete() {
-    if (attachments.length) await supabase.storage.from("quote-attachments").remove(attachments.map(a => a.storage_path));
-    const { error } = await supabase.from("quotes").delete().eq("id", quote.id);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("quotes").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", quote.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(lang === "ar" ? "تم الحذف" : "Deleted");
+    toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات" : "Moved to trash");
     onChanged();
   }
 
@@ -601,8 +604,11 @@ function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved 
   }
 
   async function removeAttachment(a: Attachment) {
-    await supabase.storage.from("quote-attachments").remove([a.storage_path]);
-    await supabase.from("quote_attachments").delete().eq("id", a.id);
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("quote_attachments").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: u.user?.id ?? null,
+    }).eq("id", a.id);
     setExistingAttachments(prev => prev.filter(x => x.id !== a.id));
   }
 
