@@ -2,12 +2,21 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { qk } from "@/features/_shared/queryKeys";
 import {
   fetchCurrentUserId,
+  fetchHrDashboard,
   fetchProfiles,
   fetchUserRoles,
   removeUserFromTeam,
   setUserRole,
   type AppRole,
 } from "./api";
+
+export function useHrDashboard() {
+  return useQuery({
+    queryKey: ["hr", "dashboard"] as const,
+    queryFn: fetchHrDashboard,
+    staleTime: 15_000,
+  });
+}
 
 export const profilesQueryOptions = queryOptions({
   queryKey: qk.hr.profiles(),
