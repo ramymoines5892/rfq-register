@@ -33,9 +33,13 @@
 - `useOwnerCheck`, `useDeletedRows`, `useRestoreRow`, `usePurgeRow`
 - `settings.trash.tsx`: صفر `supabase.from` مباشر؛ التحديث بعد restore/purge عن طريق invalidateQueries
 
-## ⏳ اللى لسه (نطاق كبير — يحتاج جلسات مخصّصة)
+### المرحلة 1.7 — Form Builder ✅
+- `src/features/formBuilder/api.ts` + `queries.ts`
+- `useCanManageFormFields`, `useFormBuilderData`, `useSoftDeleteField`, `useSoftDeleteFieldsBulk`, `usePersistFieldChanges`, `useSaveFieldDefinition`
+- `settings.form-builder.tsx`: صفر `supabase.from` مباشر — كل الـ writes بتـ invalidate الـ cache تلقائى؛ الـ dirty guard بيحمى الـ in-flight edits من الـ hydration
 
-- **`settings.form-builder.tsx`** (1348 سطر) — feature module لـ `customer_field_definitions` + `customer_field_options`.
+## ⏳ اللى لسه (نطاق كبير — يحتاج جلسة مخصّصة)
+
 - **`settings.organization.tsx`** (1111 سطر) — feature module للـ org fields + مخطط الشركة.
 
 ## 🧪 التحقق
