@@ -69,6 +69,11 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const lastReminderCountRef = useRef<number>(-1);
+  // Realtime handlers read the latest prefs via ref so we don't re-subscribe on prefs change.
+  const prefsRef = useRef<Prefs>(DEFAULT_PREFS);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
+
+
 
   const unreadCount = items.filter((n) => !n.read_at).length;
 
