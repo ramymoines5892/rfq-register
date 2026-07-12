@@ -665,39 +665,81 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          browser_push_enabled: boolean
+          categories: Json
+          created_at: string
+          enabled: boolean
+          reminder_enabled: boolean
+          reminder_interval_minutes: number
+          sound_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser_push_enabled?: boolean
+          categories?: Json
+          created_at?: string
+          enabled?: boolean
+          reminder_enabled?: boolean
+          reminder_interval_minutes?: number
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser_push_enabled?: boolean
+          categories?: Json
+          created_at?: string
+          enabled?: boolean
+          reminder_enabled?: boolean
+          reminder_interval_minutes?: number
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
+          category: string
           created_at: string
           entity_id: string | null
           entity_type: string | null
           id: string
           kind: string
           link: string | null
+          priority: string
           read_at: string | null
           title: string
           user_id: string
         }
         Insert: {
           body?: string | null
+          category?: string
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
           id?: string
           kind?: string
           link?: string | null
+          priority?: string
           read_at?: string | null
           title: string
           user_id: string
         }
         Update: {
           body?: string | null
+          category?: string
           created_at?: string
           entity_id?: string | null
           entity_type?: string | null
           id?: string
           kind?: string
           link?: string | null
+          priority?: string
           read_at?: string | null
           title?: string
           user_id?: string
