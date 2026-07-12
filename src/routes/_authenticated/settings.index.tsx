@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
-import { LayoutGrid, Languages, FileText, ShieldCheck } from "lucide-react";
+import { LayoutGrid, Languages, FileText, ShieldCheck, Bell } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings/")({
@@ -18,6 +18,15 @@ function SettingsHome() {
       descAr: "حرّك الحقول بالسحب والإفلات، وحدّد شكل ظهورها في كل شاشة (بجانب بعض أو تحت بعض).",
       descEn: "Drag & drop fields, decide column widths, and design each screen the way you want.",
       icon: LayoutGrid,
+      enabled: true,
+    },
+    {
+      to: "/settings/notifications",
+      titleAr: "الإشعارات",
+      titleEn: "Notifications",
+      descAr: "فعّل/أوقف الإشعارات، حدد فترة التذكير الدورى، والصوت، وأنواع الإشعارات.",
+      descEn: "Enable/disable notifications, set reminder interval, sound, and categories.",
+      icon: Bell,
       enabled: true,
     },
     {

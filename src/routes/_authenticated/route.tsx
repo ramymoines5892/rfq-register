@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2 } from "lucide-react";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -116,10 +117,11 @@ function AuthenticatedLayout() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Button variant="ghost" size="sm" className="flex-1 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
               <Languages className="h-4 w-4 me-1" /> {t("langToggle")}
             </Button>
+            <NotificationBell />
             <Button variant="ghost" size="sm" className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground" onClick={signOut}>
               <LogOut className="h-4 w-4" />
             </Button>
@@ -143,6 +145,7 @@ function AuthenticatedLayout() {
               </Link>
             );
           })}
+          <NotificationBell />
           <Button variant="ghost" size="sm" className="text-sidebar-foreground" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </div>
       </div>
