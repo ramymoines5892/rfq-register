@@ -1128,17 +1128,21 @@ function FieldEditor({
           {needsOptions(fieldType) && !isReferenceField(editing) && (
             <div className="border rounded p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="font-bold">{ar ? "قيم القائمة" : "List Options"}</Label>
+                <Label className="font-bold flex items-center gap-1.5">
+                  {ar ? "قيم القائمة" : "List Options"}
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    {ar ? "(القيمة التقنية تُولَّد تلقائيًا)" : "(technical value auto-generated)"}
+                  </span>
+                </Label>
                 <Button size="sm" variant="outline" onClick={() => setLocalOptions((o) => [...o, { value: "", label_ar: "", label_en: "", is_active: true }])}>
                   <Plus className="h-3 w-3 me-1" /> {ar ? "قيمة" : "Option"}
                 </Button>
               </div>
               {localOptions.length === 0 && <p className="text-xs text-muted-foreground">{ar ? "لا توجد قيم بعد." : "No options yet."}</p>}
               {localOptions.map((opt, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1 items-center">
-                  <Input placeholder={ar ? "القيمة" : "value"} value={opt.value} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, value: e.target.value } : o))} className="text-xs font-mono h-8" />
-                  <Input placeholder="AR" value={opt.label_ar} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_ar: e.target.value } : o))} className="text-xs h-8" />
-                  <Input placeholder="EN" value={opt.label_en} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_en: e.target.value } : o))} className="text-xs h-8" />
+                <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-1 items-center">
+                  <Input autoFocus={i === localOptions.length - 1 && !opt.label_ar} placeholder={ar ? "بالعربي" : "AR"} value={opt.label_ar} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_ar: e.target.value } : o))} className="text-xs h-8" dir="rtl" />
+                  <Input placeholder={ar ? "بالإنجليزي" : "EN"} value={opt.label_en} onChange={(e) => setLocalOptions((list) => list.map((o, j) => j === i ? { ...o, label_en: e.target.value } : o))} className="text-xs h-8" dir="ltr" />
                   <Button size="icon" variant="ghost" onClick={() => setLocalOptions((list) => list.filter((_, j) => j !== i))} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
                 </div>
               ))}
