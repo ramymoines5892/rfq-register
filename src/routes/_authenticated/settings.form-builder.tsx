@@ -969,7 +969,7 @@ function FieldEditor({
         const { error } = await supabase.from("customer_field_options").insert(rows);
         if (error) { setSaving(false); toast.error(error.message); return; }
       }
-    } else if (fieldId && !needsOptions(fieldType)) {
+    } else if (fieldId && !needsOptions(fieldType) && !isReferenceField(editing)) {
       await supabase.from("customer_field_options").delete().eq("field_id", fieldId);
     }
 
