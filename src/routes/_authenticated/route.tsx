@@ -90,6 +90,11 @@ function AuthenticatedLayout() {
           </div>
         </div>
 
+        <div className="px-4 pb-2">
+          <GlobalSearchTrigger className="w-full justify-start" />
+        </div>
+
+
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <div className="text-[10px] uppercase tracking-widest font-bold px-4 pt-4 pb-2 text-sidebar-primary/70">
             {t("mainMenu") ?? "القائمة الرئيسية"}
