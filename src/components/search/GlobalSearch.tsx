@@ -44,20 +44,23 @@ type PageEntry = {
   keywords: string;
   icon: typeof Settings2;
   group: "data" | "settings" | "admin";
+  /** Optional gate — page hidden from search when it returns false. */
+  when?: (a: import("@/hooks/useAccess").Access) => boolean;
 };
 
 const PAGES: PageEntry[] = [
   { to: "/", labelAr: "لوحة التحكم", labelEn: "Dashboard", keywords: "home overview dashboard الرئيسية", icon: LayoutGrid, group: "data" },
   { to: "/customers", labelAr: "العملاء", labelEn: "Customers", keywords: "clients customers عملاء زبائن", icon: Users, group: "data" },
   { to: "/workflows", labelAr: "عروض الأسعار وسير العمل", labelEn: "Quotes & Workflows", keywords: "quotes workflow approvals عروض اسعار موافقات", icon: Workflow, group: "data" },
-  { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", keywords: "hr users employees موظفين موارد بشرية", icon: Building2, group: "admin" },
-  { to: "/team", labelAr: "الفريق", labelEn: "Team", keywords: "team members فريق", icon: UserRound, group: "admin" },
-  { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings" },
-  { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", keywords: "fields forms builder حقول تخصيص نماذج", icon: LayoutGrid, group: "settings" },
-  { to: "/settings/notifications", labelAr: "الإشعارات", labelEn: "Notifications", keywords: "notifications alerts إشعارات تنبيهات", icon: Bell, group: "settings" },
-  { to: "/settings/search", labelAr: "البحث الذكي", labelEn: "AI Search", keywords: "search semantic ai بحث ذكي دلالي embeddings", icon: Sparkles, group: "settings" },
-  { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", keywords: "trash deleted recycle bin سلة محذوفات", icon: Trash2, group: "settings" },
+  { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", keywords: "hr users employees موظفين موارد بشرية", icon: Building2, group: "admin", when: (a) => a.isAdmin },
+  { to: "/team", labelAr: "الفريق", labelEn: "Team", keywords: "team members فريق", icon: UserRound, group: "admin", when: (a) => a.isAdmin },
+  { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings", when: (a) => a.isAdmin || a.canManageFormFields },
+  { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", keywords: "fields forms builder حقول تخصيص نماذج", icon: LayoutGrid, group: "settings", when: (a) => a.canManageFormFields },
+  { to: "/settings/notifications", labelAr: "الإشعارات", labelEn: "Notifications", keywords: "notifications alerts إشعارات تنبيهات", icon: Bell, group: "settings", when: (a) => a.canManageNotifications },
+  { to: "/settings/search", labelAr: "البحث الذكي", labelEn: "AI Search", keywords: "search semantic ai بحث ذكي دلالي embeddings", icon: Sparkles, group: "settings", when: (a) => a.canManageSemanticSearch },
+  { to: "/settings/trash", labelAr: "سلة المحذوفات", labelEn: "Trash", keywords: "trash deleted recycle bin سلة محذوفات", icon: Trash2, group: "settings", when: (a) => a.canViewTrash },
 ];
+
 
 const ICONS: Record<Hit["entity"], typeof Users> = {
   customer: Users,
