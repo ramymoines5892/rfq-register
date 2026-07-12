@@ -261,13 +261,17 @@ function FormBuilderPage() {
       return;
     }
     const label = sec.label;
-    if (!confirm(
-      sec.items.length === 0
+    const ok = await confirm({
+      title: ar ? "حذف القسم" : "Delete section",
+      description: sec.items.length === 0
         ? (ar ? `حذف القسم "${label}"؟` : `Delete section "${label}"?`)
         : (ar
-            ? `حذف القسم "${label}" مع ${sec.items.length} حقل جواه؟ (الحقول هتروح سلة المحذوفات)`
-            : `Delete section "${label}" and its ${sec.items.length} field(s)? (Fields go to Trash)`)
-    )) return;
+            ? `حذف القسم "${label}" مع ${sec.items.length} حقل جواه؟\nالحقول هتروح سلة المحذوفات.`
+            : `Delete section "${label}" and its ${sec.items.length} field(s)?\nFields will go to Trash.`),
+      confirmText: ar ? "حذف" : "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     if (sec.items.length > 0) {
       const { data: u } = await supabase.auth.getUser();
