@@ -222,11 +222,12 @@ export function GlobalSearch() {
         <button
           type="button"
           onClick={() => setAiMode((v) => !v)}
-          className={`absolute top-1/2 -translate-y-1/2 ${ar ? "left-2" : "right-2"} inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-medium transition-colors ${
+          className={`absolute top-1/2 -translate-y-1/2 ${ar ? "left-10" : "right-10"} inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-medium transition-colors ${
             aiMode
               ? "bg-primary text-primary-foreground"
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           }`}
+
           title={ar ? "بحث ذكي بالمعنى" : "Semantic AI search"}
         >
           <Sparkles className="h-3 w-3" />
