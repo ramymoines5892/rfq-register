@@ -3,7 +3,26 @@ import { useAccess } from "@/hooks/useAccess";
 import { useCustomers, useCustomerRelations, useSoftDeleteCustomer } from "@/features/customers/queries";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  currentUserId,
+  requireUserId,
+  findCustomerByTaxId,
+  updateCustomer,
+  insertCustomer,
+  insertContacts,
+  insertBanks,
+  insertContact,
+  updateContactRow,
+  softDeleteContact,
+  insertBank,
+  updateBankRow,
+  softDeleteBank,
+  insertAttachment,
+  insertAttachmentSilent,
+  softDeleteAttachment,
+  uploadAttachmentFile,
+  createAttachmentSignedUrl,
+} from "@/features/customers/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";
@@ -180,7 +199,7 @@ type DraftAttachment = {
   label: string | null;
 };
 
-const ATTACHMENT_BUCKET = "customer-attachments";
+
 const ATTACHMENT_CATEGORIES: AttachmentCategory[] = [
   "company_profile",
   "commercial_register",
@@ -600,11 +619,9 @@ function CustomerSheet({
     }
     setChecking(true);
     const timer = setTimeout(async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id ?? "";
-      const { data, error } = await supabase.rpc("find_customer_by_tax_id", { _tax_id: tid });
-      if (!error && data && data.length > 0) {
-        const row = data[0] as { id: string; name: string; owner_id: string };
+      const uid = (await currentUserId()) ?? "";
+      const row = await findCustomerByTaxId(tid);
+      if (row) {
         if (!customer || row.id !== customer.id) {
           setTaxIdConflict({ name: row.name, ownedByMe: row.owner_id === uid });
         } else setTaxIdConflict(null);
@@ -629,9 +646,7 @@ function CustomerSheet({
     }
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
-      if (!uid) throw new Error("Not authenticated");
+      const uid = await requireUserId();
 
       const pt = stringifyBiList(paymentTermsList);
       const payload = {
@@ -659,20 +674,17 @@ function CustomerSheet({
       };
 
       if (customer) {
-        const { error } = await supabase.from("customers").update(payload).eq("id", customer.id);
-        if (error) throw error;
+        await updateCustomer(customer.id, payload);
       } else {
-        const { data: inserted, error } = await supabase
-          .from("customers")
-          .insert({ ...payload, user_id: uid })
-          .select()
-          .single();
-        if (error) {
-          if (error.code === "23505" || /duplicate|unique/i.test(error.message))
+        let inserted: Customer;
+        try {
+          inserted = await insertCustomer({ ...payload, user_id: uid });
+        } catch (e: any) {
+          if (e?.code === "23505" || /duplicate|unique/i.test(e?.message ?? ""))
             throw new Error(t("taxIdInUse"));
-          throw error;
+          throw e;
         }
-        const newId = (inserted as Customer).id;
+        const newId = inserted.id;
         if (draftContacts.length > 0) {
           const rows = draftContacts.map((c) => {
             const name = (c.name_ar ?? "").trim() || (c.name_en ?? "").trim() || (lang === "ar" ? "بدون اسم" : "Untitled");
@@ -692,8 +704,7 @@ function CustomerSheet({
               notes: c.notes,
             };
           });
-          const { error: ce } = await supabase.from("customer_contacts").insert(rows);
-          if (ce) toast.error(ce.message);
+          try { await insertContacts(rows); } catch (e: any) { toast.error(e?.message); }
         }
         if (draftBanks.length > 0) {
           const rows = draftBanks.map((b) => {
@@ -719,31 +730,30 @@ function CustomerSheet({
               notes: b.notes,
             };
           });
-          const { error: be } = await supabase.from("customer_banks").insert(rows);
-          if (be) toast.error(be.message);
+          try { await insertBanks(rows); } catch (e: any) { toast.error(e?.message); }
         }
         if (draftAttachments.length > 0) {
           for (const a of draftAttachments) {
             const safeName = a.file.name.replace(/[^\w.\-]+/g, "_");
             const path = `${uid}/${newId}/${crypto.randomUUID()}_${safeName}`;
-            const { error: upErr } = await supabase.storage
-              .from(ATTACHMENT_BUCKET)
-              .upload(path, a.file, { contentType: a.file.type });
-            if (upErr) {
-              toast.error(upErr.message);
+            try {
+              await uploadAttachmentFile(path, a.file);
+            } catch (e: any) {
+              toast.error(e?.message);
               continue;
             }
-            const { error: insErr } = await supabase.from("customer_attachments").insert({
-              customer_id: newId,
-              user_id: uid,
-              category: a.category,
-              label: a.category === "other" ? a.label : null,
-              file_path: path,
-              file_name: a.file.name,
-              mime_type: a.file.type || null,
-              size_bytes: a.file.size,
-            });
-            if (insErr) toast.error(insErr.message);
+            try {
+              await insertAttachmentSilent({
+                customer_id: newId,
+                user_id: uid,
+                category: a.category,
+                label: a.category === "other" ? a.label : null,
+                file_path: path,
+                file_name: a.file.name,
+                mime_type: a.file.type || null,
+                size_bytes: a.file.size,
+              });
+            } catch (e: any) { toast.error(e?.message); }
           }
         }
       }
@@ -760,23 +770,19 @@ function CustomerSheet({
   /* ------------- contacts (existing customer) ------------- */
   async function addContact() {
     if (!customer) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id!;
     const seedAr = lang === "ar" ? "مسؤول جديد" : "";
     const seedEn = lang === "en" ? "New contact" : "";
-    const { data, error } = await supabase
-      .from("customer_contacts")
-      .insert({
+    try {
+      const uid = await requireUserId();
+      const row = await insertContact<Contact>({
         customer_id: customer.id,
         user_id: uid,
         name: seedAr || seedEn || "New contact",
         name_ar: seedAr || null,
         name_en: seedEn || null,
-      })
-      .select()
-      .single();
-    if (error) return toast.error(error.message);
-    setContacts([...contacts, data as Contact]);
+      });
+      setContacts([...contacts, row]);
+    } catch (e: any) { toast.error(e?.message); }
   }
   async function updateContact(id: string, patch: Partial<Contact>) {
     // Keep legacy name/title in sync with picked value from AR/EN if either changed.
@@ -794,40 +800,32 @@ function CustomerSheet({
       merged.title = ar.trim() || en.trim() || null;
     }
     setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...merged } : c)));
-    const { error } = await supabase.from("customer_contacts").update(merged).eq("id", id);
-    if (error) toast.error(error.message);
+    try { await updateContactRow(id, merged as Record<string, unknown>); } catch (e: any) { toast.error(e?.message); }
   }
   async function deleteContact(id: string) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_contacts").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) return toast.error(error.message);
-    setContacts((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await softDeleteContact(id);
+      setContacts((prev) => prev.filter((c) => c.id !== id));
+    } catch (e: any) { toast.error(e?.message); }
   }
 
   /* ------------- banks (existing customer) ------------- */
   async function addBank() {
     if (!customer) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id!;
     const seedAr = lang === "ar" ? "بنك جديد" : "";
     const seedEn = lang === "en" ? "New bank" : "";
-    const { data, error } = await supabase
-      .from("customer_banks")
-      .insert({
+    try {
+      const uid = await requireUserId();
+      const row = await insertBank<Bank>({
         customer_id: customer.id,
         user_id: uid,
         bank_name: seedAr || seedEn || "New bank",
         bank_name_ar: seedAr || null,
         bank_name_en: seedEn || null,
         currency: form.currency,
-      })
-      .select()
-      .single();
-    if (error) return toast.error(error.message);
-    setBanks([...banks, data as Bank]);
+      });
+      setBanks([...banks, row]);
+    } catch (e: any) { toast.error(e?.message); }
   }
   async function updateBank(id: string, patch: Partial<Bank>) {
     const merged: Partial<Bank> = { ...patch };
@@ -850,17 +848,13 @@ function CustomerSheet({
       merged.branch = ar.trim() || en.trim() || null;
     }
     setBanks((prev) => prev.map((b) => (b.id === id ? { ...b, ...merged } : b)));
-    const { error } = await supabase.from("customer_banks").update(merged).eq("id", id);
-    if (error) toast.error(error.message);
+    try { await updateBankRow(id, merged as Record<string, unknown>); } catch (e: any) { toast.error(e?.message); }
   }
   async function deleteBank(id: string) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_banks").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", id);
-    if (error) return toast.error(error.message);
-    setBanks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await softDeleteBank(id);
+      setBanks((prev) => prev.filter((b) => b.id !== id));
+    } catch (e: any) { toast.error(e?.message); }
   }
 
   /* ------------- drafts (new customer) ------------- */
@@ -944,30 +938,21 @@ function CustomerSheet({
     }
     setUploadingAttach(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id!;
+      const uid = await requireUserId();
       const safeName = file.name.replace(/[^\w.\-]+/g, "_");
       const path = `${uid}/${customer.id}/${crypto.randomUUID()}_${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from(ATTACHMENT_BUCKET)
-        .upload(path, file, { contentType: file.type });
-      if (upErr) throw upErr;
-      const { data, error } = await supabase
-        .from("customer_attachments")
-        .insert({
-          customer_id: customer.id,
-          user_id: uid,
-          category: newAttachCategory,
-          label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
-          file_path: path,
-          file_name: file.name,
-          mime_type: file.type || null,
-          size_bytes: file.size,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      setAttachments((p) => [...p, data as Attachment]);
+      await uploadAttachmentFile(path, file);
+      const row = await insertAttachment<Attachment>({
+        customer_id: customer.id,
+        user_id: uid,
+        category: newAttachCategory,
+        label: newAttachCategory === "other" ? newAttachLabel.trim() : null,
+        file_path: path,
+        file_name: file.name,
+        mime_type: file.type || null,
+        size_bytes: file.size,
+      });
+      setAttachments((p) => [...p, row]);
       setNewAttachLabel("");
       toast.success(lang === "ar" ? "تم الرفع" : "Uploaded");
     } catch (err) {
@@ -978,24 +963,19 @@ function CustomerSheet({
   }
 
   async function downloadAttachment(a: Attachment) {
-    const { data, error } = await supabase.storage
-      .from(ATTACHMENT_BUCKET)
-      .createSignedUrl(a.file_path, 60);
-    if (error || !data?.signedUrl) {
-      toast.error(error?.message ?? "Error");
-      return;
+    try {
+      const url = await createAttachmentSignedUrl(a.file_path, 60);
+      window.open(url, "_blank");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Error");
     }
-    window.open(data.signedUrl, "_blank");
   }
 
   async function deleteAttachment(a: Attachment) {
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("customer_attachments").update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: u.user?.id ?? null,
-    }).eq("id", a.id);
-    if (error) return toast.error(error.message);
-    setAttachments((p) => p.filter((x) => x.id !== a.id));
+    try {
+      await softDeleteAttachment(a.id);
+      setAttachments((p) => p.filter((x) => x.id !== a.id));
+    } catch (e: any) { toast.error(e?.message); }
   }
 
   function removeDraftAttachment(key: string) {
