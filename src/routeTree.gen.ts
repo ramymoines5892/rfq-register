@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PendingRouteImport } from './routes/pending'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -28,6 +29,11 @@ import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings.appearance'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/pending': typeof PendingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/setup': typeof SetupRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/hr': typeof AuthenticatedHrRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/pending': typeof PendingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/setup': typeof SetupRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/hr': typeof AuthenticatedHrRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/pending': typeof PendingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/setup': typeof SetupRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/hr': typeof AuthenticatedHrRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/pending'
     | '/reset-password'
+    | '/setup'
     | '/customers'
     | '/hr'
     | '/settings'
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/pending'
     | '/reset-password'
+    | '/setup'
     | '/customers'
     | '/hr'
     | '/team'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/pending'
     | '/reset-password'
+    | '/setup'
     | '/_authenticated/customers'
     | '/_authenticated/hr'
     | '/_authenticated/settings'
@@ -249,10 +261,18 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PendingRoute: typeof PendingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -437,6 +457,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   PendingRoute: PendingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
