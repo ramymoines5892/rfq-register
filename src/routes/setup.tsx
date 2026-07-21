@@ -329,16 +329,27 @@ function SetupPage() {
     else setStep("welcome");
   }
 
-  function handleLogo(file: File) {
+  async function handleLogo(file: File) {
     if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
     if (file.size > 3 * 1024 * 1024) { toast.error(T("الحجم أكبر من 3MB", "File is larger than 3MB")); return; }
-    setLogoFile(file);
-    // Clear any previously uploaded URL — new pick replaces it and we defer upload to save.
-    setGeneral((g) => ({ ...g, logo_url: "" }));
+    setLogoUploading(true);
+    try {
+      const oldPath = logoPath;
+      const { path, url } = await uploadCompanyLogo(file);
+      setLogoPath(path);
+      setGeneral((g) => ({ ...g, logo_url: url }));
+      if (oldPath) void deleteCompanyLogo(oldPath);
+    } catch (e: any) {
+      toast.error(e?.message ?? T("فشل رفع اللوجو", "Failed to upload logo"));
+    } finally {
+      setLogoUploading(false);
+    }
   }
   function clearLogo() {
-    setLogoFile(null);
+    const p = logoPath;
+    setLogoPath(null);
     setGeneral((g) => ({ ...g, logo_url: "" }));
+    if (p) void deleteCompanyLogo(p);
   }
 
   async function submit() {
@@ -348,21 +359,8 @@ function SetupPage() {
       if (err) { toast.error(err); setStep(s as Step); return; }
     }
     try {
-      // Upload logo now (deferred from the wizard) if a new file was picked.
-      let logoUrl = general.logo_url ?? "";
-      if (logoFile) {
-        setLogoUploading(true);
-        try {
-          logoUrl = await uploadCompanyLogo(logoFile);
-        } catch (e: any) {
-          toast.error(e?.message ?? T("فشل رفع اللوجو", "Failed to upload logo"));
-          setLogoUploading(false);
-          return;
-        }
-        setLogoUploading(false);
-      }
       // Auto-generate company code if user hasn't set one
-      const payloadGeneral = { ...general, logo_url: logoUrl, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
+      const payloadGeneral = { ...general, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
       // Auto-align regional settings from country
       const c = getCountry(advanced.country ?? "EG");
       const payloadAdvanced = {
