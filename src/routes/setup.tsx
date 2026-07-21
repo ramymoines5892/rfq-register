@@ -12,7 +12,30 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw } from "lucide-react";
+import { useConfirm } from "@/hooks/useConfirm";
+
+const DRAFT_KEY = "eec.setup.draft.v1";
+
+type Draft = {
+  step: Step;
+  general: CompanyGeneral;
+  advanced: CompanyAdvanced;
+  features: CompanyFeatures;
+  numbering: NumberingRow[];
+};
+
+function loadDraft(): Draft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Draft;
+  } catch { return null; }
+}
+function clearDraft() {
+  if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
+}
 
 export const Route = createFileRoute("/setup")({
   beforeLoad: async () => {
