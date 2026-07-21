@@ -1731,17 +1731,22 @@ function DocumentsDialog({
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    setForm((prev) => ({ ...prev, file: f, file_name: f?.name ?? null, file_type: f?.type ?? null, file_data_url: null, has_file: !!f }));
-                  }}
+                  disabled={uploadingFile}
+                  onChange={(e) => { void handleFilePick(e.target.files?.[0] ?? null); }}
                 />
-                {form.file ? (
+                {uploadingFile ? (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {T("جارٍ رفع الملف…", "Uploading…")}
+                  </div>
+                ) : (form.storage_path || form.file_name) ? (
                   <div className="text-[11px] text-muted-foreground flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                       <Paperclip className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{form.file.name}</span>
-                      <span className="shrink-0">· {(form.file.size / 1024).toFixed(1)} KB</span>
+                      <span className="truncate">{form.file_name ?? T("ملف مرفوع", "Uploaded file")}</span>
+                      {form.file_size ? (
+                        <span className="shrink-0">· {(form.file_size / 1024).toFixed(1)} KB</span>
+                      ) : null}
                     </span>
                     <Button
                       type="button" variant="ghost" size="sm"
