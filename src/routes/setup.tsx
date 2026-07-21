@@ -314,6 +314,16 @@ function SetupPage() {
     4: numberingPct(numbering),
   }), [completion, advanced, features, numbering]);
 
+  // Sticky progress bar collapses to a slim floating pill on scroll
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 120);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+
 
   function validateStep(s: number): string | null {
     if (s === 1) {
@@ -603,35 +613,54 @@ function SetupPage() {
           </div>
         </nav>
 
-        {/* Per-step title + completion bar — visible on every step */}
+        {/* Per-step title + completion bar — sticky on every step, collapses on scroll */}
         {typeof step === "number" && (() => {
           const pct = stepPct[step as 1 | 2 | 3 | 4] ?? 0;
           const tone = pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-primary" : "bg-amber-500";
+          const TabIcon = currentTab?.icon;
           return (
-            <div className="bg-card border rounded-2xl px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 flex-wrap">
-              {currentTab && (
-                <div className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${pct >= 100 ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"}`}>
-                  <currentTab.icon className="h-5 w-5" />
+            <div className="sticky top-2 z-30 -mx-3 sm:-mx-4 px-3 sm:px-4">
+              {scrolled ? (
+                <div className="bg-background/95 backdrop-blur-md border rounded-full shadow-lg px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {TabIcon && (
+                    <div className={`h-7 w-7 rounded-full grid place-items-center shrink-0 ${pct >= 100 ? "bg-emerald-500/15 text-emerald-600" : "bg-primary/15 text-primary"}`}>
+                      <TabIcon className="h-3.5 w-3.5" />
+                    </div>
+                  )}
+                  <span className="text-xs font-semibold truncate min-w-0 flex-1">{currentTab?.label}</span>
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden min-w-[60px] max-w-[180px]">
+                    <div className={`h-full transition-all duration-500 ${tone}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="text-xs font-bold tabular-nums shrink-0">{pct}%</span>
+                </div>
+              ) : (
+                <div className="bg-card border rounded-2xl px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 flex-wrap shadow-sm">
+                  {TabIcon && (
+                    <div className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${pct >= 100 ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"}`}>
+                      <TabIcon className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {T("الخطوة", "Step")} {currentIdx}/4
+                    </div>
+                    <div className="text-sm sm:text-base font-semibold truncate">{currentTab?.label}</div>
+                  </div>
+                  <div className="min-w-[140px] sm:min-w-[200px] shrink-0">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="text-muted-foreground">{T("الاكتمال", "Completeness")}</span>
+                      <span className="font-semibold tabular-nums">{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full transition-all duration-500 ${tone}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  {T("الخطوة", "Step")} {currentIdx}/4
-                </div>
-                <div className="text-sm sm:text-base font-semibold truncate">{currentTab?.label}</div>
-              </div>
-              <div className="min-w-[140px] sm:min-w-[200px] shrink-0">
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-muted-foreground">{T("الاكتمال", "Completeness")}</span>
-                  <span className="font-semibold tabular-nums">{pct}%</span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-500 ${tone}`} style={{ width: `${pct}%` }} />
-                </div>
-              </div>
             </div>
           );
         })()}
+
 
         <Card className="border-border/60 shadow-sm">
           <CardContent className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8">
