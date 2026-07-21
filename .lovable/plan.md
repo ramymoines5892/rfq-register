@@ -1,102 +1,58 @@
-# خطة: First-Run Setup Wizard لإنشاء الشركة
+# ربط مميزات النظام بالسلوك الفعلي
 
-## الفكرة العامة
-أول ما حد يفتح البرنامج، لو مفيش أي شركة مسجلة في الداتا بيز، البرنامج بالكامل (Dashboard + Sidebar + كل الموديولز) يتقفل ويتحوّل المستخدم على شاشة ترحيب → Wizard لإنشاء أول شركة. بعد الإنشاء، الـ Wizard مايظهرش تاني إلا لو الجدول رجع فاضي.
+كلامك صح — حالياً المميزات مجرد Switches بتتخزن ومحدش بيقرأها. الخطة إننا نحوّلها لـ **Feature Flags حقيقية** تتحكم فى ظهور وإتاحة الموديولات فى كل النظام، مع نظام قابل للتوسّع بحيث كل ما نبنى موديول جديد بنسجّله فى مكان واحد.
 
-هنبني فوق اللي موجود من غير ما نلمس بنية `_authenticated` أو `profiles/user_roles`. الشركة هتكون Entity جديد (`companies`) + جداول مساعدة.
+## المبدأ
 
----
+المميزات = مفاتيح تشغيل فعلية. لما `multi_branch = false` مفيش صفحة فروع أصلاً، ولما `multi_currency = false` حقل العملة يختفى من كل الفواتير والعروض، وهكذا.
 
-## المرحلة 1 — Database (Migration واحدة)
+## الخطوات
 
-جداول جديدة (كلها RLS + GRANT حسب القواعد):
+### 1. مصدر واحد للمميزات (Feature Registry)
+ملف `src/lib/features/registry.ts` فيه لكل ميزة:
+- المفتاح، الاسم بالعربى/الإنجليزى، الوصف، الأيقونة، التصنيف (أساسى / تشغيلى / تتبع / مالى).
+- `depends_on`: مثلاً `heat_number` يحتاج `traceability`.
+- `affects`: قائمة الـ Routes والـ Components والحقول اللى تتأثر.
+- `default`: القيمة الافتراضية.
 
-- **`companies`**: الحقول الأساسية (name, name_ar, short_name, code UNIQUE, tax_no, cr_no, vat_no, email, phone, mobile, website, logo_url) + الحقول المتقدمة (country, city, state, postal_code, address, default_language, timezone, date_format, number_format, base_currency, fiscal_year_start, fiscal_year_end, gm_name, purchasing_manager, sales_manager, finance_manager, notes) + `is_active`, `created_by`.
-- **`company_features`**: `company_id` FK + toggle boolean لكل feature (multi_branch, multi_warehouse, multi_currency, approval_workflow, audit_log, inventory, procurement, sales, finance, quality, traceability, heat_number, lot_number, batch_control, attachments, e_signatures).
-- **`company_numbering`**: `company_id` FK + `doc_type` (RFQ/PO/QT/SO/INV/GRN) + `prefix`, `year_segment`, `padding`, `next_seq`.
-- **`branches`**: `company_id`, name, is_head_office. نعمل Insert تلقائي لـ "Head Office".
-- **`warehouses`**: `company_id`, `branch_id`, name, is_main. نعمل Insert تلقائي لـ "Main Warehouse".
+### 2. Hook مركزى `useFeature`
+`useFeature("multi_branch")` يرجع `boolean` بيقرأ من `company_features` الحالى (Cached فى TanStack Query).
+مع `<FeatureGate feature="multi_currency">...</FeatureGate>` لإخفاء أجزاء من الـ UI.
 
-Helper function: `public.has_any_company()` returns boolean (SECURITY DEFINER) عشان الـ client يعرف يعمل gate من غير ما يحتاج صلاحيات SELECT قبل تسجيل الدخول.
+### 3. حماية الـ Routes
+فى `_authenticated/route.tsx` نضيف `beforeLoad` guard: لو المستخدم دخل على `/branches` وهو مقفول، يتحوّل لصفحة "الميزة غير مفعّلة" مع زر "تفعيل".
 
-RLS: القراءة والتعديل للـ `authenticated` بس، والإنشاء الأول للـ owner/admin (أو أي authenticated لو مفيش شركات لسه — عشان أول مستخدم يقدر يعملها).
+### 4. ربط أول 6 مميزات فعلياً (Phase 1)
+| الميزة | التأثير الفعلى |
+|---|---|
+| `multi_branch` | صفحة الفروع تختفى من السايدبار، حقل "الفرع" يختفى من كل الفورمز |
+| `multi_warehouse` | صفحة المخازن + حقل "المخزن" فى المستندات |
+| `multi_currency` | حقل العملة يظهر فى العروض/الفواتير + جدول أسعار صرف |
+| `approval_workflow` | صفحة Workflow Templates + زر "طلب اعتماد" |
+| `audit_log` | صفحة سجل التدقيق + تفعيل التسجيل التلقائى |
+| `attachments` | زر رفع مرفقات على العملاء/العروض |
 
-Storage: هنستعمل bucket جديد `company-logos` (public read) لرفع اللوجو.
+باقى المميزات (quality, traceability, heat_number, e_signatures...) نسيبها مسجّلة فى الـ Registry لكن بدون Route فعلى لحد ما نبنيها — الـ Switch يفضل موجود لكن يتقفل ومكتوب "قريباً".
 
----
+### 5. صفحة إدارة المميزات بعد الـ Setup
+`/_authenticated/settings/features` — نفس مكونات الـ Setup Wizard، الأونر/الأدمن يقدر يفعّل ويعطّل فى أى وقت مع تحذير لو الميزة عليها بيانات (مثلاً عاوز تقفل multi_branch وعندك 3 فروع).
 
-## المرحلة 2 — Feature layer
+### 6. نمط قابل للتوسّع
+كل موديول جديد نبنيه لازم:
+1. يضيف نفسه فى `registry.ts`.
+2. يلف الـ Route بتاعه بـ `FeatureGate`.
+3. يستخدم `useFeature` لإخفاء حقوله المشروطة.
 
-`src/features/company/`:
-- `api.ts`: `hasAnyCompany()`, `fetchCompany()`, `createCompanyBundle(payload)` — يعمل insert للشركة + features + numbering + Head Office branch + Main Warehouse في transaction واحدة (server function).
-- `queries.ts`: `useHasAnyCompany()`, `useCurrentCompany()`, `useCreateCompany()` مع invalidation.
+بكده كل ما نبنى فى النظام، شاشة المميزات تتحدّث تلقائياً وتفضل مصدر الحقيقة الوحيد.
 
-نضيف `qk.company` في `queryKeys.ts`.
+## تفاصيل تقنية
 
----
+- **قاعدة البيانات**: `company_features` موجود بالفعل ومظبوط — بس هنضيف عمود `updated_by` و trigger يسجّل التغييرات فى `audit_logs`.
+- **Cache**: `useFeatures()` query بـ `staleTime: Infinity` وnvalidate عند التحديث فقط.
+- **Types**: نولّد `FeatureKey` union type تلقائياً من الـ Registry عشان الـ Typescript يمنع أى مفتاح غلط.
+- **SSR-safe**: القراءة من Client فقط (protected routes)، مفيش تأثير على SEO.
 
-## المرحلة 3 — Gating
+## اللى مش داخل فى الخطة دى
+- بناء الموديولات الناقصة نفسها (quality module, e-signatures...) — دى مشاريع منفصلة، بس البنية التحتية هتكون جاهزة لاستقبالها.
 
-- **Route جديد public**: `src/routes/setup.tsx` — شاشة الترحيب + الـ Wizard.
-- **تعديل `src/routes/_authenticated/route.tsx`**: بعد الـ auth check نستعلم عن `has_any_company`؛ لو false نعمل `redirect({ to: "/setup" })`.
-- **تعديل `src/routes/auth.tsx`**: بعد login ناجح، لو مفيش شركة يوديه على `/setup`.
-- `/setup` نفسها لو فيه شركة بالفعل تعمل redirect على `/`.
-
----
-
-## المرحلة 4 — الـ Wizard UI
-
-مكوّن واحد `SetupWizard` جوّه `/setup` بيبتدي بشاشة Welcome:
-- عنوان "Welcome to EEC ERP" + Description + زرار "Create Company" واحد بس.
-
-بعد الضغط يظهر Wizard بـ 4 tabs (Stepper بصري فوق):
-
-1. **General Information** — الحقول الأساسية + رفع لوجو (Upload لـ storage).
-2. **Advanced Information** — 5 secions (Address, Regional, Financial, Contacts, Notes) مع Selects للـ country/timezone/currency/language.
-3. **System Features** — grid toggles لكل feature (defaults كلها ON).
-4. **Document Numbering** — جدول قابل للتعديل لكل نوع مستند مع preview live (`RFQ-2026-000001`).
-
-Navigation: Back/Next + Progress indicator. Validation بـ zod لكل tab قبل الانتقال. الـ state محفوظ في `useState` (autosave في localStorage اختياري خفيف).
-
-في آخر tab زرار "Create Company" → يستدعي `useCreateCompany` → عند النجاح يعرض شاشة "Congratulations" + زرار "Go to Dashboard" → يوديه على `/` ويعمل invalidate لـ `has_any_company`.
-
----
-
-## المرحلة 5 — تعديلات على القائمة
-
-الاسم في الـ sidebar بيبقى من `companies.short_name` بدل الـ hardcode "Egyptian Europe" (fallback على "Egyptian Europe" لو مفيش قيمة).
-
----
-
-## Design
-- shadcn Card + Tabs + Input + Select + Switch + Button + Progress.
-- Layout Split screen للـ Welcome (يسار brand/gradient، يمين call-to-action).
-- Wizard في container max-w-4xl، Stepper أفقي فوق، محتوى الـ tab في Card.
-- كامل الدعم لـ RTL/AR-EN من `useI18n`.
-- Responsive: الـ tabs تتحول إلى Select على الموبايل.
-
----
-
-## الملفات اللي هتتعمل/تتعدل
-
-**جديد:**
-- Migration واحدة (companies + company_features + company_numbering + branches + warehouses + has_any_company + storage bucket policies)
-- `src/features/company/api.ts`
-- `src/features/company/queries.ts`
-- `src/routes/setup.tsx` (Welcome + Wizard)
-- `src/components/setup/SetupWizard.tsx` + مكونات فرعية للـ tabs الأربعة
-
-**تعديل:**
-- `src/features/_shared/queryKeys.ts` (إضافة `qk.company`)
-- `src/routes/_authenticated/route.tsx` (gate على has_any_company)
-- `src/routes/auth.tsx` (redirect بعد login)
-- `src/routes/_authenticated/route.tsx` (استخدام short_name في الـ sidebar)
-
----
-
-## ملاحظات
-- مش هنلمس أي شاشة تانية دلوقتي — بس الـ gate والـ wizard.
-- الـ Administrator account نفسه بيتعمل من خلال أول signup الموجود بالفعل (أول مستخدم = owner). الشركة بيربطها بـ `created_by = auth.uid()`.
-- ممكن في مراحل جاية نربط باقي الموديولز بـ `company_id` — دلوقتي مش هنكسر أي شيء موجود.
-
-هل نبدأ بالـ migration؟
+هل نبدأ بالتنفيذ كده، أو تحب نعدّل نطاق الـ Phase 1 (نضيف/نشيل مميزات)؟

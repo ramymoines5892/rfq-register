@@ -7,6 +7,8 @@ import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, B
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { useFeatures, isFeatureEnabled } from "@/features/features/queries";
+import { NAV_FEATURE } from "@/lib/features/registry";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -48,12 +50,19 @@ function AuthenticatedLayout() {
     })();
   }, []);
 
+  const { data: featureFlags } = useFeatures();
+  const canSee = (to: string) => {
+    const key = NAV_FEATURE[to];
+    if (!key) return true;
+    return featureFlags ? isFeatureEnabled(key, featureFlags) : false;
+  };
+
   const mainNav = [
     { to: "/", label: t("overview"), icon: LayoutDashboard, match: (p: string) => p === "/" },
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
     { to: "/documents", label: lang === "ar" ? "مستندات الشركة" : "Company Documents", icon: FolderArchive, match: (p: string) => p.startsWith("/documents") },
-  ];
+  ].filter((n) => canSee(n.to));
 
   const adminNav = [
     ...(isAdmin ? [
