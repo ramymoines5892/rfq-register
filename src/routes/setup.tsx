@@ -237,8 +237,8 @@ function SetupPage() {
     setAdvanced({
       country: "EG", city: "", state: "", postal_code: "", address: "",
       default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
-      base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
-      gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
+      base_currency: "EGP", fiscal_year_start: "2000-01-01", fiscal_year_end: "2000-12-31",
+      notes: "",
     });
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
