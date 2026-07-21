@@ -695,7 +695,7 @@ function MultiContactField({
 // ---------------- STEP 1 — General (CV-like layout, weighted progress) ----------------
 
 function StepGeneral({
-  general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, completion, weights, showErrors,
+  general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, logoPreview, clearLogo, completion, weights, showErrors,
   documents, setDocuments,
 }: {
   general: CompanyGeneral;
@@ -706,6 +706,8 @@ function StepGeneral({
   isAr: boolean;
   onLogoFile: (f: File) => void;
   logoUploading: boolean;
+  logoPreview: string | null;
+  clearLogo: () => void;
   completion: number;
   weights: Weight[];
   showErrors: boolean;
