@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2, Pin, PinOff } from "lucide-react";
+import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2, Pin, PinOff, FolderArchive } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
