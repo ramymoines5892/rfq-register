@@ -492,6 +492,27 @@ function SetupPage() {
 
 // ---------------- Reusable field with inline validation ----------------
 
+function SectionHeader({
+  n, title, T, right,
+}: {
+  n: number;
+  title: string;
+  T: (ar: string, en: string) => string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0 tabular-nums">
+          {n}
+        </div>
+        <h4 className="text-sm sm:text-base font-semibold tracking-tight truncate">{title}</h4>
+      </div>
+      {right}
+    </div>
+  );
+}
+
 function SmartField({
   label, icon: Icon, required, hint, error, children,
 }: {
