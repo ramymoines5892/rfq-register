@@ -21,12 +21,15 @@ import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPreset
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
+type PersistedDoc = Omit<SetupDocument, "file"> & { file_name?: string | null };
+
 type Draft = {
   step: Step;
   general: CompanyGeneral;
   advanced: CompanyAdvanced;
   features: CompanyFeatures;
   numbering: NumberingRow[];
+  documents: PersistedDoc[];
 };
 
 function loadDraft(): Draft | null {
