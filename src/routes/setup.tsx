@@ -166,6 +166,7 @@ function SetupPage() {
     });
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
+    setDocuments([]);
   }
 
   const isAr = lang === "ar";
