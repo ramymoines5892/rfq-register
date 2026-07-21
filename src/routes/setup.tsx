@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
@@ -12,7 +12,30 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw } from "lucide-react";
+import { useConfirm } from "@/hooks/useConfirm";
+
+const DRAFT_KEY = "eec.setup.draft.v1";
+
+type Draft = {
+  step: Step;
+  general: CompanyGeneral;
+  advanced: CompanyAdvanced;
+  features: CompanyFeatures;
+  numbering: NumberingRow[];
+};
+
+function loadDraft(): Draft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Draft;
+  } catch { return null; }
+}
+function clearDraft() {
+  if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
+}
 
 export const Route = createFileRoute("/setup")({
   beforeLoad: async () => {
@@ -48,22 +71,59 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
 function SetupPage() {
   const { lang, setLang, dir } = useI18n();
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("welcome");
+  const confirm = useConfirm();
   const createMut = useCreateCompany();
 
-  const [general, setGeneral] = useState<CompanyGeneral>({
+  const draftRef = useRef<Draft | null>(typeof window !== "undefined" ? loadDraft() : null);
+  const d = draftRef.current;
+
+  const [step, setStep] = useState<Step>(d?.step ?? "welcome");
+  const [general, setGeneral] = useState<CompanyGeneral>(d?.general ?? {
     name: "", name_ar: "", short_name: "", code: "",
     tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "",
   });
-  const [advanced, setAdvanced] = useState<CompanyAdvanced>({
+  const [advanced, setAdvanced] = useState<CompanyAdvanced>(d?.advanced ?? {
     country: "Egypt", city: "", state: "", postal_code: "", address: "",
     default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
     base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
     gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
   });
-  const [features, setFeatures] = useState<CompanyFeatures>(DEFAULT_FEATURES);
-  const [numbering, setNumbering] = useState<NumberingRow[]>(DEFAULT_NUMBERING);
+  const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
+  const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [logoUploading, setLogoUploading] = useState(false);
+
+  // Persist every change so a refresh/close returns to the exact same place.
+  useEffect(() => {
+    if (step === "done") return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, general, advanced, features, numbering }));
+    } catch { /* ignore quota errors */ }
+  }, [step, general, advanced, features, numbering]);
+
+  async function resetAll() {
+    const ok = await confirm({
+      title: lang === "ar" ? "البدء من جديد؟" : "Start over?",
+      description: lang === "ar"
+        ? "هيتم مسح كل البيانات اللى دخلتها فى المعالج."
+        : "All data entered in the wizard will be cleared.",
+      confirmText: lang === "ar" ? "نعم، ابدأ من جديد" : "Yes, start over",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    clearDraft();
+    setStep("welcome");
+    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "" });
+    setAdvanced({
+      country: "Egypt", city: "", state: "", postal_code: "", address: "",
+      default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
+      base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
+      gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
+    });
+    setFeatures(DEFAULT_FEATURES);
+    setNumbering(DEFAULT_NUMBERING);
+  }
+
+
 
   const isAr = lang === "ar";
   const T = (ar: string, en: string) => (isAr ? ar : en);
@@ -125,6 +185,7 @@ function SetupPage() {
     }
     try {
       await createMut.mutateAsync({ general, advanced, features, numbering });
+      clearDraft();
       setStep("done");
     } catch (e: any) {
       toast.error(e?.message ?? T("فشل إنشاء الشركة", "Failed to create company"));
@@ -170,10 +231,20 @@ function SetupPage() {
                    "No company has been configured yet. Before using the ERP system, create your first company.")}
               </p>
             </div>
-            <Button size="lg" className="w-full h-12 text-base" onClick={() => setStep(1)}>
-              {T("إنشاء الشركة", "Create Company")}
-              {isAr ? <ArrowLeft className="ms-2 h-5 w-5" /> : <ArrowRight className="ms-2 h-5 w-5" />}
-            </Button>
+            <div className="space-y-2">
+              <Button size="lg" className="w-full h-12 text-base" onClick={() => setStep(d ? (typeof d.step === "number" ? d.step : 1) : 1)}>
+                {d && typeof d.step === "number"
+                  ? T("متابعة الإعداد", "Continue Setup")
+                  : T("إنشاء الشركة", "Create Company")}
+                {isAr ? <ArrowLeft className="ms-2 h-5 w-5" /> : <ArrowRight className="ms-2 h-5 w-5" />}
+              </Button>
+              {d && typeof d.step === "number" && (
+                <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={resetAll}>
+                  <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+                  {T("البدء من جديد", "Start over")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -259,11 +330,17 @@ function SetupPage() {
         </Card>
 
         {/* Nav */}
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="outline" onClick={back} disabled={createMut.isPending}>
-            {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
-            {T("رجوع", "Back")}
-          </Button>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={back} disabled={createMut.isPending}>
+              {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
+              {T("رجوع", "Back")}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={resetAll} disabled={createMut.isPending} className="text-muted-foreground">
+              <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+              {T("البدء من جديد", "Start over")}
+            </Button>
+          </div>
           {currentIdx < 4 ? (
             <Button onClick={next}>
               {T("التالي", "Next")}
