@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt, FolderOpen, Plus, Trash2, Paperclip, CalendarDays, Info, Star, Printer } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt, FolderOpen, Plus, Trash2, Paperclip, CalendarDays, Info, Star, Printer, X } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
@@ -80,7 +80,7 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
 // weighted by usefulness, not by count. Landline / website are tiny weight.
 type Weight = { key: string; weight: number; filled: boolean; valid: boolean; required?: boolean };
 
-function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0): Weight[] {
+function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0, hasLogo: boolean = false): Weight[] {
   const c = getCountry(country);
   const nz = (s?: string | null) => (s ?? "").trim().length > 0;
   const primaryEmail = pickPrimary(g.emails) ?? g.email ?? "";
@@ -95,7 +95,7 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
     { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
     { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
     { key: "country", weight: 5,  filled: nz(country),      valid: nz(country),      required: true },
-    { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
+    { key: "logo",    weight: 10, filled: hasLogo || nz(g.logo_url), valid: hasLogo || nz(g.logo_url) },
     { key: "mobile",  weight: 12, filled: nz(primaryMobile),valid: nz(primaryMobile) && mobileV.ok },
     { key: "email",   weight: 8,  filled: nz(primaryEmail), valid: nz(primaryEmail) && emailV.ok },
     { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
@@ -133,6 +133,14 @@ function SetupPage() {
     (d?.documents ?? []).map((pd) => ({ ...pd, file: null } as SetupDocument)),
   );
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!logoFile) { setLogoPreview(null); return; }
+    const url = URL.createObjectURL(logoFile);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logoFile]);
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
@@ -185,8 +193,8 @@ function SetupPage() {
   const currentIdx = typeof step === "number" ? step : 0;
 
   const weights = useMemo(
-    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length),
-    [general, advanced.country, documents.length],
+    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length, !!logoFile),
+    [general, advanced.country, documents.length, logoFile],
   );
   const completion = useMemo(() => {
     const total = weights.reduce((a, w) => a + w.weight, 0);
@@ -251,19 +259,16 @@ function SetupPage() {
     else setStep("welcome");
   }
 
-  async function handleLogo(file: File) {
+  function handleLogo(file: File) {
     if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
     if (file.size > 3 * 1024 * 1024) { toast.error(T("الحجم أكبر من 3MB", "File is larger than 3MB")); return; }
-    setLogoUploading(true);
-    try {
-      const url = await uploadCompanyLogo(file);
-      setGeneral((g) => ({ ...g, logo_url: url }));
-      toast.success(T("تم رفع اللوجو", "Logo uploaded"));
-    } catch (e: any) {
-      toast.error(e?.message ?? T("فشل رفع اللوجو", "Upload failed"));
-    } finally {
-      setLogoUploading(false);
-    }
+    setLogoFile(file);
+    // Clear any previously uploaded URL — new pick replaces it and we defer upload to save.
+    setGeneral((g) => ({ ...g, logo_url: "" }));
+  }
+  function clearLogo() {
+    setLogoFile(null);
+    setGeneral((g) => ({ ...g, logo_url: "" }));
   }
 
   async function submit() {
@@ -273,8 +278,21 @@ function SetupPage() {
       if (err) { toast.error(err); setStep(s as Step); return; }
     }
     try {
+      // Upload logo now (deferred from the wizard) if a new file was picked.
+      let logoUrl = general.logo_url ?? "";
+      if (logoFile) {
+        setLogoUploading(true);
+        try {
+          logoUrl = await uploadCompanyLogo(logoFile);
+        } catch (e: any) {
+          toast.error(e?.message ?? T("فشل رفع اللوجو", "Failed to upload logo"));
+          setLogoUploading(false);
+          return;
+        }
+        setLogoUploading(false);
+      }
       // Auto-generate company code if user hasn't set one
-      const payloadGeneral = { ...general, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
+      const payloadGeneral = { ...general, logo_url: logoUrl, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
       // Auto-align regional settings from country
       const c = getCountry(advanced.country ?? "EG");
       const payloadAdvanced = {
@@ -443,7 +461,7 @@ function SetupPage() {
                   return { ...a, country: v, base_currency: c.currency, timezone: c.timezone };
                 })}
                 T={T} isAr={isAr}
-                onLogoFile={handleLogo} logoUploading={logoUploading}
+                onLogoFile={handleLogo} logoUploading={logoUploading} logoPreview={logoPreview} clearLogo={clearLogo}
                 completion={completion} weights={weights}
                 showErrors={showErrors}
                 documents={documents} setDocuments={setDocuments}
@@ -677,7 +695,7 @@ function MultiContactField({
 // ---------------- STEP 1 — General (CV-like layout, weighted progress) ----------------
 
 function StepGeneral({
-  general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, completion, weights, showErrors,
+  general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, logoPreview, clearLogo, completion, weights, showErrors,
   documents, setDocuments,
 }: {
   general: CompanyGeneral;
@@ -688,6 +706,8 @@ function StepGeneral({
   isAr: boolean;
   onLogoFile: (f: File) => void;
   logoUploading: boolean;
+  logoPreview: string | null;
+  clearLogo: () => void;
   completion: number;
   weights: Weight[];
   showErrors: boolean;
@@ -735,23 +755,37 @@ function StepGeneral({
         <SectionHeader n={1} title={T("الهوية والعلامة", "Identity & Branding")} T={T} />
         <div className="rounded-2xl border bg-gradient-to-br from-muted/40 to-transparent p-4 sm:p-6 md:p-8">
           <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)] md:gap-8 items-start">
-            <label className="relative group cursor-pointer justify-self-center md:justify-self-start">
-              <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
-                {logoUploading ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                ) : general.logo_url ? (
-                  <img src={general.logo_url} alt="logo" className="h-full w-full object-contain" />
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <ImagePlus className="h-7 w-7" />
-                    <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
-                  </div>
-                )}
-              </div>
-              <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors" />
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
-              <div className="mt-2 text-[11px] text-muted-foreground text-center">{T("انقر للتغيير", "Click to change")}</div>
-            </label>
+            <div className="relative justify-self-center md:justify-self-start">
+              <label className="relative group cursor-pointer block">
+                <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
+                  {logoUploading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (logoPreview || general.logo_url) ? (
+                    <img src={logoPreview || general.logo_url!} alt="logo" className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                      <ImagePlus className="h-7 w-7" />
+                      <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors pointer-events-none" />
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
+                <div className="mt-2 text-[11px] text-muted-foreground text-center">
+                  {(logoPreview || general.logo_url) ? T("انقر للتغيير", "Click to change") : T("انقر للرفع", "Click to upload")}
+                </div>
+              </label>
+              {(logoPreview || general.logo_url) && !logoUploading && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearLogo(); }}
+                  aria-label={T("حذف اللوجو", "Remove logo")}
+                  className="absolute -top-2 -end-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground shadow-lg grid place-items-center hover:scale-110 transition-transform"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2 min-w-0">
               <SmartField
@@ -1168,8 +1202,8 @@ function DocumentsDialog({
   isAr: boolean;
 }) {
   // Form state for adding / editing one document at a time
-  const emptyForm: SetupDocument & { customName?: string } = {
-    code: "CR",
+  const emptyForm: SetupDocument = {
+    code: "",
     name_ar: "",
     name_en: "",
     doc_number: "",
@@ -1177,11 +1211,10 @@ function DocumentsDialog({
     expiry_date: "",
     notes: "",
     file: null,
-    customName: "",
   };
-  const [form, setForm] = useState<SetupDocument & { customName?: string }>(emptyForm);
+  const [form, setForm] = useState<SetupDocument>(emptyForm);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [isCustom, setIsCustom] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-focus the first field (document type) whenever the dialog opens
   // or after a document is added/edited so the user can chain entries fast.
@@ -1195,16 +1228,10 @@ function DocumentsDialog({
   function resetForm() {
     setForm(emptyForm);
     setEditingIndex(null);
-    setIsCustom(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function pickPreset(code: string) {
-    if (code === "__custom__") {
-      setIsCustom(true);
-      setForm((f) => ({ ...f, code: "", name_ar: "", name_en: "", customName: "" }));
-      return;
-    }
-    setIsCustom(false);
     const preset = DOC_PRESETS.find((p) => p.code === code);
     if (!preset) return;
     setForm((f) => ({
@@ -1217,30 +1244,21 @@ function DocumentsDialog({
     }));
   }
 
+  function clearFile() {
+    setForm((f) => ({ ...f, file: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   function addOrUpdate() {
-    // Resolve name/code for custom
-    let name_ar = form.name_ar;
-    let name_en = form.name_en;
-    let code = form.code;
-    if (isCustom) {
-      const raw = (form.customName || "").trim();
-      if (!raw) {
-        toast.error(T("اكتب اسم المستند", "Enter the document name"));
-        return;
-      }
-      name_ar = raw;
-      name_en = raw;
-      code = slugifyCode(raw);
-    }
-    if (!code || !name_ar || !name_en) {
+    if (!form.code || !form.name_ar || !form.name_en) {
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
 
     const entry: SetupDocument = {
-      code,
-      name_ar,
-      name_en,
+      code: form.code,
+      name_ar: form.name_ar,
+      name_en: form.name_en,
       notify_days_before: form.notify_days_before,
       notify_repeat: form.notify_repeat,
       doc_number: form.doc_number?.trim() || null,
@@ -1266,13 +1284,8 @@ function DocumentsDialog({
 
   function edit(i: number) {
     const d = documents[i];
-    const preset = DOC_PRESETS.find((p) => p.code === d.code);
-    setIsCustom(!preset);
     setEditingIndex(i);
-    setForm({
-      ...d,
-      customName: preset ? "" : d.name_ar || d.name_en,
-    });
+    setForm({ ...d });
   }
 
   function remove(i: number) {
@@ -1345,7 +1358,7 @@ function DocumentsDialog({
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
-                <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
+                <Select value={form.code || undefined} onValueChange={pickPreset}>
                   <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
                   <SelectContent>
                     {DOC_PRESETS.map((p) => (
@@ -1357,22 +1370,13 @@ function DocumentsDialog({
                         {isAr ? p.name_ar : p.name_en}
                       </SelectItem>
                     ))}
-                    <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {T("تقدر تضيف أنواع إضافية بعد إنشاء الشركة من إعدادات «أنواع مستندات الشركة».",
+                     "You can add more types later from Settings › Company Document Types.")}
+                </p>
               </div>
-
-              {isCustom && (
-                <div className="space-y-1.5">
-                  <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={form.customName ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
-                    placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
-                    autoFocus
-                  />
-                </div>
-              )}
 
               <div className="space-y-1.5">
                 <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
@@ -1413,6 +1417,7 @@ function DocumentsDialog({
               <div className="space-y-1.5">
                 <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
                 <Input
+                  ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                   onChange={(e) => {
@@ -1421,8 +1426,15 @@ function DocumentsDialog({
                   }}
                 />
                 {form.file ? (
-                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
+                  <div className="text-[11px] text-muted-foreground flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 min-w-0 truncate">
+                      <Paperclip className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{form.file.name}</span>
+                      <span className="shrink-0">· {(form.file.size / 1024).toFixed(1)} KB</span>
+                    </span>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-destructive" onClick={clearFile}>
+                      <X className="h-3.5 w-3.5 me-1" />{T("إزالة", "Remove")}
+                    </Button>
                   </div>
                 ) : (
                   <div className="text-[11px] text-muted-foreground">
