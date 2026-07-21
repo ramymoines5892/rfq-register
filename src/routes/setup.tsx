@@ -185,6 +185,7 @@ function SetupPage() {
     }
     try {
       await createMut.mutateAsync({ general, advanced, features, numbering });
+      clearDraft();
       setStep("done");
     } catch (e: any) {
       toast.error(e?.message ?? T("فشل إنشاء الشركة", "Failed to create company"));
