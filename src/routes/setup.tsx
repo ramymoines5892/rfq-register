@@ -624,7 +624,7 @@ function StepGeneral({
   setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
 }) {
   const c = getCountry(country);
-  const set = <K extends keyof CompanyGeneral>(k: K) => (v: string) => setGeneral((g) => ({ ...g, [k]: v }));
+  const set = <K extends keyof CompanyGeneral>(k: K) => (v: CompanyGeneral[K]) => setGeneral((g) => ({ ...g, [k]: v }));
 
   // Live validations
   const webV = validateWebsite(general.website ?? "");
