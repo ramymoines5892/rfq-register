@@ -1133,14 +1133,18 @@ function Field({ label, children, hint }: { label: string; children: React.React
   );
 }
 
-function StepAdvanced({ advanced, setAdvanced, T }: any) {
-  const set = (k: keyof CompanyAdvanced) => (e: any) => setAdvanced((a: any) => ({ ...a, [k]: e?.target ? e.target.value : e }));
-  const Section = ({ title, children }: any) => (
+function AdvSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-foreground/80 uppercase tracking-wider">{title}</h4>
       <div className="grid md:grid-cols-2 gap-4">{children}</div>
     </div>
   );
+}
+
+function StepAdvanced({ advanced, setAdvanced, T }: any) {
+  const set = (k: keyof CompanyAdvanced) => (e: any) => setAdvanced((a: any) => ({ ...a, [k]: e?.target ? e.target.value : e }));
+  const Section = AdvSection;
 
   const country: string = advanced.country ?? "EG";
   const hasGeoData = hasGeo(country);
