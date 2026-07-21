@@ -62,11 +62,25 @@ export type NumberingRow = {
   next_seq: number;
 };
 
+export type SetupDocument = {
+  code: string;                 // preset code or slugified custom code
+  name_ar: string;
+  name_en: string;
+  notify_days_before?: number;
+  notify_repeat?: "none" | "daily" | "weekly" | "monthly";
+  doc_number?: string | null;
+  issue_date?: string | null;   // YYYY-MM-DD
+  expiry_date?: string | null;
+  notes?: string | null;
+  file?: File | null;           // in-memory; uploaded only on final save
+};
+
 export type CreateCompanyPayload = {
   general: CompanyGeneral;
   advanced: CompanyAdvanced;
   features: CompanyFeatures;
   numbering: NumberingRow[];
+  documents?: SetupDocument[];
 };
 
 export async function hasAnyCompany(): Promise<boolean> {
