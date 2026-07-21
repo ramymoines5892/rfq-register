@@ -161,5 +161,72 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
     });
   if (wErr) throw wErr;
 
+  // 6) Company documents (optional). Types are created on the fly and files
+  //    uploaded only now (setup deferred everything to this final save).
+  if (payload.documents?.length) {
+    for (const d of payload.documents) {
+      // Ensure a document type row exists for this company
+      const { data: existingType } = await supabase
+        .from("company_document_types")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("code", d.code)
+        .maybeSingle();
+      let typeId = existingType?.id as string | undefined;
+      if (!typeId) {
+        const { data: newType, error: tErr } = await supabase
+          .from("company_document_types")
+          .insert({
+            company_id: companyId,
+            code: d.code,
+            name_ar: d.name_ar,
+            name_en: d.name_en,
+            notify_days_before: d.notify_days_before ?? 45,
+            notify_repeat: d.notify_repeat ?? "weekly",
+            default_department_ids: [],
+            is_system: false,
+            position: 0,
+          })
+          .select("id")
+          .single();
+        if (tErr) throw tErr;
+        typeId = newType.id;
+      }
+
+      const { data: doc, error: dErr } = await supabase
+        .from("company_documents")
+        .insert({
+          company_id: companyId,
+          type_id: typeId!,
+          doc_number: d.doc_number ?? null,
+          issue_date: d.issue_date ?? null,
+          expiry_date: d.expiry_date ?? null,
+          notes: d.notes ?? null,
+          created_by: userId,
+        })
+        .select("id")
+        .single();
+      if (dErr) throw dErr;
+
+      if (d.file) {
+        const ext = d.file.name.split(".").pop() || "bin";
+        const path = `${doc.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("company-documents")
+          .upload(path, d.file, { cacheControl: "3600", upsert: false, contentType: d.file.type });
+        if (upErr) throw upErr;
+        const { error: fErr2 } = await supabase.from("company_document_files").insert({
+          document_id: doc.id,
+          storage_path: path,
+          file_name: d.file.name,
+          mime_type: d.file.type || null,
+          size_bytes: d.file.size,
+          uploaded_by: userId,
+        });
+        if (fErr2) throw fErr2;
+      }
+    }
+  }
+
   return company;
 }
