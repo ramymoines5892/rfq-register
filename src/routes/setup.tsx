@@ -1581,15 +1581,27 @@ function DocumentsDialog({
                   const label = isAr ? d.name_ar : d.name_en;
                   const details = [d.doc_number, d.issue_date, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
                     .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details");
+                  let expText: string | null = null;
+                  let expTone = "text-muted-foreground";
+                  if (d.expiry_date) {
+                    const dt = new Date(d.expiry_date + "T00:00:00");
+                    if (!isNaN(dt.getTime())) {
+                      const today = new Date(); today.setHours(0, 0, 0, 0);
+                      const n = Math.ceil((dt.getTime() - today.getTime()) / 86400000);
+                      if (n < 0) { expText = T(`منتهى -${Math.abs(n)}ي`, `exp -${Math.abs(n)}d`); expTone = "text-destructive font-semibold"; }
+                      else if (n === 0) { expText = T("ينتهى اليوم", "today"); expTone = "text-destructive font-semibold"; }
+                      else { expText = T(`${n} يوم`, `${n}d`); expTone = n <= 30 ? "text-amber-600 dark:text-amber-500 font-medium" : "text-emerald-600 dark:text-emerald-500"; }
+                    }
+                  }
                   return (
                     <div
                       key={i}
                       title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
-                      className={`group relative w-[76px] h-[76px] rounded-lg border bg-card hover:border-primary/60 hover:shadow-sm transition cursor-pointer flex flex-col items-center justify-center gap-1 p-1.5 ${editingIndex === i ? "border-primary ring-2 ring-primary/20 bg-primary/5" : ""}`}
+                      className={`group relative w-[76px] h-[76px] rounded-lg border bg-card hover:border-primary/60 hover:shadow-sm transition cursor-pointer flex flex-col items-center justify-center gap-0.5 p-1.5 ${editingIndex === i ? "border-primary ring-2 ring-primary/20 bg-primary/5" : ""}`}
                       onClick={() => edit(i)}
                     >
                       <div className="relative">
-                        <div className="h-8 w-8 rounded-md bg-primary/10 text-primary grid place-items-center">
+                        <div className="h-7 w-7 rounded-md bg-primary/10 text-primary grid place-items-center">
                           <FileText className="h-4 w-4" />
                         </div>
                         {d.file && (
@@ -1601,6 +1613,9 @@ function DocumentsDialog({
                       <div className="text-[10px] leading-tight text-center line-clamp-2 w-full px-0.5 text-foreground">
                         {label}
                       </div>
+                      {expText && (
+                        <div className={`text-[9px] truncate w-full text-center ${expTone}`}>{expText}</div>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); remove(i); }}
