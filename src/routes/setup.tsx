@@ -1310,123 +1310,139 @@ function DocumentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-5" dir={isAr ? "rtl" : "ltr"}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FolderOpen className="h-5 w-5 text-primary" />
-            {T("مستندات الشركة", "Company Documents")}
-          </DialogTitle>
-          <DialogDescription>
-            {T("اختر نوع المستند وأدخل بياناته. الملفات هيتم رفعها بس لما تحفظ الإعداد النهائى.",
-               "Choose a document type and enter its details. Files are uploaded only when you finish the setup wizard.")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Existing list */}
-        {documents.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {T("المستندات المضافة", "Added documents")}
-            </div>
-            <div className="border rounded-lg divide-y">
-              {documents.map((d, i) => (
-                <div key={i} className={`p-3 flex items-start gap-3 ${editingIndex === i ? "bg-primary/5" : ""}`}>
-                  <div className="h-9 w-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm">{isAr ? d.name_ar : d.name_en}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
-                      {[d.doc_number, d.issue_date, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
-                        .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details")}
-                    </div>
-                    {d.file ? (
-                      <Badge variant="secondary" className="mt-1 text-[10px]">
-                        <Paperclip className="h-2.5 w-2.5 me-1" />{d.file.name}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => edit(i)}>{T("تعديل", "Edit")}</Button>
-                    <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => remove(i)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] p-0 flex flex-col gap-0"
+        dir={isAr ? "rtl" : "ltr"}
+      >
+        {/* Sticky header + actions — always reachable regardless of scroll */}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-5 pt-5 pb-3 space-y-3">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-primary" />
+              {T("مستندات الشركة", "Company Documents")}
+            </DialogTitle>
+            <DialogDescription>
+              {T("اختر نوع المستند وأدخل بياناته. الملفات هيتم رفعها بس لما تحفظ الإعداد النهائى.",
+                 "Choose a document type and enter its details. Files upload only when you finish the setup wizard.")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-end gap-2">
+            {editingIndex !== null && (
+              <Button type="button" variant="ghost" size="sm" onClick={resetForm}>
+                {T("إلغاء التعديل", "Cancel edit")}
+              </Button>
+            )}
+            <Button type="button" size="sm" onClick={addOrUpdate}>
+              <Plus className="me-2 h-4 w-4" />
+              {editingIndex !== null ? T("حفظ التعديل", "Save changes") : T("إضافة للسته", "Add to list")}
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => { resetForm(); onOpenChange(false); }}>
+              {T("تم", "Done")}
+            </Button>
           </div>
-        )}
+        </div>
 
-        {/* Add / edit form */}
-        <div className="space-y-4 border-t pt-4">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {editingIndex !== null ? T("تعديل مستند", "Edit document") : T("إضافة مستند جديد", "Add a new document")}
-          </div>
-
-          <div className="space-y-4">
-            {/* Group 1 — What is it? */}
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
-                <Select value={form.code || undefined} onValueChange={pickPreset}>
-                  <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
-                  <SelectContent>
-                    {DOC_PRESETS.map((p) => (
-                      <SelectItem
-                        key={p.code}
-                        value={p.code}
-                        disabled={usedCodes.has(p.code)}
-                      >
-                        {isAr ? p.name_ar : p.name_en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-muted-foreground">
-                  {T("تقدر تضيف أنواع إضافية بعد إنشاء الشركة من إعدادات «أنواع مستندات الشركة».",
-                     "You can add more types later from Settings › Company Document Types.")}
-                </p>
+        <div className="overflow-y-auto px-5 py-4 space-y-5">
+          {/* Existing list */}
+          {documents.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {T("المستندات المضافة", "Added documents")}
               </div>
+              <div className="border rounded-lg divide-y">
+                {documents.map((d, i) => (
+                  <div key={i} className={`p-3 flex items-start gap-3 ${editingIndex === i ? "bg-primary/5" : ""}`}>
+                    <div className="h-9 w-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm">{isAr ? d.name_ar : d.name_en}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">
+                        {[d.doc_number, d.issue_date, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
+                          .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details")}
+                      </div>
+                      {d.file ? (
+                        <Badge variant="secondary" className="mt-1 text-[10px]">
+                          <Paperclip className="h-2.5 w-2.5 me-1" />{d.file.name}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button type="button" size="sm" variant="ghost" onClick={() => edit(i)}>{T("تعديل", "Edit")}</Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => remove(i)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
+          {/* Add / edit form */}
+          <div className="space-y-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {editingIndex !== null ? T("تعديل مستند", "Edit document") : T("إضافة مستند جديد", "Add a new document")}
+            </div>
+
+            {/* Type selector */}
+            <div className="space-y-1.5">
+              <Label className="text-sm">
+                {T("نوع المستند", "Document type")} <span className="text-destructive">*</span>
+              </Label>
+              <Select value={form.code || undefined} onValueChange={pickPreset}>
+                <SelectTrigger ref={firstInputRef}>
+                  <SelectValue placeholder={T("اختر نوع", "Choose type")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {DOC_PRESETS.map((p) => (
+                    <SelectItem key={p.code} value={p.code} disabled={usedCodes.has(p.code)}>
+                      {isAr ? p.name_ar : p.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Row 1 — number + dates side by side */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
                 <Input
                   dir="ltr"
                   value={form.doc_number ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
-                  placeholder={T("اختيارى", "Optional")}
                 />
               </div>
-            </div>
-
-            {/* Group 2 — Validity dates */}
-            <div className="grid grid-cols-2 gap-3 pt-1 border-t">
-              <div className="space-y-1.5 pt-3">
-                <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm flex items-center gap-1">
+                  <CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}
+                </Label>
                 <Input
                   type="date"
                   value={form.issue_date ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
                 />
               </div>
-              <div className="space-y-1.5 pt-3">
-                <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm flex items-center gap-1">
+                  <CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}
+                </Label>
                 <Input
                   type="date"
                   value={form.expiry_date ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
                 />
               </div>
-              <div className="col-span-2 text-[11px] text-muted-foreground -mt-1">
-                {T("لو حددت تاريخ انتهاء هيوصلك تنبيه قبله.", "Set an expiry to receive alerts before it.")}
-              </div>
             </div>
 
-            {/* Group 3 — File + notes */}
-            <div className="space-y-3 pt-3 border-t">
+            {/* Row 2 — file + notes side by side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
+                <Label className="text-sm flex items-center gap-1">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  {T("رفع المستند", "Upload file")} <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   ref={fileInputRef}
                   type="file"
@@ -1443,54 +1459,29 @@ function DocumentsDialog({
                       <span className="truncate">{form.file.name}</span>
                       <span className="shrink-0">· {(form.file.size / 1024).toFixed(1)} KB</span>
                     </span>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-destructive" onClick={clearFile}>
+                    <Button
+                      type="button" variant="ghost" size="sm"
+                      className="h-7 px-2 text-destructive" onClick={clearFile}
+                    >
                       <X className="h-3.5 w-3.5 me-1" />{T("إزالة", "Remove")}
                     </Button>
                   </div>
-                ) : (
-                  <div className="text-[11px] text-muted-foreground">
-                    {T("الملف بيترفع بس عند حفظ الإعداد النهائى.", "File uploads only when you finish the setup wizard.")}
-                  </div>
-                )}
+                ) : null}
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-sm">{T("ملاحظات", "Notes")}</Label>
                 <Textarea
-                  rows={2}
+                  rows={3}
                   value={form.notes ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  placeholder={T("اختيارى", "Optional")}
                 />
               </div>
             </div>
           </div>
-
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground flex items-start gap-2">
-            <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-            <span>
-              {T("بعد إنشاء الشركة وإضافة الأقسام، تقدر تحدد الأقسام أو الأشخاص المسئولين عن كل نوع مستند من صفحة إعدادات «أنواع مستندات الشركة» — والتنبيهات هتوصلهم لوحدهم عند قرب انتهاء الصلاحية.",
-                 "Once the company is created and departments are set up, you can pick which departments (or people) are responsible for each document type from Settings › Company Document Types — expiry notifications go to them automatically.")}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            {editingIndex !== null && (
-              <Button type="button" variant="ghost" onClick={resetForm}>{T("إلغاء التعديل", "Cancel edit")}</Button>
-            )}
-            <Button type="button" onClick={addOrUpdate}>
-              <Plus className="me-2 h-4 w-4" />
-              {editingIndex !== null ? T("حفظ التعديل", "Save changes") : T("إضافة للسته", "Add to list")}
-            </Button>
-          </div>
         </div>
-
-        <DialogFooter className="border-t pt-4">
-          <Button type="button" onClick={() => { resetForm(); onOpenChange(false); }}>
-            {T("تم", "Done")}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
