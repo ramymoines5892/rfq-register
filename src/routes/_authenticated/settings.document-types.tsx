@@ -146,8 +146,8 @@ function DocumentTypesPage() {
           } catch (e) { toast.error((e as Error).message); }
         }}
       />
-      <ConfirmDialog />
     </div>
+
   );
 }
 
