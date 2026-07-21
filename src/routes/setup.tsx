@@ -795,7 +795,7 @@ function StepGeneral({
                 hint={T("هيظهر فى التقارير الإنجليزى", "Used in English reports")}
                 error={reqErr(general.name, "الاسم الإنجليزى مطلوب", "English name is required")}
               >
-                <Input dir="ltr" className="h-11" value={general.name} onChange={(e) => set("name")(e.target.value)} autoFocus placeholder="Egyptian Europe Company" />
+                <Input dir="ltr" className="h-11" value={general.name} onChange={(e) => set("name")(filterEnglish(e.target.value))} autoFocus placeholder="Egyptian Europe Company" />
               </SmartField>
               <SmartField
                 label={T("الاسم بالعربى", "Company Name (Arabic)")}
