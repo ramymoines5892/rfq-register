@@ -52,7 +52,9 @@ function AuthenticatedLayout() {
     { to: "/", label: t("overview"), icon: LayoutDashboard, match: (p: string) => p === "/" },
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
+    { to: "/documents", label: lang === "ar" ? "مستندات الشركة" : "Company Documents", icon: FolderArchive, match: (p: string) => p.startsWith("/documents") },
   ];
+
   const adminNav = [
     ...(isAdmin ? [
       { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },
