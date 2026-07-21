@@ -1444,6 +1444,8 @@ function DocumentsDialog({
   }, [open, editingIndex]);
 
 
+  const [uploadingFile, setUploadingFile] = useState(false);
+
   function resetForm() {
     setForm(emptyForm);
     setEditingIndex(null);
@@ -1463,9 +1465,41 @@ function DocumentsDialog({
     }));
   }
 
+  async function handleFilePick(f: File | null) {
+    if (!f) return;
+    if (f.size > 15 * 1024 * 1024) {
+      toast.error(T("الحجم أكبر من 15MB", "File is larger than 15MB"));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    setUploadingFile(true);
+    try {
+      const oldPath = form.storage_path;
+      const { path, url } = await uploadCompanyDocumentDraft(f);
+      setForm((prev) => ({
+        ...prev,
+        file: null,
+        storage_path: path,
+        file_name: f.name,
+        file_type: f.type,
+        file_size: f.size,
+        file_data_url: url, // signed URL kept only in memory for preview
+        has_file: true,
+      }));
+      if (oldPath && oldPath !== path) void deleteCompanyDocumentDraft(oldPath);
+    } catch (e: any) {
+      toast.error(e?.message ?? T("فشل رفع الملف", "Failed to upload the file"));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
   function clearFile() {
-    setForm((f) => ({ ...f, file: null, file_name: null, file_type: null, file_data_url: null, has_file: false }));
+    const p = form.storage_path;
+    setForm((f) => ({ ...f, file: null, file_name: null, file_type: null, file_size: null, file_data_url: null, storage_path: null, has_file: false }));
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (p) void deleteCompanyDocumentDraft(p);
   }
 
   async function addOrUpdate() {
@@ -1473,25 +1507,15 @@ function DocumentsDialog({
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
-    const existingFile =
-      editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
-    const existingFileName =
-      editingIndex !== null ? documents[editingIndex]?.file_name ?? null : null;
-    const existingFileDataUrl =
-      editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null;
-    const keepsExistingFile = form.has_file !== false;
-    const hasExistingFile =
-      editingIndex !== null && keepsExistingFile && (!!existingFile || !!existingFileDataUrl);
-    const effectiveFile = form.file ?? existingFile;
-    if (!effectiveFile && !hasExistingFile) {
+    if (uploadingFile) {
+      toast.error(T("جارٍ رفع الملف…", "File is still uploading…"));
+      return;
+    }
+    const hasFile = !!form.storage_path || !!form.has_file;
+    if (!hasFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
       return;
     }
-
-    const effectiveFileDataUrl = effectiveFile
-      ? form.file_data_url ?? await fileToDataUrl(effectiveFile).catch(() => null)
-      : keepsExistingFile ? form.file_data_url ?? existingFileDataUrl : null;
-
 
     const entry: SetupDocument = {
       code: form.code,
@@ -1503,11 +1527,13 @@ function DocumentsDialog({
       issue_date: form.issue_date || null,
       expiry_date: form.expiry_date || null,
       notes: form.notes?.trim() || null,
-      file: effectiveFile,
-      file_name: effectiveFile?.name ?? form.file_name ?? existingFileName ?? null,
-      file_type: effectiveFile?.type ?? form.file_type ?? (editingIndex !== null ? documents[editingIndex]?.file_type ?? null : null),
-      file_data_url: effectiveFileDataUrl,
-      has_file: !!effectiveFile || hasExistingFile,
+      file: null,
+      file_name: form.file_name ?? null,
+      file_type: form.file_type ?? null,
+      file_size: form.file_size ?? null,
+      file_data_url: form.file_data_url ?? null,
+      storage_path: form.storage_path ?? null,
+      has_file: hasFile,
     };
 
     setDocuments((prev) => {
@@ -1531,6 +1557,8 @@ function DocumentsDialog({
   }
 
   function remove(i: number) {
+    const doc = documents[i];
+    if (doc?.storage_path) void deleteCompanyDocumentDraft(doc.storage_path);
     setDocuments((prev) => prev.filter((_, idx) => idx !== i));
     if (editingIndex === i) resetForm();
   }
