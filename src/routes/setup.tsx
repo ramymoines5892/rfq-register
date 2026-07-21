@@ -1297,48 +1297,216 @@ function StepFeatures({ features, setFeatures, T }: any) {
   );
 }
 
-function StepNumbering({ numbering, setNumbering, T }: any) {
+// Bilingual labels for well-known document type codes. Code stays English
+// everywhere; the label is only for display when the UI language is Arabic.
+const DOC_TYPE_LABELS: Record<string, { ar: string; en: string }> = {
+  RFQ: { ar: "طلب عرض سعر", en: "Request for Quotation" },
+  QT:  { ar: "عرض سعر",     en: "Quotation" },
+  PO:  { ar: "أمر توريد",   en: "Purchase Order" },
+  SO:  { ar: "أمر بيع",     en: "Sales Order" },
+  INV: { ar: "فاتورة",      en: "Invoice" },
+  GRN: { ar: "إذن استلام",  en: "Goods Receipt Note" },
+  DN:  { ar: "إذن تسليم",   en: "Delivery Note" },
+  CN:  { ar: "إشعار دائن",  en: "Credit Note" },
+  DBN: { ar: "إشعار مدين",  en: "Debit Note" },
+  JV:  { ar: "قيد يومية",   en: "Journal Voucher" },
+  PV:  { ar: "سند صرف",     en: "Payment Voucher" },
+  RV:  { ar: "سند قبض",     en: "Receipt Voucher" },
+};
+
+function docTypeLabel(code: string, isAr: boolean): string {
+  const l = DOC_TYPE_LABELS[code.toUpperCase()];
+  if (!l) return code;
+  return isAr ? l.ar : l.en;
+}
+
+function StepNumbering({
+  numbering, setNumbering, T, isAr,
+}: {
+  numbering: NumberingRow[];
+  setNumbering: React.Dispatch<React.SetStateAction<NumberingRow[]>>;
+  T: (ar: string, en: string) => string;
+  isAr: boolean;
+}) {
   const year = new Date().getFullYear();
   const preview = (r: NumberingRow) =>
     `${r.prefix}${r.year_segment ? `-${year}` : ""}-${String(r.next_seq).padStart(r.padding, "0")}`;
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newPrefix, setNewPrefix] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+
+  const takenTypes = new Set(numbering.map((n) => n.doc_type.toUpperCase()));
+  const takenPrefixes = new Set(numbering.map((n) => n.prefix.toUpperCase()));
+
+  function addRow() {
+    const code = newCode.trim().toUpperCase();
+    const pref = (newPrefix.trim() || code).toUpperCase();
+    if (!code) return toast.error(T("النوع مطلوب", "Type is required"));
+    if (!/^[A-Z0-9_-]+$/.test(code)) return toast.error(T("النوع لازم يكون إنجليزى", "Type must be English"));
+    if (!/^[A-Z0-9_-]+$/.test(pref)) return toast.error(T("البادئة لازم تكون إنجليزى", "Prefix must be English"));
+    if (takenTypes.has(code)) return toast.error(T("النوع موجود بالفعل", "Type already exists"));
+    if (takenPrefixes.has(pref)) return toast.error(T("البادئة مستخدمة", "Prefix already used"));
+    setNumbering((prev) => [...prev, { doc_type: code, prefix: pref, year_segment: true, padding: 6, next_seq: 1 }]);
+    setNewCode(""); setNewPrefix(""); setAddOpen(false);
+  }
+
+  function removeRow(idx: number) {
+    setNumbering((prev) => prev.filter((_, i) => i !== idx));
+    setConfirmDelete(null);
+  }
+
+  // Suggest quick-add chips for common codes the user hasn't used yet.
+  const suggestions = Object.keys(DOC_TYPE_LABELS).filter((c) => !takenTypes.has(c));
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">{T("ترقيم المستندات", "Document Numbering")}</h3>
-        <p className="text-sm text-muted-foreground">{T("خصّص صيغة ترقيم كل نوع مستند.", "Customize numbering format for each document type.")}</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="text-lg font-semibold">{T("ترقيم المستندات", "Document Numbering")}</h3>
+          <p className="text-sm text-muted-foreground">{T("خصّص صيغة ترقيم كل نوع مستند. الأكواد والبادئة بالإنجليزى دايمًا.", "Customize numbering for each document type. Codes and prefixes are always English.")}</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="h-4 w-4 me-1.5" /> {T("إضافة نوع", "Add type")}
+        </Button>
       </div>
+
       <div className="space-y-3">
-        {numbering.map((row: NumberingRow, i: number) => {
+        {numbering.map((row, i) => {
           const upd = (patch: Partial<NumberingRow>) =>
-            setNumbering((prev: NumberingRow[]) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+            setNumbering((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+          const label = docTypeLabel(row.doc_type, isAr);
+          const dupPrefix = numbering.filter((n) => n.prefix.trim().toUpperCase() === row.prefix.trim().toUpperCase()).length > 1;
           return (
-            <div key={row.doc_type} className="border rounded-xl p-4 grid md:grid-cols-12 gap-3 items-end">
-              <div className="md:col-span-2">
+            <div key={`${row.doc_type}-${i}`} className="border rounded-xl p-4 grid md:grid-cols-12 gap-3 items-end bg-card/50">
+              <div className="md:col-span-3">
                 <Label className="text-xs text-muted-foreground">{T("النوع", "Type")}</Label>
-                <div className="mt-1 h-9 grid place-items-center bg-muted rounded-md font-mono text-sm font-medium">{row.doc_type}</div>
+                <div className="mt-1 h-9 px-3 flex items-center justify-between gap-2 bg-muted rounded-md">
+                  <span className="text-sm font-medium truncate">{label}</span>
+                  <Badge variant="secondary" className="font-mono text-[10px] shrink-0">{row.doc_type}</Badge>
+                </div>
               </div>
               <div className="md:col-span-2">
-                <Field label={T("البادئة", "Prefix")}><Input value={row.prefix} onChange={(e) => upd({ prefix: e.target.value.toUpperCase() })} /></Field>
+                <Field label={T("البادئة", "Prefix")}>
+                  <ScriptInput
+                    script="en"
+                    isAr={isAr}
+                    value={row.prefix}
+                    onChange={(v) => upd({ prefix: v.toUpperCase().replace(/[^A-Z0-9_-]/g, "") })}
+                    maxLength={8}
+                    className={dupPrefix ? "border-destructive" : ""}
+                  />
+                </Field>
               </div>
               <div className="md:col-span-2">
                 <Field label={T("خانات الرقم", "Padding")}>
-                  <Input type="number" min={1} max={12} value={row.padding} onChange={(e) => upd({ padding: Math.max(1, Number(e.target.value) || 1) })} />
+                  <Input type="number" min={1} max={12} value={row.padding} onChange={(e) => upd({ padding: Math.max(1, Math.min(12, Number(e.target.value) || 1)) })} />
                 </Field>
               </div>
               <div className="md:col-span-2 flex items-center gap-2 h-9 mt-6">
                 <Switch checked={row.year_segment} onCheckedChange={(c) => upd({ year_segment: c })} />
                 <span className="text-sm">{T("إظهار السنة", "Include year")}</span>
               </div>
-              <div className="md:col-span-4">
+              <div className="md:col-span-2">
                 <Label className="text-xs text-muted-foreground">{T("معاينة", "Preview")}</Label>
-                <div className="mt-1 h-9 px-3 grid items-center bg-primary/5 border border-primary/20 rounded-md font-mono text-sm text-primary">
+                <div className="mt-1 h-9 px-3 grid items-center bg-primary/5 border border-primary/20 rounded-md font-mono text-sm text-primary" dir="ltr">
                   {preview(row)}
                 </div>
+              </div>
+              <div className="md:col-span-1 flex md:justify-end">
+                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => setConfirmDelete(i)} aria-label={T("حذف", "Delete")}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           );
         })}
+        {numbering.length === 0 && (
+          <div className="border border-dashed rounded-xl p-8 text-center text-sm text-muted-foreground">
+            {T("لا توجد أنواع مستندات. اضغط \"إضافة نوع\" للبدء.", "No document types yet. Click \"Add type\" to start.")}
+          </div>
+        )}
       </div>
+
+      {/* Add type dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{T("إضافة نوع مستند", "Add document type")}</DialogTitle>
+            <DialogDescription>{T("الكود والبادئة لازم يكونوا إنجليزى.", "Code and prefix must be English.")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {suggestions.length > 0 && (
+              <div>
+                <Label className="text-xs text-muted-foreground">{T("اقتراحات سريعة", "Quick suggestions")}</Label>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {suggestions.map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => { setNewCode(code); setNewPrefix(code); }}
+                      className="text-xs px-2.5 py-1 rounded-full border hover:bg-muted transition-colors"
+                    >
+                      <span className="font-mono me-1.5">{code}</span>
+                      <span className="text-muted-foreground">{docTypeLabel(code, isAr)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Field label={T("الكود (إنجليزى)", "Code (English)")}>
+              <ScriptInput
+                script="en" isAr={isAr} autoFocus
+                value={newCode}
+                onChange={(v) => {
+                  const up = v.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+                  setNewCode(up);
+                  if (!newPrefix || newPrefix === newCode) setNewPrefix(up);
+                }}
+                placeholder="e.g. RFQ"
+                maxLength={8}
+              />
+              {newCode && DOC_TYPE_LABELS[newCode] && (
+                <p className="text-xs text-muted-foreground mt-1">{docTypeLabel(newCode, isAr)}</p>
+              )}
+            </Field>
+            <Field label={T("البادئة", "Prefix")}>
+              <ScriptInput
+                script="en" isAr={isAr}
+                value={newPrefix}
+                onChange={(v) => setNewPrefix(v.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+                placeholder={newCode || "e.g. RFQ"}
+                maxLength={8}
+              />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>{T("إلغاء", "Cancel")}</Button>
+            <Button onClick={addRow}>{T("إضافة", "Add")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm delete */}
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{T("حذف نوع المستند؟", "Delete document type?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete !== null && numbering[confirmDelete] &&
+                T(`سيتم حذف "${docTypeLabel(numbering[confirmDelete].doc_type, true)}" من إعدادات الترقيم.`,
+                  `"${docTypeLabel(numbering[confirmDelete].doc_type, false)}" will be removed from numbering settings.`)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{T("إلغاء", "Cancel")}</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => confirmDelete !== null && removeRow(confirmDelete)}>
+              {T("حذف", "Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
