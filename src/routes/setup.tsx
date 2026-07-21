@@ -1371,8 +1371,12 @@ function DocumentsDialog({
     }
     const existingFile =
       editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
+    const existingFileName =
+      editingIndex !== null ? documents[editingIndex]?.file_name ?? null : null;
+    const hasExistingFile =
+      editingIndex !== null && (!!existingFile || !!documents[editingIndex]?.has_file || !!existingFileName);
     const effectiveFile = form.file ?? existingFile;
-    if (!effectiveFile) {
+    if (!effectiveFile && !hasExistingFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
       return;
     }
@@ -1389,6 +1393,8 @@ function DocumentsDialog({
       expiry_date: form.expiry_date || null,
       notes: form.notes?.trim() || null,
       file: effectiveFile,
+      file_name: effectiveFile?.name ?? form.file_name ?? existingFileName ?? null,
+      has_file: !!effectiveFile || hasExistingFile,
     };
 
     setDocuments((prev) => {
