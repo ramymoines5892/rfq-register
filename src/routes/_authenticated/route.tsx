@@ -199,7 +199,7 @@ function AuthenticatedLayout() {
       <div className="md:hidden fixed top-0 inset-x-0 z-20 h-14 bg-sidebar text-sidebar-foreground flex items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
           <Gem className="h-5 w-5 text-sidebar-primary" />
-          <span className="font-display font-bold text-sm">CoreSuite</span>
+          <span className="font-display font-bold text-sm">Egyptian Europe</span>
         </div>
         <div className="flex items-center gap-1">
           {[...mainNav, ...adminNav].map((n) => {
