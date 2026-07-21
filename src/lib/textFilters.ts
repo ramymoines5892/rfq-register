@@ -18,3 +18,12 @@ export function filterEnglish(input: string): string {
     .filter((ch) => LATIN.test(ch) || SHARED.test(ch))
     .join("");
 }
+
+// Detect characters that don't belong to the target script.
+export function hasNonArabic(input: string): boolean {
+  return Array.from(input ?? "").some((ch) => LATIN.test(ch));
+}
+export function hasNonEnglish(input: string): boolean {
+  return Array.from(input ?? "").some((ch) => ARABIC.test(ch));
+}
+
