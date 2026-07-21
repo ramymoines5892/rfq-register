@@ -113,6 +113,9 @@ export type Database = {
           date_format: string | null
           default_language: string | null
           email: string | null
+          emails: Json
+          fax: string | null
+          faxes: Json
           finance_manager: string | null
           fiscal_year_end: string | null
           fiscal_year_start: string | null
@@ -121,11 +124,13 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           mobile: string | null
+          mobiles: Json
           name: string
           name_ar: string | null
           notes: string | null
           number_format: string | null
           phone: string | null
+          phones: Json
           postal_code: string | null
           purchasing_manager: string | null
           sales_manager: string | null
@@ -149,6 +154,9 @@ export type Database = {
           date_format?: string | null
           default_language?: string | null
           email?: string | null
+          emails?: Json
+          fax?: string | null
+          faxes?: Json
           finance_manager?: string | null
           fiscal_year_end?: string | null
           fiscal_year_start?: string | null
@@ -157,11 +165,13 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           mobile?: string | null
+          mobiles?: Json
           name: string
           name_ar?: string | null
           notes?: string | null
           number_format?: string | null
           phone?: string | null
+          phones?: Json
           postal_code?: string | null
           purchasing_manager?: string | null
           sales_manager?: string | null
@@ -185,6 +195,9 @@ export type Database = {
           date_format?: string | null
           default_language?: string | null
           email?: string | null
+          emails?: Json
+          fax?: string | null
+          faxes?: Json
           finance_manager?: string | null
           fiscal_year_end?: string | null
           fiscal_year_start?: string | null
@@ -193,11 +206,13 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           mobile?: string | null
+          mobiles?: Json
           name?: string
           name_ar?: string | null
           notes?: string | null
           number_format?: string | null
           phone?: string | null
+          phones?: Json
           postal_code?: string | null
           purchasing_manager?: string | null
           sales_manager?: string | null
