@@ -1272,19 +1272,21 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
 
       <Section title={T("الإعدادات المالية", "Financial Settings")}>
         <Field label={T("العملة الأساسية", "Base Currency")}>
-          <Select value={advanced.base_currency ?? "EGP"} onValueChange={(v) => set("base_currency")(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="EGP">EGP - جنيه مصري</SelectItem>
-              <SelectItem value="USD">USD - US Dollar</SelectItem>
-              <SelectItem value="EUR">EUR - Euro</SelectItem>
-              <SelectItem value="GBP">GBP - British Pound</SelectItem>
-              <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
-              <SelectItem value="AED">AED - UAE Dirham</SelectItem>
-              <SelectItem value="KWD">KWD - Kuwaiti Dinar</SelectItem>
-              <SelectItem value="QAR">QAR - Qatari Riyal</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={advanced.base_currency ?? "EGP"} onValueChange={(v) => set("base_currency")(v)}
+            searchPlaceholder={T("ابحث…", "Search…")}
+            emptyText={T("لا توجد نتائج", "No results")}
+            options={[
+              { value: "EGP", label: "EGP - جنيه مصري", keywords: "egyptian pound" },
+              { value: "USD", label: "USD - US Dollar", keywords: "dollar" },
+              { value: "EUR", label: "EUR - Euro", keywords: "euro" },
+              { value: "GBP", label: "GBP - British Pound", keywords: "sterling" },
+              { value: "SAR", label: "SAR - Saudi Riyal", keywords: "ريال سعودي" },
+              { value: "AED", label: "AED - UAE Dirham", keywords: "درهم إماراتي" },
+              { value: "KWD", label: "KWD - Kuwaiti Dinar", keywords: "دينار كويتي" },
+              { value: "QAR", label: "QAR - Qatari Riyal", keywords: "ريال قطري" },
+            ]}
+          />
         </Field>
         <div />
         <Field label={T("بداية السنة المالية (يوم/شهر)", "Fiscal Year Start (day/month)")}>
