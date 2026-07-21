@@ -605,13 +605,26 @@ function SetupPage() {
                   <span className="truncate">{stepErr}</span>
                 </div>
               )}
+              {currentIdx === 4 && !stepErr && submitBlockError && (
+                <button
+                  type="button"
+                  onClick={() => goToStep(submitBlockError.s as 1 | 2 | 3 | 4)}
+                  className="text-[11px] text-destructive flex items-center gap-1 max-w-[260px] truncate hover:underline"
+                  title={submitBlockError.err ?? undefined}
+                >
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    {T(`الخطوة ${submitBlockError.s}: `, `Step ${submitBlockError.s}: `)}{submitBlockError.err}
+                  </span>
+                </button>
+              )}
               {currentIdx < 4 ? (
                 <Button onClick={next} className="h-10 min-w-[110px]" disabled={createMut.isPending}>
                   {T("التالي", "Next")}
                   {isAr ? <ArrowLeft className="ms-2 h-4 w-4" /> : <ArrowRight className="ms-2 h-4 w-4" />}
                 </Button>
               ) : (
-                <Button onClick={submit} disabled={createMut.isPending || !canProceed} className="h-10 min-w-[140px]">
+                <Button onClick={submit} disabled={createMut.isPending || !allStepsValid} className="h-10 min-w-[140px]">
                   {createMut.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                   {T("إنشاء الشركة", "Create Company")}
                 </Button>
