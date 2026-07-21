@@ -339,6 +339,17 @@ function SetupPage() {
     if (currentIdx > 1) setStep((currentIdx - 1) as Step);
     else setStep("welcome");
   }
+  // Jump to a specific step. Going back or to the current step is always
+  // allowed; jumping forward requires every intermediate step to be valid.
+  function goToStep(target: 1 | 2 | 3 | 4) {
+    if (target <= currentIdx) { setStep(target); return; }
+    for (let s = currentIdx; s < target; s += 1) {
+      const err = validateStep(s);
+      if (err) { setShowErrors(true); setStep(s as Step); toast.error(err); return; }
+    }
+    setShowErrors(false);
+    setStep(target);
+  }
 
   async function handleLogo(file: File) {
     if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
@@ -471,6 +482,18 @@ function SetupPage() {
 
   const stepErr = validateStep(currentIdx);
   const canProceed = !stepErr;
+  // The "Create Company" button is only enabled when EVERY step is valid,
+  // so the user can't sneak in with missing required data by skipping tabs.
+  const allStepsValid = useMemo(
+    () => [1, 2, 3, 4].every((s) => validateStep(s) === null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [general, advanced, features, numbering, documents, requiredMissing.length],
+  );
+  const submitBlockError = useMemo(
+    () => [1, 2, 3, 4].map((s) => ({ s, err: validateStep(s) })).find((x) => x.err),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [general, advanced, features, numbering, documents, requiredMissing.length],
+  );
   const currentTab = tabs.find((t) => t.id === currentIdx);
   const staticProgress = typeof step === "number" ? (step / 4) * 100 : 0;
 
@@ -506,18 +529,25 @@ function SetupPage() {
               const Icon = t.icon;
               return (
                 <li key={t.id} className="flex-1 flex items-center min-w-0">
-                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => goToStep(t.id)}
+                    disabled={createMut.isPending}
+                    aria-current={active ? "step" : undefined}
+                    aria-label={`${T("الخطوة", "Step")} ${t.id}: ${t.label}`}
+                    className="flex flex-col items-center gap-1.5 flex-1 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-lg py-1 group disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
                     <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 ${
-                      done ? "bg-primary text-primary-foreground shadow-sm" :
+                      done ? "bg-primary text-primary-foreground shadow-sm group-hover:brightness-110" :
                       active ? "bg-primary text-primary-foreground ring-4 ring-primary/15 scale-110" :
-                      "bg-muted text-muted-foreground"
+                      "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15 group-hover:text-foreground"
                     }`}>
                       {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
                     </div>
-                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>
                       {t.label}
                     </div>
-                  </div>
+                  </button>
                   {i < tabs.length - 1 && (
                     <div className={`h-0.5 flex-1 mx-1 rounded-full transition-colors ${done ? "bg-primary" : "bg-muted"}`} />
                   )}
@@ -575,13 +605,26 @@ function SetupPage() {
                   <span className="truncate">{stepErr}</span>
                 </div>
               )}
+              {currentIdx === 4 && !stepErr && submitBlockError && (
+                <button
+                  type="button"
+                  onClick={() => goToStep(submitBlockError.s as 1 | 2 | 3 | 4)}
+                  className="text-[11px] text-destructive flex items-center gap-1 max-w-[260px] truncate hover:underline"
+                  title={submitBlockError.err ?? undefined}
+                >
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    {T(`الخطوة ${submitBlockError.s}: `, `Step ${submitBlockError.s}: `)}{submitBlockError.err}
+                  </span>
+                </button>
+              )}
               {currentIdx < 4 ? (
                 <Button onClick={next} className="h-10 min-w-[110px]" disabled={createMut.isPending}>
                   {T("التالي", "Next")}
                   {isAr ? <ArrowLeft className="ms-2 h-4 w-4" /> : <ArrowRight className="ms-2 h-4 w-4" />}
                 </Button>
               ) : (
-                <Button onClick={submit} disabled={createMut.isPending || !canProceed} className="h-10 min-w-[140px]">
+                <Button onClick={submit} disabled={createMut.isPending || !allStepsValid} className="h-10 min-w-[140px]">
                   {createMut.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                   {T("إنشاء الشركة", "Create Company")}
                 </Button>
