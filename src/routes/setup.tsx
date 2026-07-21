@@ -1257,6 +1257,11 @@ function DocumentsDialog({
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
+    if (!form.file) {
+      toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
+      return;
+    }
+
 
     const entry: SetupDocument = {
       code: form.code,
