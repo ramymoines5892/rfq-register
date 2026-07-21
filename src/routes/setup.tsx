@@ -159,7 +159,7 @@ function SetupPage() {
     clearDraft();
     setStep("welcome");
     setShowErrors(false);
-    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "" });
+    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "", emails: [], phones: [], mobiles: [], faxes: [] });
     setAdvanced({
       country: "EG", city: "", state: "", postal_code: "", address: "",
       default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
