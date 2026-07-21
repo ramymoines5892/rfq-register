@@ -803,7 +803,7 @@ function StepGeneral({
                 hint={T("هيظهر فى التقارير العربى", "Used in Arabic reports")}
                 error={reqErr(general.name_ar, "الاسم العربى مطلوب", "Arabic name is required")}
               >
-                <Input dir="rtl" className="h-11" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(e.target.value)} placeholder="الشركة المصرية الأوروبية" />
+                <Input dir="rtl" className="h-11" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(filterArabic(e.target.value))} placeholder="الشركة المصرية الأوروبية" />
               </SmartField>
               <SmartField
                 label={T("الدولة", "Country")} required icon={MapPin}
