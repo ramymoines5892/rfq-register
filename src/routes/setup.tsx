@@ -137,7 +137,7 @@ function SetupPage() {
     try {
       const persistedDocs: PersistedDoc[] = documents.map((doc) => {
         const { file, ...rest } = doc;
-        return { ...rest, file_name: file?.name ?? doc.file_name ?? null };
+        return { ...rest, file_name: file?.name ?? null };
       });
       localStorage.setItem(
         DRAFT_KEY,
