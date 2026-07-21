@@ -306,6 +306,15 @@ function SetupPage() {
 
   const requiredMissing = weights.filter((w) => w.required && !w.valid);
 
+  // Per-step completion percentages (drive stepper icons + sticky bar).
+  const stepPct = useMemo(() => ({
+    1: completion,
+    2: pctFromWeights(computeStep2Weights(advanced)),
+    3: featuresPct(features),
+    4: numberingPct(numbering),
+  }), [completion, advanced, features, numbering]);
+
+
   function validateStep(s: number): string | null {
     if (s === 1) {
       if (requiredMissing.length > 0) {
