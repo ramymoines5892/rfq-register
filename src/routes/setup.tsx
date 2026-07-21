@@ -164,7 +164,7 @@ function SetupPage() {
       const restoredFile = pd.file_data_url && pd.file_name
         ? fileFromDataUrl(pd.file_data_url, pd.file_name, pd.file_type)
         : null;
-      return { ...pd, file: restoredFile, has_file: pd.has_file ?? !!restoredFile ?? !!pd.file_name } as SetupDocument;
+      return { ...pd, file: restoredFile, has_file: pd.has_file ?? (!!restoredFile || !!pd.file_name) } as SetupDocument;
     }),
   );
   const [logoUploading, setLogoUploading] = useState(false);
@@ -1400,7 +1400,7 @@ function DocumentsDialog({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function addOrUpdate() {
+  async function addOrUpdate() {
     if (!form.code || !form.name_ar || !form.name_en) {
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
@@ -1417,6 +1417,10 @@ function DocumentsDialog({
       return;
     }
 
+    const effectiveFileDataUrl = effectiveFile
+      ? form.file_data_url ?? await fileToDataUrl(effectiveFile).catch(() => null)
+      : form.file_data_url ?? (editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null);
+
 
     const entry: SetupDocument = {
       code: form.code,
@@ -1430,6 +1434,8 @@ function DocumentsDialog({
       notes: form.notes?.trim() || null,
       file: effectiveFile,
       file_name: effectiveFile?.name ?? form.file_name ?? existingFileName ?? null,
+      file_type: effectiveFile?.type ?? form.file_type ?? (editingIndex !== null ? documents[editingIndex]?.file_type ?? null : null),
+      file_data_url: effectiveFileDataUrl,
       has_file: !!effectiveFile || hasExistingFile,
     };
 
@@ -1613,7 +1619,7 @@ function DocumentsDialog({
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
-                    setForm((prev) => ({ ...prev, file: f }));
+                    setForm((prev) => ({ ...prev, file: f, file_name: f?.name ?? null, file_type: f?.type ?? null, file_data_url: null, has_file: !!f }));
                   }}
                 />
                 {form.file ? (
