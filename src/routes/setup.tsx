@@ -1,7 +1,11 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAnyCompany, pickPrimary, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type ContactEntry, type NumberingRow, type SetupDocument } from "@/features/company/api";
+import {
+  hasAnyCompany, pickPrimary, uploadCompanyLogo, deleteCompanyLogo,
+  uploadCompanyDocumentDraft, deleteCompanyDocumentDraft, getCompanyDocumentSignedUrl,
+  type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type ContactEntry, type NumberingRow, type SetupDocument,
+} from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +25,6 @@ import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, v
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 import { filterArabic, filterEnglish } from "@/lib/textFilters";
 import { ScriptInput } from "@/components/ScriptInput";
-import { idbSet, idbGet, idbClearSetup } from "@/lib/setupBlobStore";
 
 
 const DRAFT_KEY = "eec.setup.draft.v1";
@@ -40,8 +43,8 @@ type Draft = {
   features: CompanyFeatures;
   numbering: NumberingRow[];
   documents: PersistedDoc[];
-  // Logo metadata only — the binary lives in IndexedDB under "logo".
-  logo?: { name: string; type: string } | null;
+  // Path in the company-logos bucket of the currently staged logo (survives refresh).
+  logo_path?: string | null;
 };
 
 
@@ -55,8 +58,6 @@ function loadDraft(): Draft | null {
 }
 function clearDraft() {
   if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
-  // Fire-and-forget — clearing IDB is best-effort.
-  void idbClearSetup();
 }
 
 function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
@@ -166,62 +167,33 @@ function SetupPage() {
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [documents, setDocuments] = useState<SetupDocument[]>(
     (d?.documents ?? []).map((pd) => {
-      // Legacy migration: some old drafts still carry file_data_url in localStorage.
-      const restoredFile = pd.file_data_url && pd.file_name
-        ? fileFromDataUrl(pd.file_data_url, pd.file_name, pd.file_type)
-        : null;
-      return { ...pd, file: restoredFile, has_file: !!restoredFile || !!pd.has_file } as SetupDocument;
+      const has = !!pd.storage_path || !!pd.has_file || (!!pd.file_data_url && !!pd.file_name);
+      return { ...pd, file: null, has_file: has } as SetupDocument;
     }),
   );
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  // Immediately-uploaded logo (path in storage + a signed URL for preview live in general.logo_url).
+  const [logoPath, setLogoPath] = useState<string | null>(d?.logo_path ?? null);
 
-  // Hydrate binary blobs (logo + document files) from IndexedDB after mount.
+  // Re-sign the doc preview URLs on mount so previously-uploaded drafts show a valid link.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const logoRec = await idbGet<{ name: string; type: string; blob: Blob }>("logo");
-      if (!cancelled && logoRec?.blob) {
-        try { setLogoFile(new File([logoRec.blob], logoRec.name, { type: logoRec.type })); } catch { /* ignore */ }
-      }
-      const docs = await idbGet<Array<{ code: string; name: string; type: string; blob: Blob }>>("documents");
-      if (!cancelled && Array.isArray(docs) && docs.length) {
-        setDocuments((prev) => prev.map((doc) => {
-          if (doc.file) return doc;
-          const rec = docs.find((r) => r.code === doc.code);
-          if (!rec?.blob) return doc;
-          try {
-            const f = new File([rec.blob], rec.name, { type: rec.type });
-            return { ...doc, file: f, file_name: rec.name, file_type: rec.type, has_file: true };
-          } catch { return doc; }
-        }));
-      }
+      const staged = documents.filter((doc) => doc.storage_path);
+      if (!staged.length) return;
+      const updated = await Promise.all(staged.map(async (doc) => {
+        const url = await getCompanyDocumentSignedUrl(doc.storage_path!).catch(() => null);
+        return { code: doc.code, url };
+      }));
+      if (cancelled) return;
+      setDocuments((prev) => prev.map((doc) => {
+        const hit = updated.find((u) => u.code === doc.code);
+        return hit?.url ? ({ ...doc, file_data_url: hit.url } as SetupDocument) : doc;
+      }));
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!logoFile) { setLogoPreview(null); return; }
-    const url = URL.createObjectURL(logoFile);
-    setLogoPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [logoFile]);
-
-  // Persist the logo blob to IDB whenever it changes.
-  useEffect(() => {
-    if (logoFile) void idbSet("logo", { name: logoFile.name, type: logoFile.type, blob: logoFile });
-    else void idbSet("logo", null);
-  }, [logoFile]);
-
-  // Persist document blobs (by code) to IDB whenever documents change.
-  useEffect(() => {
-    const withFiles = documents
-      .filter((d) => d.file instanceof File)
-      .map((d) => ({ code: d.code, name: d.file!.name, type: d.file!.type, blob: d.file! as Blob }));
-    void idbSet("documents", withFiles);
-  }, [documents]);
 
   const [showErrors, setShowErrors] = useState(false);
 
@@ -229,22 +201,24 @@ function SetupPage() {
     if (step === "done") return;
     try {
       const persistedDocs: PersistedDoc[] = documents.map((doc) => {
-        const { file, ...rest } = doc;
+        const { file, file_data_url, ...rest } = doc;
         return {
           ...rest,
-          file_name: file?.name ?? doc.file_name ?? null,
-          file_type: file?.type ?? doc.file_type ?? null,
-          file_data_url: null, // never store base64 in localStorage — IDB holds the blob
-          has_file: !!file || !!doc.has_file,
+          file_name: doc.file_name ?? null,
+          file_type: doc.file_type ?? null,
+          file_size: doc.file_size ?? null,
+          storage_path: doc.storage_path ?? null,
+          // preview URL is signed and expires; don't persist it.
+          file_data_url: null,
+          has_file: !!doc.storage_path || !!doc.has_file,
         };
       });
-      const logo = logoFile ? { name: logoFile.name, type: logoFile.type } : null;
       localStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs, logo }),
+        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs, logo_path: logoPath }),
       );
     } catch { /* ignore — likely quota exceeded */ }
-  }, [step, general, advanced, features, numbering, documents, logoFile]);
+  }, [step, general, advanced, features, numbering, documents, logoPath]);
 
 
   async function resetAll() {
@@ -267,9 +241,13 @@ function SetupPage() {
     });
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
+    // Delete any staged files from storage so we don't leave orphans behind.
+    if (logoPath) { void deleteCompanyLogo(logoPath); }
+    for (const doc of documents) {
+      if (doc.storage_path) void deleteCompanyDocumentDraft(doc.storage_path);
+    }
     setDocuments([]);
-    setLogoFile(null);
-
+    setLogoPath(null);
   }
 
   const isAr = lang === "ar";
@@ -285,8 +263,8 @@ function SetupPage() {
   const currentIdx = typeof step === "number" ? step : 0;
 
   const weights = useMemo(
-    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length, !!logoFile),
-    [general, advanced.country, documents.length, logoFile],
+    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length, !!general.logo_url),
+    [general, advanced.country, documents.length, general.logo_url],
   );
   const completion = useMemo(() => {
     const total = weights.reduce((a, w) => a + w.weight, 0);
@@ -351,16 +329,27 @@ function SetupPage() {
     else setStep("welcome");
   }
 
-  function handleLogo(file: File) {
+  async function handleLogo(file: File) {
     if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
     if (file.size > 3 * 1024 * 1024) { toast.error(T("الحجم أكبر من 3MB", "File is larger than 3MB")); return; }
-    setLogoFile(file);
-    // Clear any previously uploaded URL — new pick replaces it and we defer upload to save.
-    setGeneral((g) => ({ ...g, logo_url: "" }));
+    setLogoUploading(true);
+    try {
+      const oldPath = logoPath;
+      const { path, url } = await uploadCompanyLogo(file);
+      setLogoPath(path);
+      setGeneral((g) => ({ ...g, logo_url: url }));
+      if (oldPath) void deleteCompanyLogo(oldPath);
+    } catch (e: any) {
+      toast.error(e?.message ?? T("فشل رفع اللوجو", "Failed to upload logo"));
+    } finally {
+      setLogoUploading(false);
+    }
   }
   function clearLogo() {
-    setLogoFile(null);
+    const p = logoPath;
+    setLogoPath(null);
     setGeneral((g) => ({ ...g, logo_url: "" }));
+    if (p) void deleteCompanyLogo(p);
   }
 
   async function submit() {
@@ -370,21 +359,8 @@ function SetupPage() {
       if (err) { toast.error(err); setStep(s as Step); return; }
     }
     try {
-      // Upload logo now (deferred from the wizard) if a new file was picked.
-      let logoUrl = general.logo_url ?? "";
-      if (logoFile) {
-        setLogoUploading(true);
-        try {
-          logoUrl = await uploadCompanyLogo(logoFile);
-        } catch (e: any) {
-          toast.error(e?.message ?? T("فشل رفع اللوجو", "Failed to upload logo"));
-          setLogoUploading(false);
-          return;
-        }
-        setLogoUploading(false);
-      }
       // Auto-generate company code if user hasn't set one
-      const payloadGeneral = { ...general, logo_url: logoUrl, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
+      const payloadGeneral = { ...general, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
       // Auto-align regional settings from country
       const c = getCountry(advanced.country ?? "EG");
       const payloadAdvanced = {
@@ -556,7 +532,7 @@ function SetupPage() {
                   return { ...a, country: v, base_currency: c.currency, timezone: c.timezone };
                 })}
                 T={T} isAr={isAr}
-                onLogoFile={handleLogo} logoUploading={logoUploading} logoPreview={logoPreview} clearLogo={clearLogo}
+                onLogoFile={handleLogo} logoUploading={logoUploading} logoPreview={general.logo_url ?? null} clearLogo={clearLogo}
                 completion={completion} weights={weights}
                 showErrors={showErrors}
                 documents={documents} setDocuments={setDocuments}
@@ -1407,6 +1383,8 @@ function CompanyDocumentsSection({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (confirmDelete !== null) {
+                  const doc = documents[confirmDelete];
+                  if (doc?.storage_path) void deleteCompanyDocumentDraft(doc.storage_path);
                   setDocuments((prev) => prev.filter((_, idx) => idx !== confirmDelete));
                 }
                 setConfirmDelete(null);
@@ -1468,6 +1446,8 @@ function DocumentsDialog({
   }, [open, editingIndex]);
 
 
+  const [uploadingFile, setUploadingFile] = useState(false);
+
   function resetForm() {
     setForm(emptyForm);
     setEditingIndex(null);
@@ -1487,9 +1467,41 @@ function DocumentsDialog({
     }));
   }
 
+  async function handleFilePick(f: File | null) {
+    if (!f) return;
+    if (f.size > 15 * 1024 * 1024) {
+      toast.error(T("الحجم أكبر من 15MB", "File is larger than 15MB"));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    setUploadingFile(true);
+    try {
+      const oldPath = form.storage_path;
+      const { path, url } = await uploadCompanyDocumentDraft(f);
+      setForm((prev) => ({
+        ...prev,
+        file: null,
+        storage_path: path,
+        file_name: f.name,
+        file_type: f.type,
+        file_size: f.size,
+        file_data_url: url, // signed URL kept only in memory for preview
+        has_file: true,
+      }));
+      if (oldPath && oldPath !== path) void deleteCompanyDocumentDraft(oldPath);
+    } catch (e: any) {
+      toast.error(e?.message ?? T("فشل رفع الملف", "Failed to upload the file"));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
   function clearFile() {
-    setForm((f) => ({ ...f, file: null, file_name: null, file_type: null, file_data_url: null, has_file: false }));
+    const p = form.storage_path;
+    setForm((f) => ({ ...f, file: null, file_name: null, file_type: null, file_size: null, file_data_url: null, storage_path: null, has_file: false }));
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (p) void deleteCompanyDocumentDraft(p);
   }
 
   async function addOrUpdate() {
@@ -1497,25 +1509,15 @@ function DocumentsDialog({
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
-    const existingFile =
-      editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
-    const existingFileName =
-      editingIndex !== null ? documents[editingIndex]?.file_name ?? null : null;
-    const existingFileDataUrl =
-      editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null;
-    const keepsExistingFile = form.has_file !== false;
-    const hasExistingFile =
-      editingIndex !== null && keepsExistingFile && (!!existingFile || !!existingFileDataUrl);
-    const effectiveFile = form.file ?? existingFile;
-    if (!effectiveFile && !hasExistingFile) {
+    if (uploadingFile) {
+      toast.error(T("جارٍ رفع الملف…", "File is still uploading…"));
+      return;
+    }
+    const hasFile = !!form.storage_path || !!form.has_file;
+    if (!hasFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
       return;
     }
-
-    const effectiveFileDataUrl = effectiveFile
-      ? form.file_data_url ?? await fileToDataUrl(effectiveFile).catch(() => null)
-      : keepsExistingFile ? form.file_data_url ?? existingFileDataUrl : null;
-
 
     const entry: SetupDocument = {
       code: form.code,
@@ -1527,11 +1529,13 @@ function DocumentsDialog({
       issue_date: form.issue_date || null,
       expiry_date: form.expiry_date || null,
       notes: form.notes?.trim() || null,
-      file: effectiveFile,
-      file_name: effectiveFile?.name ?? form.file_name ?? existingFileName ?? null,
-      file_type: effectiveFile?.type ?? form.file_type ?? (editingIndex !== null ? documents[editingIndex]?.file_type ?? null : null),
-      file_data_url: effectiveFileDataUrl,
-      has_file: !!effectiveFile || hasExistingFile,
+      file: null,
+      file_name: form.file_name ?? null,
+      file_type: form.file_type ?? null,
+      file_size: form.file_size ?? null,
+      file_data_url: form.file_data_url ?? null,
+      storage_path: form.storage_path ?? null,
+      has_file: hasFile,
     };
 
     setDocuments((prev) => {
@@ -1555,6 +1559,8 @@ function DocumentsDialog({
   }
 
   function remove(i: number) {
+    const doc = documents[i];
+    if (doc?.storage_path) void deleteCompanyDocumentDraft(doc.storage_path);
     setDocuments((prev) => prev.filter((_, idx) => idx !== i));
     if (editingIndex === i) resetForm();
   }
@@ -1727,17 +1733,22 @@ function DocumentsDialog({
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    setForm((prev) => ({ ...prev, file: f, file_name: f?.name ?? null, file_type: f?.type ?? null, file_data_url: null, has_file: !!f }));
-                  }}
+                  disabled={uploadingFile}
+                  onChange={(e) => { void handleFilePick(e.target.files?.[0] ?? null); }}
                 />
-                {form.file ? (
+                {uploadingFile ? (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {T("جارٍ رفع الملف…", "Uploading…")}
+                  </div>
+                ) : (form.storage_path || form.file_name) ? (
                   <div className="text-[11px] text-muted-foreground flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                       <Paperclip className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{form.file.name}</span>
-                      <span className="shrink-0">· {(form.file.size / 1024).toFixed(1)} KB</span>
+                      <span className="truncate">{form.file_name ?? T("ملف مرفوع", "Uploaded file")}</span>
+                      {form.file_size ? (
+                        <span className="shrink-0">· {(form.file_size / 1024).toFixed(1)} KB</span>
+                      ) : null}
                     </span>
                     <Button
                       type="button" variant="ghost" size="sm"

@@ -107,11 +107,13 @@ export type SetupDocument = {
   issue_date?: string | null;   // YYYY-MM-DD
   expiry_date?: string | null;
   notes?: string | null;
-  file?: File | null;           // in-memory; uploaded only on final save
-  file_name?: string | null;     // draft/UI metadata when the File object is already staged
+  file?: File | null;           // legacy — no longer required; kept for typing compat
+  file_name?: string | null;
   file_type?: string | null;
-  file_data_url?: string | null; // persisted draft copy; restored to File on final save
-  has_file?: boolean;            // keeps edit validation stable for staged existing documents
+  file_size?: number | null;
+  file_data_url?: string | null; // legacy migration only
+  storage_path?: string | null;  // uploaded immediately on pick — survives refresh
+  has_file?: boolean;
 };
 
 function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
@@ -152,18 +154,48 @@ export async function fetchCurrentCompany() {
   return data;
 }
 
-export async function uploadCompanyLogo(file: File): Promise<string> {
+export async function uploadCompanyLogo(file: File): Promise<{ path: string; url: string }> {
   const ext = file.name.split(".").pop() || "png";
   const path = `${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("company-logos").upload(path, file, {
     cacheControl: "3600",
     upsert: false,
+    contentType: file.type,
   });
   if (error) throw error;
-  const { data } = supabase.storage.from("company-logos").createSignedUrl
-    ? await supabase.storage.from("company-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
-    : ({ data: null } as any);
-  return data?.signedUrl ?? path;
+  const { data } = await supabase.storage.from("company-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+  return { path, url: data?.signedUrl ?? path };
+}
+
+export async function deleteCompanyLogo(path: string): Promise<void> {
+  if (!path) return;
+  try { await supabase.storage.from("company-logos").remove([path]); } catch { /* ignore */ }
+}
+
+// Upload a document file to the shared bucket during setup, before we have a company id.
+// Draft files live under `_drafts/{uuid}.ext` and are stitched into the real record on submit.
+export async function uploadCompanyDocumentDraft(file: File): Promise<{ path: string; url: string }> {
+  const ext = file.name.split(".").pop() || "bin";
+  const path = `_drafts/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("company-documents").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type,
+  });
+  if (error) throw error;
+  const { data } = await supabase.storage.from("company-documents").createSignedUrl(path, 60 * 60 * 24 * 7);
+  return { path, url: data?.signedUrl ?? path };
+}
+
+export async function deleteCompanyDocumentDraft(path: string): Promise<void> {
+  if (!path) return;
+  try { await supabase.storage.from("company-documents").remove([path]); } catch { /* ignore */ }
+}
+
+export async function getCompanyDocumentSignedUrl(path: string): Promise<string | null> {
+  if (!path) return null;
+  const { data } = await supabase.storage.from("company-documents").createSignedUrl(path, 60 * 60 * 24 * 7);
+  return data?.signedUrl ?? null;
 }
 
 export async function createCompanyBundle(payload: CreateCompanyPayload) {
@@ -278,23 +310,35 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
         .single();
       if (dErr) throw dErr;
 
-      const fileToUpload = d.file ?? (d.file_data_url && d.file_name
+      const preUploadedPath = d.storage_path ?? null;
+      const fileToUpload = !preUploadedPath && (d.file ?? (d.file_data_url && d.file_name
         ? fileFromDataUrl(d.file_data_url, d.file_name, d.file_type)
-        : null);
+        : null));
 
-      if (fileToUpload) {
+      let finalPath: string | null = preUploadedPath;
+      let fileMeta = {
+        name: d.file_name ?? (fileToUpload ? fileToUpload.name : null),
+        type: d.file_type ?? (fileToUpload ? fileToUpload.type : null),
+        size: d.file_size ?? (fileToUpload ? fileToUpload.size : null),
+      };
+
+      if (!preUploadedPath && fileToUpload) {
         const ext = fileToUpload.name.split(".").pop() || "bin";
-        const path = `${doc.id}/${crypto.randomUUID()}.${ext}`;
+        finalPath = `${doc.id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("company-documents")
-          .upload(path, fileToUpload, { cacheControl: "3600", upsert: false, contentType: fileToUpload.type });
+          .upload(finalPath, fileToUpload, { cacheControl: "3600", upsert: false, contentType: fileToUpload.type });
         if (upErr) throw upErr;
+        fileMeta = { name: fileToUpload.name, type: fileToUpload.type, size: fileToUpload.size };
+      }
+
+      if (finalPath) {
         const { error: fErr2 } = await supabase.from("company_document_files").insert({
           document_id: doc.id,
-          storage_path: path,
-          file_name: fileToUpload.name,
-          mime_type: fileToUpload.type || null,
-          size_bytes: fileToUpload.size,
+          storage_path: finalPath,
+          file_name: fileMeta.name ?? "file",
+          mime_type: fileMeta.type ?? null,
+          size_bytes: fileMeta.size ?? 0,
           uploaded_by: userId,
         });
         if (fErr2) throw fErr2;
