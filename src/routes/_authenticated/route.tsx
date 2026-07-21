@@ -222,17 +222,15 @@ function AuthenticatedLayout() {
     const activeChild = g.children.some((c) => c.to && (c.match ? c.match(pathname) : pathname === c.to));
 
     if (collapsed) {
-      // Show children as flat icon-only list in collapsed mode
+      // In icon-rail mode, show children as icon+label tiles (no group header)
       return (
-        <div className="space-y-1">
-          <div title={ar ? g.labelAr : g.labelEn} className="flex justify-center py-1 text-sidebar-foreground/50">
-            <Icon className="h-4 w-4" />
-          </div>
+        <div className="space-y-0.5">
           {g.children.map((c, i) => <LeafItem key={i} n={c} />)}
-          <div className="mx-2 my-1 border-t border-sidebar-border/40" />
+          <div className="mx-2 my-1.5 border-t border-sidebar-border/40" />
         </div>
       );
     }
+
 
     return (
       <div>
@@ -261,16 +259,18 @@ function AuthenticatedLayout() {
     if (!entries.length) return null;
     return (
       <div key={s.labelEn} className="space-y-1">
-        {!collapsed && (
+        {!collapsed ? (
           <div className="text-[10px] uppercase tracking-widest font-bold px-3 pt-4 pb-1.5 text-sidebar-primary/70">
             {ar ? s.labelAr : s.labelEn}
           </div>
+        ) : (
+          <div className="mx-3 my-2 border-t border-sidebar-border/40" />
         )}
-        {collapsed && <div className="pt-3" />}
         {entries.map((e, i) => isGroup(e) ? <GroupItem key={e.id} g={e} /> : <LeafItem key={i} n={e} />)}
       </div>
     );
   };
+
 
   /* ─── Brand block ─── */
   const Brand = ({ tight = false }: { tight?: boolean }) => (
@@ -299,9 +299,10 @@ function AuthenticatedLayout() {
     <div className="min-h-screen flex bg-background" dir={dir}>
       <aside
         className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out sticky top-0 h-screen ${
-          pinned ? "md:w-64 lg:w-72" : "md:w-16"
+          pinned ? "md:w-64 lg:w-72" : "md:w-20"
         }`}
       >
+
         <button
           type="button"
           onClick={() => setPinned((v) => !v)}
@@ -333,9 +334,10 @@ function AuthenticatedLayout() {
           </button>
         )}
 
-        <nav className={`flex-1 ${collapsed ? "px-2" : "px-3"} space-y-2 overflow-y-auto overflow-x-hidden pb-4`}>
+        <nav className={`flex-1 ${collapsed ? "px-2" : "px-3"} space-y-2 overflow-y-auto overflow-x-hidden pb-4 scrollbar-slim`}>
           {sections.map(renderSection)}
         </nav>
+
 
         <div className={`${collapsed ? "p-2" : "p-3"} space-y-2 border-t border-sidebar-border/40`}>
           {!collapsed && (
