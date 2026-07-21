@@ -140,12 +140,6 @@ function AuthenticatedLayout() {
       ],
     },
     {
-      labelAr: "المستندات", labelEn: "Documents",
-      entries: [
-        { to: "/documents", labelAr: "مستندات الشركة", labelEn: "Company Documents", icon: FolderArchive, match: (p) => p.startsWith("/documents") },
-      ],
-    },
-    {
       labelAr: "الإدارة", labelEn: "Administration",
       entries: [
         ...(isAdmin ? [
