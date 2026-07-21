@@ -345,7 +345,57 @@ function SettingsCompanyPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Documents */}
+        <TabsContent value="documents" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FolderArchive className="h-4 w-4 text-primary" />
+                {ar ? "مستندات الشركة" : "Company Documents"}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                {ar
+                  ? "السجل التجاري، البطاقة الضريبية، شهادات القيمة المضافة وأي مستندات رسمية مع تنبيهات انتهاء الصلاحية."
+                  : "Commercial registration, tax card, VAT certificates and any official documents with expiry alerts."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link to="/documents" className="group">
+                  <Card className="hover:border-primary/60 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <FolderArchive className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium">{ar ? "إدارة المستندات" : "Manage Documents"}</div>
+                        <div className="text-xs text-muted-foreground">{ar ? "رفع، تحديث، ومتابعة الصلاحية" : "Upload, update, track validity"}</div>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link to="/settings/document-types" className="group">
+                  <Card className="hover:border-primary/60 transition-colors h-full">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Settings className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium">{ar ? "أنواع المستندات" : "Document Types"}</div>
+                        <div className="text-xs text-muted-foreground">{ar ? "تعريف الأنواع وقواعد التنبيه" : "Define types & alert rules"}</div>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
     </div>
   );
 }
