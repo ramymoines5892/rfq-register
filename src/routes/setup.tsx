@@ -24,7 +24,12 @@ import { ScriptInput } from "@/components/ScriptInput";
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
-type PersistedDoc = Omit<SetupDocument, "file"> & { file_name?: string | null; has_file?: boolean };
+type PersistedDoc = Omit<SetupDocument, "file"> & {
+  file_name?: string | null;
+  file_type?: string | null;
+  file_data_url?: string | null;
+  has_file?: boolean;
+};
 
 type Draft = {
   step: Step;
@@ -47,6 +52,26 @@ function loadDraft(): Draft | null {
 }
 function clearDraft() {
   if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
+}
+
+function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
+  try {
+    const [meta, b64] = dataUrl.split(",");
+    const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? fallbackType ?? "application/octet-stream";
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, { type: mime });
+  } catch { return null; }
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Invalid file data"));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export const Route = createFileRoute("/setup")({
