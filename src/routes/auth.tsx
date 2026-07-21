@@ -22,6 +22,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("signin");
   const [checking, setChecking] = useState(true);
+  const [noCompany, setNoCompany] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,21 +30,25 @@ function AuthPage() {
 
   useEffect(() => {
     (async () => {
-      // Validate any existing session against the server. A stale JWT
-      // (user deleted from DB) returns 403 user_not_found — sign it out
-      // so we don't loop through the protected layout.
       const { data: userData, error: userErr } = await supabase.auth.getUser();
       if (userErr || !userData.user) {
         await supabase.auth.signOut().catch(() => {});
       } else {
-        navigate({ to: "/" });
+        // Signed in: route based on company existence.
+        const { data: hasCompany } = await supabase.rpc("has_any_company");
+        navigate({ to: hasCompany ? "/" : "/setup" });
         return;
       }
-      const { data, error } = await supabase.rpc("has_any_user");
-      if (!error && data === false) setMode("setup");
+      const [{ data: hasUser }, { data: hasCompany }] = await Promise.all([
+        supabase.rpc("has_any_user"),
+        supabase.rpc("has_any_company"),
+      ]);
+      if (hasUser === false) setMode("setup");
+      setNoCompany(hasCompany === false);
       setChecking(false);
     })();
   }, [navigate]);
+
 
   function friendlyError(msg: string): string {
     const m = msg.toLowerCase();
