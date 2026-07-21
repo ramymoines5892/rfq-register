@@ -24,7 +24,7 @@ import { ScriptInput } from "@/components/ScriptInput";
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
-type PersistedDoc = Omit<SetupDocument, "file"> & { file_name?: string | null };
+type PersistedDoc = Omit<SetupDocument, "file"> & { file_name?: string | null; has_file?: boolean };
 
 type Draft = {
   step: Step;
@@ -135,7 +135,7 @@ function SetupPage() {
   const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [documents, setDocuments] = useState<SetupDocument[]>(
-    (d?.documents ?? []).map((pd) => ({ ...pd, file: null } as SetupDocument)),
+    (d?.documents ?? []).map((pd) => ({ ...pd, file: null, has_file: pd.has_file ?? !!pd.file_name } as SetupDocument)),
   );
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(() => {
@@ -169,7 +169,7 @@ function SetupPage() {
     try {
       const persistedDocs: PersistedDoc[] = documents.map((doc) => {
         const { file, ...rest } = doc;
-        return { ...rest, file_name: file?.name ?? null };
+        return { ...rest, file_name: file?.name ?? doc.file_name ?? null, has_file: !!file || !!doc.has_file || !!doc.file_name };
       });
       const logo = logoFile && logoDataUrl
         ? { name: logoFile.name, type: logoFile.type, dataUrl: logoDataUrl }
