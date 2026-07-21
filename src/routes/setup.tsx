@@ -231,10 +231,20 @@ function SetupPage() {
                    "No company has been configured yet. Before using the ERP system, create your first company.")}
               </p>
             </div>
-            <Button size="lg" className="w-full h-12 text-base" onClick={() => setStep(1)}>
-              {T("إنشاء الشركة", "Create Company")}
-              {isAr ? <ArrowLeft className="ms-2 h-5 w-5" /> : <ArrowRight className="ms-2 h-5 w-5" />}
-            </Button>
+            <div className="space-y-2">
+              <Button size="lg" className="w-full h-12 text-base" onClick={() => setStep(d ? (typeof d.step === "number" ? d.step : 1) : 1)}>
+                {d && typeof d.step === "number"
+                  ? T("متابعة الإعداد", "Continue Setup")
+                  : T("إنشاء الشركة", "Create Company")}
+                {isAr ? <ArrowLeft className="ms-2 h-5 w-5" /> : <ArrowRight className="ms-2 h-5 w-5" />}
+              </Button>
+              {d && typeof d.step === "number" && (
+                <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={resetAll}>
+                  <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+                  {T("البدء من جديد", "Start over")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
