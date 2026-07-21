@@ -59,4 +59,12 @@ export const qk = {
     exists: () => ["company", "exists"] as const,
     current: () => ["company", "current"] as const,
   },
+  companyDocs: {
+    all: ["companyDocs"] as const,
+    types: () => ["companyDocs", "types"] as const,
+    list: () => ["companyDocs", "list"] as const,
+    history: (typeId: string) => ["companyDocs", "history", typeId] as const,
+    files: (docId: string) => ["companyDocs", "files", docId] as const,
+  },
+
 } as const;
