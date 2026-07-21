@@ -1396,7 +1396,7 @@ function DocumentsDialog({
   }
 
   function clearFile() {
-    setForm((f) => ({ ...f, file: null }));
+    setForm((f) => ({ ...f, file: null, file_name: null, file_type: null, file_data_url: null, has_file: false }));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -1409,8 +1409,9 @@ function DocumentsDialog({
       editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
     const existingFileName =
       editingIndex !== null ? documents[editingIndex]?.file_name ?? null : null;
+    const keepsExistingFile = form.has_file !== false;
     const hasExistingFile =
-      editingIndex !== null && (!!existingFile || !!documents[editingIndex]?.has_file || !!existingFileName);
+      editingIndex !== null && keepsExistingFile && (!!existingFile || !!documents[editingIndex]?.has_file || !!existingFileName);
     const effectiveFile = form.file ?? existingFile;
     if (!effectiveFile && !hasExistingFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
@@ -1419,7 +1420,7 @@ function DocumentsDialog({
 
     const effectiveFileDataUrl = effectiveFile
       ? form.file_data_url ?? await fileToDataUrl(effectiveFile).catch(() => null)
-      : form.file_data_url ?? (editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null);
+      : keepsExistingFile ? form.file_data_url ?? (editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null) : null;
 
 
     const entry: SetupDocument = {
