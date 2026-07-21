@@ -143,6 +143,36 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
   ];
 }
 
+// Weighted completion for the remaining steps — used to drive the per-step
+// progress indicator on every page (stepper icons + sticky bar).
+function computeStep2Weights(a: CompanyAdvanced): Weight[] {
+  const nz = (s?: string | null) => (s ?? "").trim().length > 0;
+  return [
+    { key: "state",    weight: 25, filled: nz(a.state),             valid: nz(a.state) },
+    { key: "city",     weight: 20, filled: nz(a.city),              valid: nz(a.city) },
+    { key: "address",  weight: 20, filled: nz(a.address),           valid: nz(a.address) },
+    { key: "postal",   weight: 5,  filled: nz(a.postal_code),       valid: nz(a.postal_code) },
+    { key: "currency", weight: 5,  filled: nz(a.base_currency),     valid: nz(a.base_currency) },
+    { key: "timezone", weight: 5,  filled: nz(a.timezone),          valid: nz(a.timezone) },
+    { key: "fy_start", weight: 5,  filled: nz(a.fiscal_year_start), valid: nz(a.fiscal_year_start) },
+    { key: "fy_end",   weight: 5,  filled: nz(a.fiscal_year_end),   valid: nz(a.fiscal_year_end) },
+    { key: "notes",    weight: 10, filled: nz(a.notes),             valid: nz(a.notes) },
+  ];
+}
+function pctFromWeights(w: Weight[]): number {
+  const total = w.reduce((a, x) => a + x.weight, 0);
+  const done = w.reduce((a, x) => a + (x.valid ? x.weight : 0), 0);
+  return total ? Math.round((done / total) * 100) : 0;
+}
+function featuresPct(f: CompanyFeatures): number {
+  const vals = Object.values(f);
+  return vals.length ? Math.round((vals.filter(Boolean).length / vals.length) * 100) : 0;
+}
+function numberingPct(rows: NumberingRow[]): number {
+  // Target ~6 configured doc types = 100%; more still shows as 100%.
+  return Math.min(100, Math.round((rows.length / 6) * 100));
+}
+
 function SetupPage() {
   const { lang, setLang, dir } = useI18n();
   const navigate = useNavigate();
