@@ -1133,14 +1133,18 @@ function Field({ label, children, hint }: { label: string; children: React.React
   );
 }
 
-function StepAdvanced({ advanced, setAdvanced, T }: any) {
-  const set = (k: keyof CompanyAdvanced) => (e: any) => setAdvanced((a: any) => ({ ...a, [k]: e?.target ? e.target.value : e }));
-  const Section = ({ title, children }: any) => (
+function AdvSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-foreground/80 uppercase tracking-wider">{title}</h4>
       <div className="grid md:grid-cols-2 gap-4">{children}</div>
     </div>
   );
+}
+
+function StepAdvanced({ advanced, setAdvanced, T }: any) {
+  const set = (k: keyof CompanyAdvanced) => (e: any) => setAdvanced((a: any) => ({ ...a, [k]: e?.target ? e.target.value : e }));
+  const Section = AdvSection;
 
   const country: string = advanced.country ?? "EG";
   const hasGeoData = hasGeo(country);
@@ -1385,18 +1389,40 @@ function StepFeatures({ features, setFeatures, T }: any) {
 // Bilingual labels for well-known document type codes. Code stays English
 // everywhere; the label is only for display when the UI language is Arabic.
 const DOC_TYPE_LABELS: Record<string, { ar: string; en: string }> = {
-  RFQ: { ar: "طلب عرض سعر", en: "Request for Quotation" },
-  QT:  { ar: "عرض سعر",     en: "Quotation" },
-  PO:  { ar: "أمر توريد",   en: "Purchase Order" },
-  SO:  { ar: "أمر بيع",     en: "Sales Order" },
-  INV: { ar: "فاتورة",      en: "Invoice" },
-  GRN: { ar: "إذن استلام",  en: "Goods Receipt Note" },
-  DN:  { ar: "إذن تسليم",   en: "Delivery Note" },
-  CN:  { ar: "إشعار دائن",  en: "Credit Note" },
-  DBN: { ar: "إشعار مدين",  en: "Debit Note" },
-  JV:  { ar: "قيد يومية",   en: "Journal Voucher" },
-  PV:  { ar: "سند صرف",     en: "Payment Voucher" },
-  RV:  { ar: "سند قبض",     en: "Receipt Voucher" },
+  // Sales & purchasing lifecycle
+  RFQ: { ar: "طلب عرض سعر",         en: "Request for Quotation" },
+  QT:  { ar: "عرض سعر",             en: "Quotation" },
+  PR:  { ar: "طلب شراء",            en: "Purchase Requisition" },
+  PO:  { ar: "أمر توريد",           en: "Purchase Order" },
+  LPO: { ar: "أمر توريد محلي",      en: "Local Purchase Order" },
+  CTR: { ar: "عقد",                 en: "Contract" },
+  WO:  { ar: "أمر عمل",             en: "Work Order" },
+  SO:  { ar: "أمر بيع",             en: "Sales Order" },
+  PFI: { ar: "فاتورة مبدئية",       en: "Proforma Invoice" },
+  INV: { ar: "فاتورة",              en: "Invoice" },
+  TXI: { ar: "فاتورة ضريبية",       en: "Tax Invoice" },
+  // Logistics & warehouse
+  DN:  { ar: "إذن تسليم",           en: "Delivery Note" },
+  GRN: { ar: "إذن استلام",          en: "Goods Receipt Note" },
+  GIN: { ar: "إذن صرف",             en: "Goods Issue Note" },
+  MTN: { ar: "إذن تحويل مخزني",     en: "Material Transfer Note" },
+  RTV: { ar: "مرتجع مورد",          en: "Return to Vendor" },
+  RTC: { ar: "مرتجع عميل",          en: "Customer Return" },
+  PKL: { ar: "قائمة تعبئة",         en: "Packing List" },
+  ASN: { ar: "إشعار شحن مسبق",      en: "Advance Shipment Notice" },
+  STK: { ar: "تسوية مخزون",         en: "Stock Adjustment" },
+  // Finance
+  CN:  { ar: "إشعار دائن",          en: "Credit Note" },
+  DBN: { ar: "إشعار مدين",          en: "Debit Note" },
+  JV:  { ar: "قيد يومية",           en: "Journal Voucher" },
+  PV:  { ar: "سند صرف",             en: "Payment Voucher" },
+  RV:  { ar: "سند قبض",             en: "Receipt Voucher" },
+  PC:  { ar: "عهدة نثرية",          en: "Petty Cash" },
+  EXP: { ar: "مصروف",               en: "Expense Claim" },
+  // HR & operations
+  SAL: { ar: "مسير رواتب",          en: "Salary Slip" },
+  QCR: { ar: "تقرير جودة",          en: "Quality Report" },
+  MOM: { ar: "محضر اجتماع",         en: "Meeting Minutes" },
 };
 
 function docTypeLabel(code: string, isAr: boolean): string {
