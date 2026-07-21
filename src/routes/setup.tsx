@@ -840,13 +840,14 @@ function StepGeneral({
             format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
             isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
           />
-          <SmartField
+          <MultiContactField
             label={T("الموقع الإلكتروني", "Website")} icon={Globe}
-            hint={T("اختيارى — لازم يكون رابط صحيح", "Optional — must be a valid URL")}
-            error={err(webV)}
-          >
-            <Input dir="ltr" className="h-11" value={general.website ?? ""} onChange={(e) => set("website")(e.target.value)} placeholder="https://company.com" />
-          </SmartField>
+            values={general.websites ?? []} onChange={(list) => set("websites")(list)}
+            placeholder="https://company.com"
+            hint={T("ممكن تضيف أكتر من موقع — النجمة للأساسى", "You can add multiple sites — star = primary")}
+            validate={validateWebsite}
+            isAr={isAr} T={T} showErrors={showErrors}
+          />
         </div>
       </section>
 
