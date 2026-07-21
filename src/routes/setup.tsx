@@ -917,50 +917,14 @@ function StepGeneral({
   const reqErr = (val: string | null | undefined, msgAr: string, msgEn: string) =>
     showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
 
-  // Detect scroll to collapse the completion header into a slim floating bar
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 140);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-
-  const barColor = completion === 100 ? "bg-emerald-500" : completion >= 60 ? "bg-primary" : "bg-amber-500";
-
   return (
     <div className="space-y-8 md:space-y-10">
-      {/* Sticky completion tracker — expanded at top, collapses to slim bar on scroll */}
-      <div className="sticky top-[56px] z-20 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8">
-        {scrolled ? (
-          <div className="bg-background/95 backdrop-blur-md border rounded-full shadow-md px-4 py-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <span className="text-[11px] text-muted-foreground shrink-0">{T("الاكتمال", "Completeness")}</span>
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden min-w-[80px]">
-              <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${completion}%` }} />
-            </div>
-            <span className="text-xs font-bold tabular-nums shrink-0">{completion}%</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between bg-background/60 backdrop-blur-sm rounded-xl py-2">
-            <div className="min-w-0">
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight">{T("بطاقة الشركة", "Company Profile")}</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-                {T("املأ البيانات الأساسية للشركة. الحقول المُميّزة بنجمة حمراء مطلوبة للانتقال للخطوة التالية.",
-                   "Fill in the company profile. Fields marked with a red asterisk are required to continue.")}
-              </p>
-            </div>
-            <div className="rounded-xl bg-muted/60 border px-3 py-2 min-w-[170px] shrink-0">
-              <div className="flex items-center justify-between text-xs text-muted-foreground gap-3">
-                <span>{T("الاكتمال", "Completeness")}</span>
-                <span className="font-semibold text-foreground tabular-nums">{completion}%</span>
-              </div>
-              <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
-                <div className={`h-full transition-all ${barColor}`} style={{ width: `${completion}%` }} />
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="min-w-0">
+        <h3 className="text-xl sm:text-2xl font-bold tracking-tight">{T("بطاقة الشركة", "Company Profile")}</h3>
+        <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+          {T("املأ البيانات الأساسية للشركة. الحقول المُميّزة بنجمة حمراء مطلوبة للانتقال للخطوة التالية.",
+             "Fill in the company profile. Fields marked with a red asterisk are required to continue.")}
+        </p>
       </div>
 
 
