@@ -27,6 +27,7 @@ import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPreset
 import { filterArabic, filterEnglish } from "@/lib/textFilters";
 import { ScriptInput } from "@/components/ScriptInput";
 import { getStates, getCities, hasGeo } from "@/lib/geoData";
+import { FEATURE_REGISTRY, CATEGORY_LABELS, FEATURE_MAP, defaultFeatures, type FeatureCategory, type FeatureDef } from "@/lib/features/registry";
 
 
 const DRAFT_KEY = "eec.setup.draft.v1";
@@ -95,13 +96,7 @@ export const Route = createFileRoute("/setup")({
 
 type Step = "welcome" | 1 | 2 | 3 | 4 | "done";
 
-const DEFAULT_FEATURES: CompanyFeatures = {
-  multi_branch: true, multi_warehouse: true, multi_currency: true,
-  approval_workflow: true, audit_log: true, inventory: true,
-  procurement: true, sales: true, finance: true, quality: true,
-  traceability: true, heat_number: true, lot_number: true,
-  batch_control: true, attachments: true, e_signatures: true,
-};
+const DEFAULT_FEATURES: CompanyFeatures = defaultFeatures() as CompanyFeatures;
 
 const DEFAULT_NUMBERING: NumberingRow[] = [
   { doc_type: "RFQ", prefix: "RFQ", year_segment: true, padding: 6, next_seq: 1 },
