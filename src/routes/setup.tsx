@@ -755,23 +755,37 @@ function StepGeneral({
         <SectionHeader n={1} title={T("الهوية والعلامة", "Identity & Branding")} T={T} />
         <div className="rounded-2xl border bg-gradient-to-br from-muted/40 to-transparent p-4 sm:p-6 md:p-8">
           <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)] md:gap-8 items-start">
-            <label className="relative group cursor-pointer justify-self-center md:justify-self-start">
-              <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
-                {logoUploading ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                ) : general.logo_url ? (
-                  <img src={general.logo_url} alt="logo" className="h-full w-full object-contain" />
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <ImagePlus className="h-7 w-7" />
-                    <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
-                  </div>
-                )}
-              </div>
-              <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors" />
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
-              <div className="mt-2 text-[11px] text-muted-foreground text-center">{T("انقر للتغيير", "Click to change")}</div>
-            </label>
+            <div className="relative justify-self-center md:justify-self-start">
+              <label className="relative group cursor-pointer block">
+                <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
+                  {logoUploading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (logoPreview || general.logo_url) ? (
+                    <img src={logoPreview || general.logo_url!} alt="logo" className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                      <ImagePlus className="h-7 w-7" />
+                      <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors pointer-events-none" />
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
+                <div className="mt-2 text-[11px] text-muted-foreground text-center">
+                  {(logoPreview || general.logo_url) ? T("انقر للتغيير", "Click to change") : T("انقر للرفع", "Click to upload")}
+                </div>
+              </label>
+              {(logoPreview || general.logo_url) && !logoUploading && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearLogo(); }}
+                  aria-label={T("حذف اللوجو", "Remove logo")}
+                  className="absolute -top-2 -end-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground shadow-lg grid place-items-center hover:scale-110 transition-transform"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2 min-w-0">
               <SmartField
