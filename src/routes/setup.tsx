@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
