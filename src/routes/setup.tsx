@@ -1408,61 +1408,38 @@ function DocumentsDialog({
               </div>
             </div>
 
-            {/* Group 3 — File + notes (skip the old separate wrappers) */}
-          </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
-              <Input
-                type="date"
-                value={form.issue_date ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
-              />
-              <div className="text-[11px] text-muted-foreground">{T("اختيارى", "Optional")}</div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}</Label>
-              <Input
-                type="date"
-                value={form.expiry_date ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
-              />
-              <div className="text-[11px] text-muted-foreground">
-                {T("اختيارى — لو محددته هيوصلك تنبيه قبل الانتهاء.",
-                   "Optional — if set you'll get an alert before expiry.")}
+            {/* Group 3 — File + notes */}
+            <div className="space-y-3 pt-3 border-t">
+              <div className="space-y-1.5">
+                <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setForm((prev) => ({ ...prev, file: f }));
+                  }}
+                />
+                {form.file ? (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-muted-foreground">
+                    {T("الملف بيترفع بس عند حفظ الإعداد النهائى.", "File uploads only when you finish the setup wizard.")}
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div className="space-y-1.5 md:col-span-2">
-              <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
-              <Input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  setForm((prev) => ({ ...prev, file: f }));
-                }}
-              />
-              {form.file && (
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                  <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
-                </div>
-              )}
-              <div className="text-[11px] text-muted-foreground">
-                {T("الملف مش هيترفع دلوقتى — هيترفع بس لما تنهى الإعداد وتحفظ الشركة.",
-                   "The file will not upload now — it uploads only when you finalize the setup wizard.")}
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("ملاحظات", "Notes")}</Label>
+                <Textarea
+                  rows={2}
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  placeholder={T("اختيارى", "Optional")}
+                />
               </div>
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <Label className="text-sm">{T("ملاحظات", "Notes")}</Label>
-              <Textarea
-                rows={2}
-                value={form.notes ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder={T("اختيارى", "Optional")}
-              />
             </div>
           </div>
 
