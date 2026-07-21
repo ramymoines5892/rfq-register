@@ -1364,48 +1364,102 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
   );
 }
 
-const FEATURE_META: { key: keyof CompanyFeatures; ar: string; en: string; desc_ar: string; desc_en: string }[] = [
-  { key: "multi_branch", ar: "تعدد الفروع", en: "Multi Branch", desc_ar: "إدارة فروع متعددة", desc_en: "Manage multiple branches" },
-  { key: "multi_warehouse", ar: "تعدد المخازن", en: "Multi Warehouse", desc_ar: "مخازن متعددة لكل فرع", desc_en: "Multiple warehouses per branch" },
-  { key: "multi_currency", ar: "تعدد العملات", en: "Multi Currency", desc_ar: "دعم عملات متعددة", desc_en: "Multiple currency support" },
-  { key: "approval_workflow", ar: "دورة اعتماد", en: "Approval Workflow", desc_ar: "مسارات اعتماد للمستندات", desc_en: "Document approval flows" },
-  { key: "audit_log", ar: "سجل التدقيق", en: "Audit Log", desc_ar: "تسجيل كل العمليات", desc_en: "Log every operation" },
-  { key: "inventory", ar: "إدارة المخزون", en: "Inventory", desc_ar: "متابعة الأصناف والحركات", desc_en: "Items and stock movements" },
-  { key: "procurement", ar: "المشتريات", en: "Procurement", desc_ar: "أوامر شراء وموردين", desc_en: "POs and suppliers" },
-  { key: "sales", ar: "المبيعات", en: "Sales", desc_ar: "عملاء وأوامر بيع", desc_en: "Customers and sales orders" },
-  { key: "finance", ar: "المالية", en: "Finance", desc_ar: "قيود وحسابات", desc_en: "Ledger and accounts" },
-  { key: "quality", ar: "الجودة", en: "Quality", desc_ar: "شهادات ومطابقة", desc_en: "Certificates and compliance" },
-  { key: "traceability", ar: "التتبع", en: "Traceability", desc_ar: "تتبع كامل للأصناف", desc_en: "Full item traceability" },
-  { key: "heat_number", ar: "أرقام الصهر", en: "Heat Number", desc_ar: "تتبع أرقام Heat", desc_en: "Heat number tracking" },
-  { key: "lot_number", ar: "أرقام التشغيلة", en: "Lot Number", desc_ar: "تتبع Lot", desc_en: "Lot tracking" },
-  { key: "batch_control", ar: "التحكم بالدُفعات", en: "Batch Control", desc_ar: "Batches", desc_en: "Batches" },
-  { key: "attachments", ar: "المرفقات", en: "Attachments", desc_ar: "رفع ملفات للمستندات", desc_en: "Attach documents" },
-  { key: "e_signatures", ar: "التوقيع الإلكتروني", en: "E-Signatures", desc_ar: "توقيعات رقمية", desc_en: "Digital signatures" },
-];
-
 function StepFeatures({ features, setFeatures, T }: any) {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+
+  const grouped = useMemo(() => {
+    const g: Record<FeatureCategory, FeatureDef[]> = {
+      core: [], operations: [], traceability: [], finance: [], compliance: [],
+    };
+    for (const f of FEATURE_REGISTRY) g[f.category].push(f);
+    return g;
+  }, []);
+
+  function toggle(key: string, v: boolean) {
+    setFeatures((prev: any) => {
+      const next = { ...prev, [key]: v };
+      if (!v) {
+        for (const f of FEATURE_REGISTRY) {
+          if (f.depends_on?.includes(key)) next[f.key] = false;
+        }
+      } else {
+        const def = FEATURE_MAP[key];
+        for (const dep of def?.depends_on ?? []) next[dep] = true;
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">{T("مميزات النظام", "System Features")}</h3>
-        <p className="text-sm text-muted-foreground">{T("فعّل أو عطّل الموديولات حسب حاجتك.", "Enable or disable modules to match your needs.")}</p>
+        <p className="text-sm text-muted-foreground">
+          {T(
+            "فعّل الموديولات اللى محتاجها. تقدر تغيّرها فى أى وقت من الإعدادات > مميزات النظام.",
+            "Enable the modules you need. You can change these anytime from Settings > System Features.",
+          )}
+        </p>
       </div>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {FEATURE_META.map((f) => {
-          const val = features[f.key] as boolean;
-          return (
-            <label key={f.key} className={`border rounded-xl p-4 cursor-pointer transition-all ${val ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-medium text-sm">{T(f.ar, f.en)}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{T(f.desc_ar, f.desc_en)}</div>
-                </div>
-                <Switch checked={val} onCheckedChange={(c) => setFeatures((prev: any) => ({ ...prev, [f.key]: c }))} />
-              </div>
-            </label>
-          );
-        })}
-      </div>
+
+      {(Object.keys(grouped) as FeatureCategory[]).map((cat) => {
+        const items = grouped[cat];
+        if (!items.length) return null;
+        return (
+          <div key={cat} className="space-y-2">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
+              {ar ? CATEGORY_LABELS[cat].ar : CATEGORY_LABELS[cat].en}
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {items.map((f) => {
+                const val = !!features[f.key];
+                const Icon = f.icon;
+                return (
+                  <label
+                    key={f.key}
+                    className={`border rounded-xl p-4 transition-all ${
+                      f.implemented ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+                    } ${val ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className={`h-9 w-9 rounded-lg grid place-items-center shrink-0 ${val ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                            {T(f.ar, f.en)}
+                            {!f.implemented && (
+                              <span className="text-[9px] uppercase tracking-wide bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                                {T("قريبًا", "Soon")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {T(f.desc_ar, f.desc_en)}
+                          </div>
+                          {f.depends_on && f.depends_on.length > 0 && (
+                            <div className="text-[10px] text-muted-foreground mt-1">
+                              {T("يتطلب:", "Requires:")}{" "}
+                              {f.depends_on.map((d) => (ar ? FEATURE_MAP[d]?.ar : FEATURE_MAP[d]?.en) ?? d).join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Switch
+                        checked={val}
+                        disabled={!f.implemented}
+                        onCheckedChange={(c) => toggle(f.key, c)}
+                      />
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
