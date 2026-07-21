@@ -126,15 +126,25 @@ function SetupPage() {
   });
   const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
+  const [documents, setDocuments] = useState<SetupDocument[]>(
+    (d?.documents ?? []).map((pd) => ({ ...pd, file: null })),
+  );
   const [logoUploading, setLogoUploading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     if (step === "done") return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, general, advanced, features, numbering }));
+      const persistedDocs: PersistedDoc[] = documents.map((doc) => {
+        const { file, ...rest } = doc;
+        return { ...rest, file_name: file?.name ?? doc.file_name ?? null };
+      });
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs }),
+      );
     } catch { /* ignore */ }
-  }, [step, general, advanced, features, numbering]);
+  }, [step, general, advanced, features, numbering, documents]);
 
   async function resetAll() {
     const ok = await confirm({
