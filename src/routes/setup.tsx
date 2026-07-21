@@ -529,18 +529,25 @@ function SetupPage() {
               const Icon = t.icon;
               return (
                 <li key={t.id} className="flex-1 flex items-center min-w-0">
-                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => goToStep(t.id)}
+                    disabled={createMut.isPending}
+                    aria-current={active ? "step" : undefined}
+                    aria-label={`${T("الخطوة", "Step")} ${t.id}: ${t.label}`}
+                    className="flex flex-col items-center gap-1.5 flex-1 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-lg py-1 group disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
                     <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 ${
-                      done ? "bg-primary text-primary-foreground shadow-sm" :
+                      done ? "bg-primary text-primary-foreground shadow-sm group-hover:brightness-110" :
                       active ? "bg-primary text-primary-foreground ring-4 ring-primary/15 scale-110" :
-                      "bg-muted text-muted-foreground"
+                      "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15 group-hover:text-foreground"
                     }`}>
                       {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
                     </div>
-                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>
                       {t.label}
                     </div>
-                  </div>
+                  </button>
                   {i < tabs.length - 1 && (
                     <div className={`h-0.5 flex-1 mx-1 rounded-full transition-colors ${done ? "bg-primary" : "bg-muted"}`} />
                   )}
