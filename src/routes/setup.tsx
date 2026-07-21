@@ -365,52 +365,71 @@ function SetupPage() {
     );
   }
 
-  // ----------- WIZARD -----------
+  const stepErr = validateStep(currentIdx);
+  const canProceed = !stepErr;
+  const currentTab = tabs.find((t) => t.id === currentIdx);
   const staticProgress = typeof step === "number" ? (step / 4) * 100 : 0;
-  return (
-    <div className="min-h-screen bg-muted/30 py-6 md:py-10 px-3 sm:px-4" dir={dir}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground grid place-items-center"><Gem className="h-5 w-5" /></div>
-          <div>
-            <div className="font-display font-bold">EEC ERP</div>
-            <div className="text-xs text-muted-foreground">{T("معالج إعداد الشركة", "Company Setup Wizard")}</div>
-          </div>
-        </div>
 
+  return (
+    <div className="min-h-screen bg-muted/30" dir={dir}>
+      {/* Sticky top bar */}
+      <div className="sticky top-0 z-30 bg-background/85 backdrop-blur-md border-b">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0">
+            <Gem className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-display font-bold text-sm sm:text-base leading-tight">EEC ERP</div>
+            <div className="text-[11px] text-muted-foreground truncate">{T("معالج إعداد الشركة", "Company Setup Wizard")}</div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setLang(isAr ? "en" : "ar")} className="shrink-0">
+            {isAr ? "EN" : "AR"}
+          </Button>
+        </div>
+        {/* Slim progress line */}
+        <div className="h-1 bg-muted overflow-hidden">
+          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${staticProgress}%` }} />
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-5 md:py-8 space-y-5 md:space-y-6">
         {/* Stepper */}
-        <div className="bg-card border rounded-2xl p-3 sm:p-4 md:p-5">
-          <div className="flex items-center justify-between gap-1 sm:gap-2">
+        <nav aria-label={T("خطوات الإعداد", "Setup steps")} className="bg-card border rounded-2xl p-3 sm:p-4">
+          <ol className="flex items-center gap-1 sm:gap-2">
             {tabs.map((t, i) => {
               const active = t.id === currentIdx;
               const done = t.id < currentIdx;
               const Icon = t.icon;
               return (
-                <div key={t.id} className="flex-1 flex items-center min-w-0">
+                <li key={t.id} className="flex-1 flex items-center min-w-0">
                   <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full grid place-items-center transition-all ${
-                      done ? "bg-primary text-primary-foreground" :
-                      active ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
+                    <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 ${
+                      done ? "bg-primary text-primary-foreground shadow-sm" :
+                      active ? "bg-primary text-primary-foreground ring-4 ring-primary/15 scale-110" :
                       "bg-muted text-muted-foreground"
                     }`}>
                       {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
                     </div>
-                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[120px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
                       {t.label}
                     </div>
                   </div>
-                  {i < tabs.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${done ? "bg-primary" : "bg-muted"}`} />}
-                </div>
+                  {i < tabs.length - 1 && (
+                    <div className={`h-0.5 flex-1 mx-1 rounded-full transition-colors ${done ? "bg-primary" : "bg-muted"}`} />
+                  )}
+                </li>
               );
             })}
+          </ol>
+          {/* Mobile-only current step label */}
+          <div className="sm:hidden mt-3 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{T("الخطوة", "Step")} {currentIdx}/4</span>
+            <span className="font-semibold text-foreground truncate ms-2">{currentTab?.label}</span>
           </div>
-          <div className="mt-4 h-1 bg-muted rounded overflow-hidden">
-            <div className="h-full bg-primary transition-all" style={{ width: `${staticProgress}%` }} />
-          </div>
-        </div>
+        </nav>
 
-        <Card>
-          <CardContent className="p-4 sm:p-6 md:p-8 space-y-6">
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8">
             {step === 1 && (
               <StepGeneral
                 general={general} setGeneral={setGeneral}
@@ -433,28 +452,38 @@ function SetupPage() {
         </Card>
 
         {/* Nav */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={back} disabled={createMut.isPending}>
-              {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
-              {T("رجوع", "Back")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetAll} disabled={createMut.isPending} className="text-muted-foreground">
-              <RotateCcw className="h-3.5 w-3.5 me-1.5" />
-              {T("البدء من جديد", "Start over")}
-            </Button>
+        <div className="sticky bottom-0 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-3 bg-background/85 backdrop-blur-md border-t">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={back} disabled={createMut.isPending} className="h-10">
+                {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
+                {T("رجوع", "Back")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={resetAll} disabled={createMut.isPending} className="text-muted-foreground hidden sm:inline-flex">
+                <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+                {T("البدء من جديد", "Start over")}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {stepErr && showErrors && (
+                <div className="text-[11px] text-destructive flex items-center gap-1 max-w-[220px] truncate">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{stepErr}</span>
+                </div>
+              )}
+              {currentIdx < 4 ? (
+                <Button onClick={next} className="h-10 min-w-[110px]" disabled={createMut.isPending}>
+                  {T("التالي", "Next")}
+                  {isAr ? <ArrowLeft className="ms-2 h-4 w-4" /> : <ArrowRight className="ms-2 h-4 w-4" />}
+                </Button>
+              ) : (
+                <Button onClick={submit} disabled={createMut.isPending || !canProceed} className="h-10 min-w-[140px]">
+                  {createMut.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                  {T("إنشاء الشركة", "Create Company")}
+                </Button>
+              )}
+            </div>
           </div>
-          {currentIdx < 4 ? (
-            <Button onClick={next}>
-              {T("التالي", "Next")}
-              {isAr ? <ArrowLeft className="ms-2 h-4 w-4" /> : <ArrowRight className="ms-2 h-4 w-4" />}
-            </Button>
-          ) : (
-            <Button onClick={submit} disabled={createMut.isPending}>
-              {createMut.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              {T("إنشاء الشركة", "Create Company")}
-            </Button>
-          )}
         </div>
       </div>
     </div>
@@ -462,6 +491,27 @@ function SetupPage() {
 }
 
 // ---------------- Reusable field with inline validation ----------------
+
+function SectionHeader({
+  n, title, T, right,
+}: {
+  n: number;
+  title: string;
+  T: (ar: string, en: string) => string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-bold grid place-items-center shrink-0 tabular-nums">
+          {n}
+        </div>
+        <h4 className="text-sm sm:text-base font-semibold tracking-tight truncate">{title}</h4>
+      </div>
+      {right}
+    </div>
+  );
+}
 
 function SmartField({
   label, icon: Icon, required, hint, error, children,
@@ -635,112 +685,106 @@ function StepGeneral({
     showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 md:space-y-10">
       {/* Header + smart progress */}
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h3 className="text-lg font-semibold">{T("بطاقة الشركة", "Company Profile")}</h3>
-            <p className="text-sm text-muted-foreground">
-              {T("املأ البيانات الأساسية للشركة. المطلوب فقط الاسم (عربى وإنجليزى) والدولة.",
-                 "Fill the company's basic profile. Only company name (AR + EN) and country are required.")}
-            </p>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="text-xl sm:text-2xl font-bold tracking-tight">{T("بطاقة الشركة", "Company Profile")}</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+            {T("املأ البيانات الأساسية للشركة. الحقول المُميّزة بنجمة حمراء مطلوبة للانتقال للخطوة التالية.",
+               "Fill in the company profile. Fields marked with a red asterisk are required to continue.")}
+          </p>
+        </div>
+        <div className="rounded-xl bg-muted/60 border px-3 py-2 min-w-[170px] shrink-0">
+          <div className="flex items-center justify-between text-xs text-muted-foreground gap-3">
+            <span>{T("الاكتمال", "Completeness")}</span>
+            <span className="font-semibold text-foreground tabular-nums">{completion}%</span>
           </div>
-          <div className="rounded-xl bg-muted/60 border px-3 py-2 min-w-[180px]">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{T("اكتمال البيانات", "Profile completeness")}</span>
-              <span className="font-semibold text-foreground">{completion}%</span>
-            </div>
-            <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all ${completion === 100 ? "bg-emerald-500" : completion >= 60 ? "bg-primary" : "bg-amber-500"}`}
-                style={{ width: `${completion}%` }}
-              />
-            </div>
-            <div className="mt-1.5 text-[10px] text-muted-foreground">
-              {completion === 100
-                ? T("ممتاز! كل شى مكتمل", "Excellent — profile is complete")
-                : T("الحقول المهمة بتزود النسبة أكتر", "Important fields contribute more")}
-            </div>
+          <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all ${completion === 100 ? "bg-emerald-500" : completion >= 60 ? "bg-primary" : "bg-amber-500"}`}
+              style={{ width: `${completion}%` }}
+            />
           </div>
         </div>
       </div>
 
-      {/* CV-style header: logo + names + country */}
-      <div className="rounded-2xl border bg-gradient-to-br from-muted/40 to-transparent p-4 sm:p-6">
-        <div className="flex flex-col items-center text-center gap-4 sm:gap-5">
-          <label className="relative group cursor-pointer">
-            <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
-              {logoUploading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : general.logo_url ? (
-                <img src={general.logo_url} alt="logo" className="h-full w-full object-contain" />
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                  <ImagePlus className="h-7 w-7" />
-                  <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
-                </div>
-              )}
+      {/* Section 1 — Identity */}
+      <section className="space-y-4">
+        <SectionHeader n={1} title={T("الهوية والعلامة", "Identity & Branding")} T={T} />
+        <div className="rounded-2xl border bg-gradient-to-br from-muted/40 to-transparent p-4 sm:p-6 md:p-8">
+          <div className="grid gap-6 md:grid-cols-[auto_minmax(0,1fr)] md:gap-8 items-start">
+            <label className="relative group cursor-pointer justify-self-center md:justify-self-start">
+              <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
+                {logoUploading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : general.logo_url ? (
+                  <img src={general.logo_url} alt="logo" className="h-full w-full object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <ImagePlus className="h-7 w-7" />
+                    <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
+                  </div>
+                )}
+              </div>
+              <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors" />
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
+              <div className="mt-2 text-[11px] text-muted-foreground text-center">{T("انقر للتغيير", "Click to change")}</div>
+            </label>
+
+            <div className="grid gap-4 sm:grid-cols-2 min-w-0">
+              <SmartField
+                label={T("الاسم بالإنجليزى", "Company Name (English)")}
+                required icon={Building2}
+                hint={T("هيظهر فى التقارير الإنجليزى", "Used in English reports")}
+                error={reqErr(general.name, "الاسم الإنجليزى مطلوب", "English name is required")}
+              >
+                <Input dir="ltr" className="h-11" value={general.name} onChange={(e) => set("name")(e.target.value)} autoFocus placeholder="Egyptian Europe Company" />
+              </SmartField>
+              <SmartField
+                label={T("الاسم بالعربى", "Company Name (Arabic)")}
+                required icon={Building2}
+                hint={T("هيظهر فى التقارير العربى", "Used in Arabic reports")}
+                error={reqErr(general.name_ar, "الاسم العربى مطلوب", "Arabic name is required")}
+              >
+                <Input dir="rtl" className="h-11" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(e.target.value)} placeholder="الشركة المصرية الأوروبية" />
+              </SmartField>
+              <SmartField
+                label={T("الدولة", "Country")} required icon={MapPin}
+                hint={T("بتحدد فورمات الأرقام والعملة", "Determines number formats & currency")}
+              >
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((cc) => (
+                      <SelectItem key={cc.code} value={cc.code}>{isAr ? cc.labelAr : cc.labelEn}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </SmartField>
+              <SmartField
+                label={T("الاسم المختصر", "Short Name")}
+                hint={T("اختيارى — بيظهر فى الشريط الجانبى", "Optional — appears in the sidebar")}
+              >
+                <Input className="h-11" value={general.short_name ?? ""} onChange={(e) => set("short_name")(e.target.value)} placeholder="EEC" />
+              </SmartField>
             </div>
-            <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors" />
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
-            <div className="mt-2 text-[11px] text-muted-foreground">{T("انقر للتغيير", "Click to change")}</div>
-          </label>
-
-          <div className="w-full max-w-2xl grid sm:grid-cols-2 gap-3 text-start">
-            <SmartField
-              label={T("الاسم بالإنجليزى", "Company Name (English)")}
-              required
-              icon={Building2}
-              hint={T("هيظهر فى التقارير الإنجليزى", "Used in English reports")}
-              error={reqErr(general.name, "الاسم الإنجليزى مطلوب", "English name is required")}
-            >
-              <Input dir="ltr" value={general.name} onChange={(e) => set("name")(e.target.value)} autoFocus placeholder="Egyptian Europe Company" />
-            </SmartField>
-            <SmartField
-              label={T("الاسم بالعربى", "Company Name (Arabic)")}
-              required
-              icon={Building2}
-              hint={T("هيظهر فى التقارير العربى", "Used in Arabic reports")}
-              error={reqErr(general.name_ar, "الاسم العربى مطلوب", "Arabic name is required")}
-            >
-              <Input dir="rtl" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(e.target.value)} placeholder="الشركة المصرية الأوروبية" />
-            </SmartField>
-            <SmartField
-              label={T("الدولة", "Country")}
-              required
-              icon={MapPin}
-              hint={T("بتحدد فورمات الأرقام والعملة", "Determines number formats & currency")}
-            >
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {COUNTRIES.map((cc) => (
-                    <SelectItem key={cc.code} value={cc.code}>{isAr ? cc.labelAr : cc.labelEn}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </SmartField>
-            <SmartField
-              label={T("الاسم المختصر", "Short Name")}
-              hint={T("اختيارى — بيظهر فى الشريط الجانبى", "Optional — appears in the sidebar")}
-            >
-              <Input value={general.short_name ?? ""} onChange={(e) => set("short_name")(e.target.value)} placeholder="EEC" />
-            </SmartField>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Contact block — multi-entry with primary flag */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("بيانات الاتصال", "Contact")}</h4>
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-            <Star className="h-3 w-3 fill-primary text-primary" />
-            {T("النجمة = الأساسى (يُستخدم فى المراسلات)", "Star = primary (used for messaging)")}
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
+      {/* Section 2 — Contact */}
+      <section className="space-y-4">
+        <SectionHeader
+          n={2} title={T("بيانات الاتصال", "Contact Details")} T={T}
+          right={
+            <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <Star className="h-3 w-3 fill-primary text-primary" />
+              {T("النجمة = الأساسى", "Star = primary")}
+            </div>
+          }
+        />
+        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
           <MultiContactField
             label={T("موبايل", "Mobile")} icon={Smartphone}
             values={general.mobiles ?? []} onChange={(list) => set("mobiles")(list)}
@@ -780,23 +824,28 @@ function StepGeneral({
             hint={T("اختيارى — لازم يكون رابط صحيح", "Optional — must be a valid URL")}
             error={err(webV)}
           >
-            <Input dir="ltr" value={general.website ?? ""} onChange={(e) => set("website")(e.target.value)} placeholder="https://company.com" />
+            <Input dir="ltr" className="h-11" value={general.website ?? ""} onChange={(e) => set("website")(e.target.value)} placeholder="https://company.com" />
           </SmartField>
         </div>
-      </div>
+      </section>
 
-      {/* Company documents */}
-      <CompanyDocumentsSection
-        documents={documents}
-        setDocuments={setDocuments}
-        T={T}
-        isAr={isAr}
-      />
+      {/* Section 3 — Documents */}
+      <section className="space-y-4">
+        <SectionHeader n={3} title={T("المستندات القانونية", "Legal Documents")} T={T} />
+        <CompanyDocumentsSection
+          documents={documents}
+          setDocuments={setDocuments}
+          T={T}
+          isAr={isAr}
+        />
+      </section>
 
-
-      <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border">
-        {T("ملاحظة: كود الشركة هيتولّد تلقائيًا من الاسم — تقدر تعدّله بعد كده من إعدادات الشركة. الكود بيتستخدم كبادئة داخلية للمستندات وسهولة التعريف.",
-           "Note: The company code is auto-generated from the name — you can change it later from company settings. The code is used as an internal prefix for documents and quick identification.")}
+      <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border flex items-start gap-2">
+        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <span>
+          {T("كود الشركة هيتولّد تلقائيًا من الاسم — تقدر تعدّله بعد كده من إعدادات الشركة.",
+             "The company code is auto-generated from the name — you can change it later from company settings.")}
+        </span>
       </div>
     </div>
   );
