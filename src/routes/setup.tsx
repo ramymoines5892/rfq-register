@@ -461,7 +461,7 @@ function SetupPage() {
                   return { ...a, country: v, base_currency: c.currency, timezone: c.timezone };
                 })}
                 T={T} isAr={isAr}
-                onLogoFile={handleLogo} logoUploading={logoUploading}
+                onLogoFile={handleLogo} logoUploading={logoUploading} logoPreview={logoPreview} clearLogo={clearLogo}
                 completion={completion} weights={weights}
                 showErrors={showErrors}
                 documents={documents} setDocuments={setDocuments}
