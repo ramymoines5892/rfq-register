@@ -21,6 +21,7 @@ import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, v
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 import { filterArabic, filterEnglish } from "@/lib/textFilters";
 import { ScriptInput } from "@/components/ScriptInput";
+import { idbSet, idbGet, idbClearSetup } from "@/lib/setupBlobStore";
 
 
 const DRAFT_KEY = "eec.setup.draft.v1";
