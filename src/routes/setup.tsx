@@ -1340,63 +1340,76 @@ function DocumentsDialog({
             {editingIndex !== null ? T("تعديل مستند", "Edit document") : T("إضافة مستند جديد", "Add a new document")}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
-              <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
-                <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
-                <SelectContent>
-                  {DOC_PRESETS.map((p) => (
-                    <SelectItem
-                      key={p.code}
-                      value={p.code}
-                      disabled={usedCodes.has(p.code)}
-                    >
-                      {isAr ? p.name_ar : p.name_en}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="text-[11px] text-muted-foreground">
-                {T("تقدر تضيف أنواع أكتر لاحقًا من الإعدادات › أنواع مستندات الشركة.",
-                   "You can add more types later from Settings › Company Document Types.")}
+          <div className="space-y-4">
+            {/* Group 1 — What is it? */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
+                <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
+                  <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
+                  <SelectContent>
+                    {DOC_PRESETS.map((p) => (
+                      <SelectItem
+                        key={p.code}
+                        value={p.code}
+                        disabled={usedCodes.has(p.code)}
+                      >
+                        {isAr ? p.name_ar : p.name_en}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {isCustom && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={form.customName ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
+                    placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
+                <Input
+                  dir="ltr"
+                  value={form.doc_number ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
+                  placeholder={T("اختيارى", "Optional")}
+                />
               </div>
             </div>
 
-            {isCustom ? (
-              <div className="space-y-1.5">
-                <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
+            {/* Group 2 — Validity dates */}
+            <div className="grid grid-cols-2 gap-3 pt-1 border-t">
+              <div className="space-y-1.5 pt-3">
+                <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
                 <Input
-                  value={form.customName ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
-                  placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
-                  autoFocus
+                  type="date"
+                  value={form.issue_date ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
                 />
               </div>
-            ) : (
-              <div className="space-y-1.5">
-                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
+              <div className="space-y-1.5 pt-3">
+                <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}</Label>
                 <Input
-                  dir="ltr"
-                  value={form.doc_number ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
-                  placeholder={T("اختيارى", "Optional")}
+                  type="date"
+                  value={form.expiry_date ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
                 />
               </div>
-            )}
+              <div className="col-span-2 text-[11px] text-muted-foreground -mt-1">
+                {T("لو حددت تاريخ انتهاء هيوصلك تنبيه قبله.", "Set an expiry to receive alerts before it.")}
+              </div>
+            </div>
 
-            {isCustom && (
-              <div className="space-y-1.5">
-                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
-                <Input
-                  dir="ltr"
-                  value={form.doc_number ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
-                  placeholder={T("اختيارى", "Optional")}
-                />
-              </div>
-            )}
+            {/* Group 3 — File + notes (skip the old separate wrappers) */}
+          </div>
 
             <div className="space-y-1.5">
               <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
