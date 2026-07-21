@@ -25,6 +25,7 @@ import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, v
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 import { filterArabic, filterEnglish } from "@/lib/textFilters";
 import { ScriptInput } from "@/components/ScriptInput";
+import { getStates, getCities, hasGeo } from "@/lib/geoData";
 
 
 const DRAFT_KEY = "eec.setup.draft.v1";
