@@ -1,7 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow } from "@/features/company/api";
+import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow, type SetupDocument } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,13 +10,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt, FolderOpen, Plus, Trash2, Paperclip, CalendarDays, Info } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
+import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 
 const DRAFT_KEY = "eec.setup.draft.v1";
+
+type PersistedDoc = Omit<SetupDocument, "file"> & { file_name?: string | null };
 
 type Draft = {
   step: Step;
@@ -24,6 +29,7 @@ type Draft = {
   advanced: CompanyAdvanced;
   features: CompanyFeatures;
   numbering: NumberingRow[];
+  documents: PersistedDoc[];
 };
 
 function loadDraft(): Draft | null {
@@ -74,15 +80,13 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
 // weighted by usefulness, not by count. Landline / website are tiny weight.
 type Weight = { key: string; weight: number; filled: boolean; valid: boolean; required?: boolean };
 
-function computeGeneralWeights(g: CompanyGeneral, country: string): Weight[] {
+function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0): Weight[] {
   const c = getCountry(country);
   const nz = (s?: string | null) => (s ?? "").trim().length > 0;
   const emailV = validateEmail(g.email ?? "");
   const webV = validateWebsite(g.website ?? "");
   const mobileV = validateRule(g.mobile ?? "", c.mobile);
   const phoneV = validateRule(g.phone ?? "", c.phone);
-  const taxV = validateRule(g.tax_no ?? "", c.tax);
-  const crV = validateRule(g.cr_no ?? "", c.cr);
   return [
     { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
     { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
@@ -90,8 +94,7 @@ function computeGeneralWeights(g: CompanyGeneral, country: string): Weight[] {
     { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
     { key: "mobile",  weight: 12, filled: nz(g.mobile),     valid: nz(g.mobile) && mobileV.ok },
     { key: "email",   weight: 8,  filled: nz(g.email),      valid: nz(g.email) && emailV.ok },
-    { key: "tax_no",  weight: 8,  filled: nz(g.tax_no),     valid: nz(g.tax_no) && taxV.ok },
-    { key: "cr_no",   weight: 5,  filled: nz(g.cr_no),      valid: nz(g.cr_no) && crV.ok },
+    { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
     { key: "phone",   weight: 4,  filled: nz(g.phone),      valid: nz(g.phone) && phoneV.ok },
     { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
@@ -120,15 +123,25 @@ function SetupPage() {
   });
   const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
+  const [documents, setDocuments] = useState<SetupDocument[]>(
+    (d?.documents ?? []).map((pd) => ({ ...pd, file: null } as SetupDocument)),
+  );
   const [logoUploading, setLogoUploading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     if (step === "done") return;
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, general, advanced, features, numbering }));
+      const persistedDocs: PersistedDoc[] = documents.map((doc) => {
+        const { file, ...rest } = doc;
+        return { ...rest, file_name: file?.name ?? null };
+      });
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs }),
+      );
     } catch { /* ignore */ }
-  }, [step, general, advanced, features, numbering]);
+  }, [step, general, advanced, features, numbering, documents]);
 
   async function resetAll() {
     const ok = await confirm({
@@ -150,6 +163,7 @@ function SetupPage() {
     });
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
+    setDocuments([]);
   }
 
   const isAr = lang === "ar";
@@ -165,8 +179,8 @@ function SetupPage() {
   const currentIdx = typeof step === "number" ? step : 0;
 
   const weights = useMemo(
-    () => computeGeneralWeights(general, advanced.country ?? "EG"),
-    [general, advanced.country],
+    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length),
+    [general, advanced.country, documents.length],
   );
   const completion = useMemo(() => {
     const total = weights.reduce((a, w) => a + w.weight, 0);
@@ -188,8 +202,6 @@ function SetupPage() {
         ["website", validateWebsite(general.website ?? "")],
         ["mobile", validateRule(general.mobile ?? "", c.mobile)],
         ["phone", validateRule(general.phone ?? "", c.phone)],
-        ["tax_no", validateRule(general.tax_no ?? "", c.tax)],
-        ["cr_no", validateRule(general.cr_no ?? "", c.cr)],
       ];
       const bad = checks.find(([, r]) => !r.ok);
       if (bad) return isAr ? bad[1].error!.ar : bad[1].error!.en;
@@ -248,7 +260,7 @@ function SetupPage() {
         base_currency: advanced.base_currency || c.currency,
         timezone: advanced.timezone || c.timezone,
       };
-      await createMut.mutateAsync({ general: payloadGeneral, advanced: payloadAdvanced, features, numbering });
+      await createMut.mutateAsync({ general: payloadGeneral, advanced: payloadAdvanced, features, numbering, documents });
       clearDraft();
       setStep("done");
     } catch (e: any) {
@@ -393,6 +405,7 @@ function SetupPage() {
                 onLogoFile={handleLogo} logoUploading={logoUploading}
                 completion={completion} weights={weights}
                 showErrors={showErrors}
+                documents={documents} setDocuments={setDocuments}
               />
             )}
             {step === 2 && <StepAdvanced advanced={advanced} setAdvanced={setAdvanced} T={T} />}
@@ -466,6 +479,7 @@ function SmartField({
 
 function StepGeneral({
   general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, completion, weights, showErrors,
+  documents, setDocuments,
 }: {
   general: CompanyGeneral;
   setGeneral: React.Dispatch<React.SetStateAction<CompanyGeneral>>;
@@ -478,6 +492,8 @@ function StepGeneral({
   completion: number;
   weights: Weight[];
   showErrors: boolean;
+  documents: SetupDocument[];
+  setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
 }) {
   const c = getCountry(country);
   const set = <K extends keyof CompanyGeneral>(k: K) => (v: string) => setGeneral((g) => ({ ...g, [k]: v }));
@@ -487,8 +503,6 @@ function StepGeneral({
   const webV = validateWebsite(general.website ?? "");
   const mobileV = validateRule(general.mobile ?? "", c.mobile);
   const phoneV = validateRule(general.phone ?? "", c.phone);
-  const taxV = validateRule(general.tax_no ?? "", c.tax);
-  const crV = validateRule(general.cr_no ?? "", c.cr);
 
   const err = (v: FieldValidation, forceShow = false) =>
     (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
@@ -498,8 +512,6 @@ function StepGeneral({
   // Auto-format on change for masked fields
   const onMobile = (v: string) => set("mobile")(c.mobile ? applyMask(v, c.mobile) : v);
   const onPhone = (v: string) => set("phone")(c.phone ? applyMask(v, c.phone) : v);
-  const onTax = (v: string) => set("tax_no")(c.tax ? applyMask(v, c.tax) : v);
-  const onCr = (v: string) => set("cr_no")(c.cr ? applyMask(v, c.cr) : v);
 
   return (
     <div className="space-y-6">
@@ -643,28 +655,14 @@ function StepGeneral({
         </div>
       </div>
 
-      {/* Legal block */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("البيانات القانونية", "Legal & Tax")}</h4>
-        <div className="grid md:grid-cols-2 gap-4">
-          <SmartField
-            label={T("الرقم الضريبي", "Tax Registration No.")}
-            icon={Receipt}
-            hint={c.tax ? (isAr ? c.tax.hintAr : c.tax.hintEn) : T("اختيارى", "Optional")}
-            error={err(taxV)}
-          >
-            <Input dir="ltr" value={general.tax_no ?? ""} onChange={(e) => onTax(e.target.value)} placeholder={c.tax?.example} />
-          </SmartField>
-          <SmartField
-            label={T("السجل التجارى", "Commercial Registration")}
-            icon={FileText}
-            hint={c.cr ? (isAr ? c.cr.hintAr : c.cr.hintEn) : T("اختيارى", "Optional")}
-            error={err(crV)}
-          >
-            <Input dir="ltr" value={general.cr_no ?? ""} onChange={(e) => onCr(e.target.value)} placeholder={c.cr?.example} />
-          </SmartField>
-        </div>
-      </div>
+      {/* Company documents */}
+      <CompanyDocumentsSection
+        documents={documents}
+        setDocuments={setDocuments}
+        T={T}
+        isAr={isAr}
+      />
+
 
       <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border">
         {T("ملاحظة: كود الشركة هيتولّد تلقائيًا من الاسم — تقدر تعدّله بعد كده من إعدادات الشركة. الكود بيتستخدم كبادئة داخلية للمستندات وسهولة التعريف.",
@@ -883,5 +881,396 @@ function StepNumbering({ numbering, setNumbering, T }: any) {
         })}
       </div>
     </div>
+  );
+}
+
+// ---------------- Company Documents (Step 1 sub-section) ----------------
+
+function CompanyDocumentsSection({
+  documents, setDocuments, T, isAr,
+}: {
+  documents: SetupDocument[];
+  setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
+  T: (ar: string, en: string) => string;
+  isAr: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <FolderOpen className="h-4 w-4" />
+            {T("مستندات الشركة", "Company Documents")}
+          </h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            {T("السجل التجارى، البطاقة الضريبية، شهادات الاستيراد… وأى مستند رسمى للشركة.",
+               "Commercial registration, tax card, import/export licenses… any official company document.")}
+          </p>
+        </div>
+        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          <FolderOpen className="me-2 h-4 w-4" />
+          {documents.length > 0
+            ? T(`إدارة المستندات (${documents.length})`, `Manage documents (${documents.length})`)
+            : T("إضافة مستندات الشركة", "Add company documents")}
+        </Button>
+      </div>
+
+      {documents.length > 0 ? (
+        <div className="grid sm:grid-cols-2 gap-2">
+          {documents.map((d, i) => (
+            <div key={i} className="border rounded-lg p-3 bg-muted/30 flex items-start gap-3">
+              <div className="h-9 w-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-sm truncate">{isAr ? d.name_ar : d.name_en}</div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {[d.doc_number, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)].filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details")}
+                </div>
+                {d.file ? (
+                  <Badge variant="secondary" className="mt-1 text-[10px]">
+                    <Paperclip className="h-2.5 w-2.5 me-1" />{d.file.name}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border">
+          {T("اختيارى — تقدر تضيف مستندات الشركة الأساسية دلوقتى، أو تسيبها لحد ما تخلص الإعداد وتضيفها من صفحة «مستندات الشركة».",
+             "Optional — you can add core company documents now, or leave them for later from the Company Documents page.")}
+        </div>
+      )}
+
+      <DocumentsDialog
+        open={open}
+        onOpenChange={setOpen}
+        documents={documents}
+        setDocuments={setDocuments}
+        T={T}
+        isAr={isAr}
+      />
+    </div>
+  );
+}
+
+function DocumentsDialog({
+  open, onOpenChange, documents, setDocuments, T, isAr,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  documents: SetupDocument[];
+  setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
+  T: (ar: string, en: string) => string;
+  isAr: boolean;
+}) {
+  // Form state for adding / editing one document at a time
+  const emptyForm: SetupDocument & { customName?: string } = {
+    code: "CR",
+    name_ar: "",
+    name_en: "",
+    doc_number: "",
+    issue_date: "",
+    expiry_date: "",
+    notes: "",
+    file: null,
+    customName: "",
+  };
+  const [form, setForm] = useState<SetupDocument & { customName?: string }>(emptyForm);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isCustom, setIsCustom] = useState(false);
+
+  // Auto-focus first input when dialog opens
+  const firstInputRef = useRef<HTMLButtonElement | null>(null);
+
+  function resetForm() {
+    setForm(emptyForm);
+    setEditingIndex(null);
+    setIsCustom(false);
+  }
+
+  function pickPreset(code: string) {
+    if (code === "__custom__") {
+      setIsCustom(true);
+      setForm((f) => ({ ...f, code: "", name_ar: "", name_en: "", customName: "" }));
+      return;
+    }
+    setIsCustom(false);
+    const preset = DOC_PRESETS.find((p) => p.code === code);
+    if (!preset) return;
+    setForm((f) => ({
+      ...f,
+      code: preset.code,
+      name_ar: preset.name_ar,
+      name_en: preset.name_en,
+      notify_days_before: preset.notify_days_before,
+      notify_repeat: preset.notify_repeat,
+    }));
+  }
+
+  function addOrUpdate() {
+    // Resolve name/code for custom
+    let name_ar = form.name_ar;
+    let name_en = form.name_en;
+    let code = form.code;
+    if (isCustom) {
+      const raw = (form.customName || "").trim();
+      if (!raw) {
+        toast.error(T("اكتب اسم المستند", "Enter the document name"));
+        return;
+      }
+      name_ar = raw;
+      name_en = raw;
+      code = slugifyCode(raw);
+    }
+    if (!code || !name_ar || !name_en) {
+      toast.error(T("اختر نوع المستند", "Choose a document type"));
+      return;
+    }
+
+    const entry: SetupDocument = {
+      code,
+      name_ar,
+      name_en,
+      notify_days_before: form.notify_days_before,
+      notify_repeat: form.notify_repeat,
+      doc_number: form.doc_number?.trim() || null,
+      issue_date: form.issue_date || null,
+      expiry_date: form.expiry_date || null,
+      notes: form.notes?.trim() || null,
+      file: form.file ?? null,
+    };
+
+    setDocuments((prev) => {
+      if (editingIndex !== null) {
+        const copy = [...prev];
+        copy[editingIndex] = entry;
+        return copy;
+      }
+      return [...prev, entry];
+    });
+    resetForm();
+    toast.success(editingIndex !== null
+      ? T("تم تحديث المستند", "Document updated")
+      : T("تم إضافة المستند للسته", "Document added to list"));
+  }
+
+  function edit(i: number) {
+    const d = documents[i];
+    const preset = DOC_PRESETS.find((p) => p.code === d.code);
+    setIsCustom(!preset);
+    setEditingIndex(i);
+    setForm({
+      ...d,
+      customName: preset ? "" : d.name_ar || d.name_en,
+    });
+  }
+
+  function remove(i: number) {
+    setDocuments((prev) => prev.filter((_, idx) => idx !== i));
+    if (editingIndex === i) resetForm();
+  }
+
+  const usedCodes = new Set(
+    documents.map((d, idx) => (editingIndex === idx ? "__self__" : d.code)),
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto" dir={isAr ? "rtl" : "ltr"}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FolderOpen className="h-5 w-5 text-primary" />
+            {T("مستندات الشركة", "Company Documents")}
+          </DialogTitle>
+          <DialogDescription>
+            {T("اختر نوع المستند وأدخل بياناته. الملفات هيتم رفعها بس لما تحفظ الإعداد النهائى.",
+               "Choose a document type and enter its details. Files are uploaded only when you finish the setup wizard.")}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Existing list */}
+        {documents.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {T("المستندات المضافة", "Added documents")}
+            </div>
+            <div className="border rounded-lg divide-y">
+              {documents.map((d, i) => (
+                <div key={i} className={`p-3 flex items-start gap-3 ${editingIndex === i ? "bg-primary/5" : ""}`}>
+                  <div className="h-9 w-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm">{isAr ? d.name_ar : d.name_en}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {[d.doc_number, d.issue_date, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
+                        .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details")}
+                    </div>
+                    {d.file ? (
+                      <Badge variant="secondary" className="mt-1 text-[10px]">
+                        <Paperclip className="h-2.5 w-2.5 me-1" />{d.file.name}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => edit(i)}>{T("تعديل", "Edit")}</Button>
+                    <Button type="button" size="sm" variant="ghost" className="text-destructive" onClick={() => remove(i)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add / edit form */}
+        <div className="space-y-4 border-t pt-4">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {editingIndex !== null ? T("تعديل مستند", "Edit document") : T("إضافة مستند جديد", "Add a new document")}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
+              <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
+                <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
+                <SelectContent>
+                  {DOC_PRESETS.map((p) => (
+                    <SelectItem
+                      key={p.code}
+                      value={p.code}
+                      disabled={usedCodes.has(p.code)}
+                    >
+                      {isAr ? p.name_ar : p.name_en}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-[11px] text-muted-foreground">
+                {T("تقدر تضيف أنواع أكتر لاحقًا من الإعدادات › أنواع مستندات الشركة.",
+                   "You can add more types later from Settings › Company Document Types.")}
+              </div>
+            </div>
+
+            {isCustom ? (
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
+                <Input
+                  value={form.customName ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
+                  placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
+                <Input
+                  dir="ltr"
+                  value={form.doc_number ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
+                  placeholder={T("اختيارى", "Optional")}
+                />
+              </div>
+            )}
+
+            {isCustom && (
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
+                <Input
+                  dir="ltr"
+                  value={form.doc_number ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
+                  placeholder={T("اختيارى", "Optional")}
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
+              <Input
+                type="date"
+                value={form.issue_date ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
+              />
+              <div className="text-[11px] text-muted-foreground">{T("اختيارى", "Optional")}</div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}</Label>
+              <Input
+                type="date"
+                value={form.expiry_date ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
+              />
+              <div className="text-[11px] text-muted-foreground">
+                {T("اختيارى — لو محددته هيوصلك تنبيه قبل الانتهاء.",
+                   "Optional — if set you'll get an alert before expiry.")}
+              </div>
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
+              <Input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  setForm((prev) => ({ ...prev, file: f }));
+                }}
+              />
+              {form.file && (
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
+                </div>
+              )}
+              <div className="text-[11px] text-muted-foreground">
+                {T("الملف مش هيترفع دلوقتى — هيترفع بس لما تنهى الإعداد وتحفظ الشركة.",
+                   "The file will not upload now — it uploads only when you finalize the setup wizard.")}
+              </div>
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-sm">{T("ملاحظات", "Notes")}</Label>
+              <Textarea
+                rows={2}
+                value={form.notes ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder={T("اختيارى", "Optional")}
+              />
+            </div>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground flex items-start gap-2">
+            <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <span>
+              {T("بعد إنشاء الشركة وإضافة الأقسام، تقدر تحدد الأقسام أو الأشخاص المسئولين عن كل نوع مستند من صفحة إعدادات «أنواع مستندات الشركة» — والتنبيهات هتوصلهم لوحدهم عند قرب انتهاء الصلاحية.",
+                 "Once the company is created and departments are set up, you can pick which departments (or people) are responsible for each document type from Settings › Company Document Types — expiry notifications go to them automatically.")}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            {editingIndex !== null && (
+              <Button type="button" variant="ghost" onClick={resetForm}>{T("إلغاء التعديل", "Cancel edit")}</Button>
+            )}
+            <Button type="button" onClick={addOrUpdate}>
+              <Plus className="me-2 h-4 w-4" />
+              {editingIndex !== null ? T("حفظ التعديل", "Save changes") : T("إضافة للسته", "Add to list")}
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter className="border-t pt-4">
+          <Button type="button" onClick={() => { resetForm(); onOpenChange(false); }}>
+            {T("تم", "Done")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
