@@ -482,6 +482,18 @@ function SetupPage() {
 
   const stepErr = validateStep(currentIdx);
   const canProceed = !stepErr;
+  // The "Create Company" button is only enabled when EVERY step is valid,
+  // so the user can't sneak in with missing required data by skipping tabs.
+  const allStepsValid = useMemo(
+    () => [1, 2, 3, 4].every((s) => validateStep(s) === null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [general, advanced, features, numbering, documents, requiredMissing.length],
+  );
+  const submitBlockError = useMemo(
+    () => [1, 2, 3, 4].map((s) => ({ s, err: validateStep(s) })).find((x) => x.err),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [general, advanced, features, numbering, documents, requiredMissing.length],
+  );
   const currentTab = tabs.find((t) => t.id === currentIdx);
   const staticProgress = typeof step === "number" ? (step / 4) * 100 : 0;
 
