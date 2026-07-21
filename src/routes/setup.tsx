@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
@@ -1248,9 +1249,25 @@ function CompanyDocumentsSection({
 }) {
   const [open, setOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   function openAdd() { setEditIndex(null); setOpen(true); }
   function openEdit(i: number) { setEditIndex(i); setOpen(true); }
+  function daysLeft(date?: string | null): number | null {
+    if (!date) return null;
+    const d = new Date(date + "T00:00:00");
+    if (isNaN(d.getTime())) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.ceil((d.getTime() - today.getTime()) / 86400000);
+  }
+  function expiryLabel(date?: string | null): { text: string; tone: "ok" | "warn" | "danger" } | null {
+    const n = daysLeft(date);
+    if (n === null) return null;
+    if (n < 0) return { text: T(`منتهى منذ ${Math.abs(n)} يوم`, `expired ${Math.abs(n)}d ago`), tone: "danger" };
+    if (n === 0) return { text: T("ينتهى اليوم", "expires today"), tone: "danger" };
+    const tone = n <= 30 ? "warn" : "ok";
+    return { text: T(`${n} يوم على التجديد`, `${n}d to renewal`), tone };
+  }
 
   return (
     <div className="space-y-3">
@@ -1277,35 +1294,52 @@ function CompanyDocumentsSection({
         <div className="grid grid-cols-[repeat(auto-fill,minmax(113px,1fr))] gap-3">
           {documents.map((d, i) => {
             const label = isAr ? d.name_ar : d.name_en;
+            const exp = expiryLabel(d.expiry_date);
             const details = [d.doc_number, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
               .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details");
+            const toneClass =
+              exp?.tone === "danger" ? "text-destructive font-semibold"
+              : exp?.tone === "warn" ? "text-amber-600 dark:text-amber-500 font-medium"
+              : "text-emerald-600 dark:text-emerald-500";
             return (
-              <button
-                type="button"
+              <div
                 key={i}
-                title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
-                onClick={() => openEdit(i)}
-                className="group relative w-[113px] h-[113px] rounded-xl border bg-card hover:border-primary/60 hover:shadow-md transition text-start flex flex-col items-center justify-center gap-1.5 p-2"
+                className="group relative w-[113px] h-[113px] rounded-xl border bg-card hover:border-primary/60 hover:shadow-md transition flex flex-col items-center justify-center gap-1.5 p-2"
               >
-                <div className="relative">
-                  <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
-                    <FileText className="h-5 w-5" />
+                <button
+                  type="button"
+                  title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
+                  onClick={() => openEdit(i)}
+                  className="absolute inset-0 rounded-xl flex flex-col items-center justify-center gap-1.5 p-2"
+                >
+                  <div className="relative">
+                    <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    {d.file && (
+                      <span className="absolute -bottom-1 -end-1 h-4 w-4 rounded-full bg-emerald-500 text-white grid place-items-center ring-2 ring-card">
+                        <Paperclip className="h-2.5 w-2.5" />
+                      </span>
+                    )}
                   </div>
-                  {d.file && (
-                    <span className="absolute -bottom-1 -end-1 h-4 w-4 rounded-full bg-emerald-500 text-white grid place-items-center ring-2 ring-card">
-                      <Paperclip className="h-2.5 w-2.5" />
-                    </span>
+                  <div className="text-[11px] leading-tight text-center font-medium line-clamp-2 w-full px-1 text-foreground">
+                    {label}
+                  </div>
+                  {exp && (
+                    <div className={`text-[9px] truncate w-full text-center px-1 ${toneClass}`}>
+                      {exp.text}
+                    </div>
                   )}
-                </div>
-                <div className="text-[11px] leading-tight text-center font-medium line-clamp-2 w-full px-1 text-foreground">
-                  {label}
-                </div>
-                {d.expiry_date && (
-                  <div className="text-[9px] text-muted-foreground truncate w-full text-center px-1">
-                    {T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)}
-                  </div>
-                )}
-              </button>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(i); }}
+                  className="absolute -top-1.5 -end-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground grid place-items-center opacity-0 group-hover:opacity-100 transition shadow z-10"
+                  aria-label={T("حذف", "Remove")}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
             );
           })}
         </div>
@@ -1325,6 +1359,36 @@ function CompanyDocumentsSection({
         isAr={isAr}
         initialEditIndex={editIndex}
       />
+
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(v) => { if (!v) setConfirmDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{T("تأكيد حذف المستند", "Confirm document deletion")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete !== null && documents[confirmDelete]
+                ? T(
+                    `هل تريد فعلاً حذف «${isAr ? documents[confirmDelete].name_ar : documents[confirmDelete].name_en}»؟ لا يمكن التراجع.`,
+                    `Delete "${isAr ? documents[confirmDelete].name_ar : documents[confirmDelete].name_en}"? This cannot be undone.`,
+                  )
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{T("لا", "No")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDelete !== null) {
+                  setDocuments((prev) => prev.filter((_, idx) => idx !== confirmDelete));
+                }
+                setConfirmDelete(null);
+              }}
+            >
+              {T("نعم، احذف", "Yes, delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1517,15 +1581,27 @@ function DocumentsDialog({
                   const label = isAr ? d.name_ar : d.name_en;
                   const details = [d.doc_number, d.issue_date, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
                     .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details");
+                  let expText: string | null = null;
+                  let expTone = "text-muted-foreground";
+                  if (d.expiry_date) {
+                    const dt = new Date(d.expiry_date + "T00:00:00");
+                    if (!isNaN(dt.getTime())) {
+                      const today = new Date(); today.setHours(0, 0, 0, 0);
+                      const n = Math.ceil((dt.getTime() - today.getTime()) / 86400000);
+                      if (n < 0) { expText = T(`منتهى -${Math.abs(n)}ي`, `exp -${Math.abs(n)}d`); expTone = "text-destructive font-semibold"; }
+                      else if (n === 0) { expText = T("ينتهى اليوم", "today"); expTone = "text-destructive font-semibold"; }
+                      else { expText = T(`${n} يوم`, `${n}d`); expTone = n <= 30 ? "text-amber-600 dark:text-amber-500 font-medium" : "text-emerald-600 dark:text-emerald-500"; }
+                    }
+                  }
                   return (
                     <div
                       key={i}
                       title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
-                      className={`group relative w-[76px] h-[76px] rounded-lg border bg-card hover:border-primary/60 hover:shadow-sm transition cursor-pointer flex flex-col items-center justify-center gap-1 p-1.5 ${editingIndex === i ? "border-primary ring-2 ring-primary/20 bg-primary/5" : ""}`}
+                      className={`group relative w-[76px] h-[76px] rounded-lg border bg-card hover:border-primary/60 hover:shadow-sm transition cursor-pointer flex flex-col items-center justify-center gap-0.5 p-1.5 ${editingIndex === i ? "border-primary ring-2 ring-primary/20 bg-primary/5" : ""}`}
                       onClick={() => edit(i)}
                     >
                       <div className="relative">
-                        <div className="h-8 w-8 rounded-md bg-primary/10 text-primary grid place-items-center">
+                        <div className="h-7 w-7 rounded-md bg-primary/10 text-primary grid place-items-center">
                           <FileText className="h-4 w-4" />
                         </div>
                         {d.file && (
@@ -1537,6 +1613,9 @@ function DocumentsDialog({
                       <div className="text-[10px] leading-tight text-center line-clamp-2 w-full px-0.5 text-foreground">
                         {label}
                       </div>
+                      {expText && (
+                        <div className={`text-[9px] truncate w-full text-center ${expTone}`}>{expText}</div>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); remove(i); }}
