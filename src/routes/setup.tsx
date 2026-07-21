@@ -330,11 +330,17 @@ function SetupPage() {
         </Card>
 
         {/* Nav */}
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="outline" onClick={back} disabled={createMut.isPending}>
-            {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
-            {T("رجوع", "Back")}
-          </Button>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={back} disabled={createMut.isPending}>
+              {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
+              {T("رجوع", "Back")}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={resetAll} disabled={createMut.isPending} className="text-muted-foreground">
+              <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+              {T("البدء من جديد", "Start over")}
+            </Button>
+          </div>
           {currentIdx < 4 ? (
             <Button onClick={next}>
               {T("التالي", "Next")}
