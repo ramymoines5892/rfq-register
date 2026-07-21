@@ -202,14 +202,27 @@ function SetupPage() {
       }
       // If user entered any optional structured field, it must be valid
       const c = getCountry(advanced.country ?? "EG");
-      const checks: Array<[string, FieldValidation]> = [
-        ["email", validateEmail(general.email ?? "")],
-        ["website", validateWebsite(general.website ?? "")],
-        ["mobile", validateRule(general.mobile ?? "", c.mobile)],
-        ["phone", validateRule(general.phone ?? "", c.phone)],
-      ];
-      const bad = checks.find(([, r]) => !r.ok);
-      if (bad) return isAr ? bad[1].error!.ar : bad[1].error!.en;
+      const primaryEmail = pickPrimary(general.emails) ?? general.email ?? "";
+      const primaryMobile = pickPrimary(general.mobiles) ?? general.mobile ?? "";
+      const primaryPhone = pickPrimary(general.phones) ?? general.phone ?? "";
+      // Validate every entered contact (not only the primary)
+      const allEmails = [primaryEmail, ...(general.emails ?? []).map((e) => e.value)].filter(Boolean);
+      const allMobiles = [primaryMobile, ...(general.mobiles ?? []).map((e) => e.value)].filter(Boolean);
+      const allPhones = [primaryPhone, ...(general.phones ?? []).map((e) => e.value)].filter(Boolean);
+      for (const v of allEmails) {
+        const r = validateEmail(v);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
+      for (const v of allMobiles) {
+        const r = validateRule(v, c.mobile);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
+      for (const v of allPhones) {
+        const r = validateRule(v, c.phone);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
+      const webR = validateWebsite(general.website ?? "");
+      if (!webR.ok) return isAr ? webR.error!.ar : webR.error!.en;
     }
     if (s === 4) {
       const seen = new Set<string>();
