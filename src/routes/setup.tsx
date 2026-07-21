@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect, type SearchableSelectOption } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -140,6 +141,36 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
     { key: "website", weight: 4,  filled: nz(primaryWebsite), valid: nz(primaryWebsite) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
   ];
+}
+
+// Weighted completion for the remaining steps — used to drive the per-step
+// progress indicator on every page (stepper icons + sticky bar).
+function computeStep2Weights(a: CompanyAdvanced): Weight[] {
+  const nz = (s?: string | null) => (s ?? "").trim().length > 0;
+  return [
+    { key: "state",    weight: 25, filled: nz(a.state),             valid: nz(a.state) },
+    { key: "city",     weight: 20, filled: nz(a.city),              valid: nz(a.city) },
+    { key: "address",  weight: 20, filled: nz(a.address),           valid: nz(a.address) },
+    { key: "postal",   weight: 5,  filled: nz(a.postal_code),       valid: nz(a.postal_code) },
+    { key: "currency", weight: 5,  filled: nz(a.base_currency),     valid: nz(a.base_currency) },
+    { key: "timezone", weight: 5,  filled: nz(a.timezone),          valid: nz(a.timezone) },
+    { key: "fy_start", weight: 5,  filled: nz(a.fiscal_year_start), valid: nz(a.fiscal_year_start) },
+    { key: "fy_end",   weight: 5,  filled: nz(a.fiscal_year_end),   valid: nz(a.fiscal_year_end) },
+    { key: "notes",    weight: 10, filled: nz(a.notes),             valid: nz(a.notes) },
+  ];
+}
+function pctFromWeights(w: Weight[]): number {
+  const total = w.reduce((a, x) => a + x.weight, 0);
+  const done = w.reduce((a, x) => a + (x.valid ? x.weight : 0), 0);
+  return total ? Math.round((done / total) * 100) : 0;
+}
+function featuresPct(f: CompanyFeatures): number {
+  const vals = Object.values(f);
+  return vals.length ? Math.round((vals.filter(Boolean).length / vals.length) * 100) : 0;
+}
+function numberingPct(rows: NumberingRow[]): number {
+  // Target ~6 configured doc types = 100%; more still shows as 100%.
+  return Math.min(100, Math.round((rows.length / 6) * 100));
 }
 
 function SetupPage() {
@@ -275,6 +306,15 @@ function SetupPage() {
 
   const requiredMissing = weights.filter((w) => w.required && !w.valid);
 
+  // Per-step completion percentages (drive stepper icons + sticky bar).
+  const stepPct = useMemo(() => ({
+    1: completion,
+    2: pctFromWeights(computeStep2Weights(advanced)),
+    3: featuresPct(features),
+    4: numberingPct(numbering),
+  }), [completion, advanced, features, numbering]);
+
+
   function validateStep(s: number): string | null {
     if (s === 1) {
       if (requiredMissing.length > 0) {
@@ -308,7 +348,6 @@ function SetupPage() {
       }
     }
     if (s === 4) {
-      if (numbering.length === 0) return T("أضف نوع مستند واحد على الأقل", "Add at least one document type");
       const seenType = new Set<string>();
       const seenPrefix = new Set<string>();
       for (const row of numbering) {
@@ -537,12 +576,14 @@ function SetupPage() {
                     aria-label={`${T("الخطوة", "Step")} ${t.id}: ${t.label}`}
                     className="flex flex-col items-center gap-1.5 flex-1 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-lg py-1 group disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 ${
-                      done ? "bg-primary text-primary-foreground shadow-sm group-hover:brightness-110" :
+                    <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 text-xs font-bold tabular-nums ${
+                      (stepPct[t.id as 1 | 2 | 3 | 4] ?? 0) >= 100 ? "bg-emerald-500 text-white shadow-sm group-hover:brightness-110" :
                       active ? "bg-primary text-primary-foreground ring-4 ring-primary/15 scale-110" :
                       "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15 group-hover:text-foreground"
                     }`}>
-                      {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
+                      {(stepPct[t.id as 1 | 2 | 3 | 4] ?? 0) >= 100
+                        ? <CheckCircle2 className="h-5 w-5" />
+                        : <span className="text-[10px] sm:text-[11px]">{stepPct[t.id as 1 | 2 | 3 | 4] ?? 0}%</span>}
                     </div>
                     <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>
                       {t.label}
@@ -561,6 +602,36 @@ function SetupPage() {
             <span className="font-semibold text-foreground truncate ms-2">{currentTab?.label}</span>
           </div>
         </nav>
+
+        {/* Per-step title + completion bar — visible on every step */}
+        {typeof step === "number" && (() => {
+          const pct = stepPct[step as 1 | 2 | 3 | 4] ?? 0;
+          const tone = pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-primary" : "bg-amber-500";
+          return (
+            <div className="bg-card border rounded-2xl px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 flex-wrap">
+              {currentTab && (
+                <div className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${pct >= 100 ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"}`}>
+                  <currentTab.icon className="h-5 w-5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {T("الخطوة", "Step")} {currentIdx}/4
+                </div>
+                <div className="text-sm sm:text-base font-semibold truncate">{currentTab?.label}</div>
+              </div>
+              <div className="min-w-[140px] sm:min-w-[200px] shrink-0">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-muted-foreground">{T("الاكتمال", "Completeness")}</span>
+                  <span className="font-semibold tabular-nums">{pct}%</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full transition-all duration-500 ${tone}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         <Card className="border-border/60 shadow-sm">
           <CardContent className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8">
@@ -846,50 +917,14 @@ function StepGeneral({
   const reqErr = (val: string | null | undefined, msgAr: string, msgEn: string) =>
     showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
 
-  // Detect scroll to collapse the completion header into a slim floating bar
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 140);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-
-  const barColor = completion === 100 ? "bg-emerald-500" : completion >= 60 ? "bg-primary" : "bg-amber-500";
-
   return (
     <div className="space-y-8 md:space-y-10">
-      {/* Sticky completion tracker — expanded at top, collapses to slim bar on scroll */}
-      <div className="sticky top-[56px] z-20 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8">
-        {scrolled ? (
-          <div className="bg-background/95 backdrop-blur-md border rounded-full shadow-md px-4 py-2 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <span className="text-[11px] text-muted-foreground shrink-0">{T("الاكتمال", "Completeness")}</span>
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden min-w-[80px]">
-              <div className={`h-full transition-all duration-500 ${barColor}`} style={{ width: `${completion}%` }} />
-            </div>
-            <span className="text-xs font-bold tabular-nums shrink-0">{completion}%</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between bg-background/60 backdrop-blur-sm rounded-xl py-2">
-            <div className="min-w-0">
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight">{T("بطاقة الشركة", "Company Profile")}</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-                {T("املأ البيانات الأساسية للشركة. الحقول المُميّزة بنجمة حمراء مطلوبة للانتقال للخطوة التالية.",
-                   "Fill in the company profile. Fields marked with a red asterisk are required to continue.")}
-              </p>
-            </div>
-            <div className="rounded-xl bg-muted/60 border px-3 py-2 min-w-[170px] shrink-0">
-              <div className="flex items-center justify-between text-xs text-muted-foreground gap-3">
-                <span>{T("الاكتمال", "Completeness")}</span>
-                <span className="font-semibold text-foreground tabular-nums">{completion}%</span>
-              </div>
-              <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
-                <div className={`h-full transition-all ${barColor}`} style={{ width: `${completion}%` }} />
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="min-w-0">
+        <h3 className="text-xl sm:text-2xl font-bold tracking-tight">{T("بطاقة الشركة", "Company Profile")}</h3>
+        <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+          {T("املأ البيانات الأساسية للشركة. الحقول المُميّزة بنجمة حمراء مطلوبة للانتقال للخطوة التالية.",
+             "Fill in the company profile. Fields marked with a red asterisk are required to continue.")}
+        </p>
       </div>
 
 
@@ -951,14 +986,17 @@ function StepGeneral({
                 label={T("الدولة", "Country")} required icon={MapPin}
                 hint={T("بتحدد فورمات الأرقام والعملة", "Determines number formats & currency")}
               >
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map((cc) => (
-                      <SelectItem key={cc.code} value={cc.code}>{isAr ? cc.labelAr : cc.labelEn}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={country} onValueChange={setCountry}
+                  className="h-11" dir={isAr ? "rtl" : "ltr"}
+                  searchPlaceholder={T("ابحث…", "Search…")}
+                  emptyText={T("لا توجد نتائج", "No results")}
+                  options={COUNTRIES.map((cc): SearchableSelectOption => ({
+                    value: cc.code,
+                    label: isAr ? cc.labelAr : cc.labelEn,
+                    keywords: `${cc.labelAr} ${cc.labelEn} ${cc.code}`,
+                  }))}
+                />
               </SmartField>
               <SmartField
                 label={T("الاسم المختصر (إنجليزى)", "Short Name (English)")}
@@ -1146,37 +1184,37 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
       <Section title={T("العنوان", "Address")}>
         <Field label={T("المحافظة / المنطقة", "State / Governorate")}>
           {hasGeoData ? (
-            <Select
+            <SearchableSelect
               value={advanced.state ?? ""}
               onValueChange={(v) => setAdvanced((a: any) => ({ ...a, state: v, city: "" }))}
-            >
-              <SelectTrigger><SelectValue placeholder={T("اختر المحافظة", "Select governorate")} /></SelectTrigger>
-              <SelectContent>
-                {states.map((s) => (
-                  <SelectItem key={s.key} value={s.key}>{T(s.ar, s.en)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={T("اختر المحافظة", "Select governorate")}
+              searchPlaceholder={T("ابحث…", "Search…")}
+              emptyText={T("لا توجد نتائج", "No results")}
+              options={states.map((s): SearchableSelectOption => ({
+                value: s.key,
+                label: T(s.ar, s.en),
+                keywords: `${s.ar} ${s.en} ${s.key}`,
+              }))}
+            />
           ) : (
             <Input value={advanced.state ?? ""} onChange={set("state")} placeholder={T("اكتب اسم المحافظة", "Type state name")} />
           )}
         </Field>
         <Field label={T("المدينة", "City")}>
           {hasGeoData ? (
-            <Select
+            <SearchableSelect
               value={advanced.city ?? ""}
               onValueChange={(v) => set("city")(v)}
               disabled={!advanced.state}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={advanced.state ? T("اختر المدينة", "Select city") : T("اختر المحافظة أولاً", "Pick governorate first")} />
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map((ct) => (
-                  <SelectItem key={ct.en} value={ct.en}>{T(ct.ar, ct.en)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={advanced.state ? T("اختر المدينة", "Select city") : T("اختر المحافظة أولاً", "Pick governorate first")}
+              searchPlaceholder={T("ابحث…", "Search…")}
+              emptyText={T("لا توجد نتائج", "No results")}
+              options={cities.map((ct): SearchableSelectOption => ({
+                value: ct.en,
+                label: T(ct.ar, ct.en),
+                keywords: `${ct.ar} ${ct.en}`,
+              }))}
+            />
           ) : (
             <Input value={advanced.city ?? ""} onChange={set("city")} placeholder={T("اكتب اسم المدينة", "Type city name")} />
           )}
@@ -1196,17 +1234,19 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
           </Select>
         </Field>
         <Field label={T("المنطقة الزمنية", "Time Zone")}>
-          <Select value={advanced.timezone ?? "Africa/Cairo"} onValueChange={(v) => set("timezone")(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Africa/Cairo">Africa/Cairo</SelectItem>
-              <SelectItem value="Europe/London">Europe/London</SelectItem>
-              <SelectItem value="Europe/Berlin">Europe/Berlin</SelectItem>
-              <SelectItem value="Asia/Riyadh">Asia/Riyadh</SelectItem>
-              <SelectItem value="Asia/Dubai">Asia/Dubai</SelectItem>
-              <SelectItem value="UTC">UTC</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={advanced.timezone ?? "Africa/Cairo"} onValueChange={(v) => set("timezone")(v)}
+            searchPlaceholder={T("ابحث…", "Search…")}
+            emptyText={T("لا توجد نتائج", "No results")}
+            options={[
+              { value: "Africa/Cairo", label: "Africa/Cairo" },
+              { value: "Europe/London", label: "Europe/London" },
+              { value: "Europe/Berlin", label: "Europe/Berlin" },
+              { value: "Asia/Riyadh", label: "Asia/Riyadh" },
+              { value: "Asia/Dubai", label: "Asia/Dubai" },
+              { value: "UTC", label: "UTC" },
+            ]}
+          />
         </Field>
         <Field label={T("صيغة التاريخ", "Date Format")}>
           <Select value={advanced.date_format ?? "DD/MM/YYYY"} onValueChange={(v) => set("date_format")(v)}>
@@ -1232,19 +1272,21 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
 
       <Section title={T("الإعدادات المالية", "Financial Settings")}>
         <Field label={T("العملة الأساسية", "Base Currency")}>
-          <Select value={advanced.base_currency ?? "EGP"} onValueChange={(v) => set("base_currency")(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="EGP">EGP - جنيه مصري</SelectItem>
-              <SelectItem value="USD">USD - US Dollar</SelectItem>
-              <SelectItem value="EUR">EUR - Euro</SelectItem>
-              <SelectItem value="GBP">GBP - British Pound</SelectItem>
-              <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
-              <SelectItem value="AED">AED - UAE Dirham</SelectItem>
-              <SelectItem value="KWD">KWD - Kuwaiti Dinar</SelectItem>
-              <SelectItem value="QAR">QAR - Qatari Riyal</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={advanced.base_currency ?? "EGP"} onValueChange={(v) => set("base_currency")(v)}
+            searchPlaceholder={T("ابحث…", "Search…")}
+            emptyText={T("لا توجد نتائج", "No results")}
+            options={[
+              { value: "EGP", label: "EGP - جنيه مصري", keywords: "egyptian pound" },
+              { value: "USD", label: "USD - US Dollar", keywords: "dollar" },
+              { value: "EUR", label: "EUR - Euro", keywords: "euro" },
+              { value: "GBP", label: "GBP - British Pound", keywords: "sterling" },
+              { value: "SAR", label: "SAR - Saudi Riyal", keywords: "ريال سعودي" },
+              { value: "AED", label: "AED - UAE Dirham", keywords: "درهم إماراتي" },
+              { value: "KWD", label: "KWD - Kuwaiti Dinar", keywords: "دينار كويتي" },
+              { value: "QAR", label: "QAR - Qatari Riyal", keywords: "ريال قطري" },
+            ]}
+          />
         </Field>
         <div />
         <Field label={T("بداية السنة المالية (يوم/شهر)", "Fiscal Year Start (day/month)")}>
