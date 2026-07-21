@@ -18,6 +18,8 @@ import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLe
 import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
+import { filterArabic, filterEnglish } from "@/lib/textFilters";
+
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
