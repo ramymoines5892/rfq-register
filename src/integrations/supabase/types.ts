@@ -56,6 +56,282 @@ export type Database = {
         }
         Relationships: []
       }
+      branches: {
+        Row: {
+          code: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_head_office: boolean
+          name: string
+          name_ar: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_head_office?: boolean
+          name: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_head_office?: boolean
+          name?: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: string | null
+          base_currency: string | null
+          city: string | null
+          code: string
+          country: string | null
+          cr_no: string | null
+          created_at: string
+          created_by: string | null
+          date_format: string | null
+          default_language: string | null
+          email: string | null
+          finance_manager: string | null
+          fiscal_year_end: string | null
+          fiscal_year_start: string | null
+          gm_name: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          mobile: string | null
+          name: string
+          name_ar: string | null
+          notes: string | null
+          number_format: string | null
+          phone: string | null
+          postal_code: string | null
+          purchasing_manager: string | null
+          sales_manager: string | null
+          short_name: string | null
+          state: string | null
+          tax_no: string | null
+          timezone: string | null
+          updated_at: string
+          vat_no: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          base_currency?: string | null
+          city?: string | null
+          code: string
+          country?: string | null
+          cr_no?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_format?: string | null
+          default_language?: string | null
+          email?: string | null
+          finance_manager?: string | null
+          fiscal_year_end?: string | null
+          fiscal_year_start?: string | null
+          gm_name?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          mobile?: string | null
+          name: string
+          name_ar?: string | null
+          notes?: string | null
+          number_format?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          purchasing_manager?: string | null
+          sales_manager?: string | null
+          short_name?: string | null
+          state?: string | null
+          tax_no?: string | null
+          timezone?: string | null
+          updated_at?: string
+          vat_no?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          base_currency?: string | null
+          city?: string | null
+          code?: string
+          country?: string | null
+          cr_no?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_format?: string | null
+          default_language?: string | null
+          email?: string | null
+          finance_manager?: string | null
+          fiscal_year_end?: string | null
+          fiscal_year_start?: string | null
+          gm_name?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          mobile?: string | null
+          name?: string
+          name_ar?: string | null
+          notes?: string | null
+          number_format?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          purchasing_manager?: string | null
+          sales_manager?: string | null
+          short_name?: string | null
+          state?: string | null
+          tax_no?: string | null
+          timezone?: string | null
+          updated_at?: string
+          vat_no?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      company_features: {
+        Row: {
+          approval_workflow: boolean
+          attachments: boolean
+          audit_log: boolean
+          batch_control: boolean
+          company_id: string
+          created_at: string
+          e_signatures: boolean
+          finance: boolean
+          heat_number: boolean
+          id: string
+          inventory: boolean
+          lot_number: boolean
+          multi_branch: boolean
+          multi_currency: boolean
+          multi_warehouse: boolean
+          procurement: boolean
+          quality: boolean
+          sales: boolean
+          traceability: boolean
+          updated_at: string
+        }
+        Insert: {
+          approval_workflow?: boolean
+          attachments?: boolean
+          audit_log?: boolean
+          batch_control?: boolean
+          company_id: string
+          created_at?: string
+          e_signatures?: boolean
+          finance?: boolean
+          heat_number?: boolean
+          id?: string
+          inventory?: boolean
+          lot_number?: boolean
+          multi_branch?: boolean
+          multi_currency?: boolean
+          multi_warehouse?: boolean
+          procurement?: boolean
+          quality?: boolean
+          sales?: boolean
+          traceability?: boolean
+          updated_at?: string
+        }
+        Update: {
+          approval_workflow?: boolean
+          attachments?: boolean
+          audit_log?: boolean
+          batch_control?: boolean
+          company_id?: string
+          created_at?: string
+          e_signatures?: boolean
+          finance?: boolean
+          heat_number?: boolean
+          id?: string
+          inventory?: boolean
+          lot_number?: boolean
+          multi_branch?: boolean
+          multi_currency?: boolean
+          multi_warehouse?: boolean
+          procurement?: boolean
+          quality?: boolean
+          sales?: boolean
+          traceability?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_features_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_numbering: {
+        Row: {
+          company_id: string
+          created_at: string
+          doc_type: string
+          id: string
+          next_seq: number
+          padding: number
+          prefix: string
+          updated_at: string
+          year_segment: boolean
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          doc_type: string
+          id?: string
+          next_seq?: number
+          padding?: number
+          prefix: string
+          updated_at?: string
+          year_segment?: boolean
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          next_seq?: number
+          padding?: number
+          prefix?: string
+          updated_at?: string
+          year_segment?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_numbering_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_attachments: {
         Row: {
           category: Database["public"]["Enums"]["customer_attachment_category"]
@@ -1313,6 +1589,60 @@ export type Database = {
         }
         Relationships: []
       }
+      warehouses: {
+        Row: {
+          branch_id: string | null
+          code: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_main: boolean
+          name: string
+          name_ar: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          code?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_main?: boolean
+          name: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_main?: boolean
+          name?: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_stage_approvers: {
         Row: {
           approver_id: string
@@ -1493,6 +1823,7 @@ export type Database = {
           title: string
         }[]
       }
+      has_any_company: { Args: never; Returns: boolean }
       has_any_user: { Args: never; Returns: boolean }
       has_permission: {
         Args: {
