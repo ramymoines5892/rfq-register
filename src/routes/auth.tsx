@@ -147,6 +147,22 @@ function AuthPage() {
               </div>
             </div>
           )}
+          {!isSetup && noCompany && (
+            <div className="mb-4 flex items-start gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-sm">
+              <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold">
+                  {lang === "ar" ? "لا توجد شركة مُعدَّة بعد" : "No company configured yet"}
+                </div>
+                <div className="text-muted-foreground">
+                  {lang === "ar"
+                    ? "سجّل الدخول لإكمال إعداد أول شركة في النظام."
+                    : "Sign in to continue setting up the first company."}
+                </div>
+              </div>
+            </div>
+          )}
+
 
           <form onSubmit={submitFn} className="space-y-4">
             <div className="space-y-2">
