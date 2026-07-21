@@ -314,6 +314,16 @@ function SetupPage() {
     4: numberingPct(numbering),
   }), [completion, advanced, features, numbering]);
 
+  // Sticky progress bar collapses to a slim floating pill on scroll
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 120);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+
 
   function validateStep(s: number): string | null {
     if (s === 1) {
