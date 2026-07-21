@@ -222,8 +222,11 @@ function SetupPage() {
         const r = validateRule(v, c.phone);
         if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
       }
-      const webR = validateWebsite(general.website ?? "");
-      if (!webR.ok) return isAr ? webR.error!.ar : webR.error!.en;
+      const allWebsites = [...(general.websites ?? []).map((e) => e.value), general.website ?? ""].filter(Boolean);
+      for (const v of allWebsites) {
+        const r = validateWebsite(v);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
     }
     if (s === 4) {
       const seen = new Set<string>();
