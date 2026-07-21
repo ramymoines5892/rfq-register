@@ -1,7 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow, type SetupDocument } from "@/features/company/api";
+import { hasAnyCompany, pickPrimary, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type ContactEntry, type NumberingRow, type SetupDocument } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt, FolderOpen, Plus, Trash2, Paperclip, CalendarDays, Info } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt, FolderOpen, Plus, Trash2, Paperclip, CalendarDays, Info, Star, Printer } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
@@ -83,19 +83,22 @@ type Weight = { key: string; weight: number; filled: boolean; valid: boolean; re
 function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0): Weight[] {
   const c = getCountry(country);
   const nz = (s?: string | null) => (s ?? "").trim().length > 0;
-  const emailV = validateEmail(g.email ?? "");
+  const primaryEmail = pickPrimary(g.emails) ?? g.email ?? "";
+  const primaryMobile = pickPrimary(g.mobiles) ?? g.mobile ?? "";
+  const primaryPhone = pickPrimary(g.phones) ?? g.phone ?? "";
+  const emailV = validateEmail(primaryEmail);
   const webV = validateWebsite(g.website ?? "");
-  const mobileV = validateRule(g.mobile ?? "", c.mobile);
-  const phoneV = validateRule(g.phone ?? "", c.phone);
+  const mobileV = validateRule(primaryMobile, c.mobile);
+  const phoneV = validateRule(primaryPhone, c.phone);
   return [
     { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
     { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
     { key: "country", weight: 5,  filled: nz(country),      valid: nz(country),      required: true },
     { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
-    { key: "mobile",  weight: 12, filled: nz(g.mobile),     valid: nz(g.mobile) && mobileV.ok },
-    { key: "email",   weight: 8,  filled: nz(g.email),      valid: nz(g.email) && emailV.ok },
+    { key: "mobile",  weight: 12, filled: nz(primaryMobile),valid: nz(primaryMobile) && mobileV.ok },
+    { key: "email",   weight: 8,  filled: nz(primaryEmail), valid: nz(primaryEmail) && emailV.ok },
     { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
-    { key: "phone",   weight: 4,  filled: nz(g.phone),      valid: nz(g.phone) && phoneV.ok },
+    { key: "phone",   weight: 4,  filled: nz(primaryPhone), valid: nz(primaryPhone) && phoneV.ok },
     { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
   ];
@@ -113,7 +116,9 @@ function SetupPage() {
   const [step, setStep] = useState<Step>(d?.step ?? "welcome");
   const [general, setGeneral] = useState<CompanyGeneral>(d?.general ?? {
     name: "", name_ar: "", short_name: "", code: "",
-    tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "",
+    tax_no: "", cr_no: "", vat_no: "",
+    email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "",
+    emails: [], phones: [], mobiles: [], faxes: [],
   });
   const [advanced, setAdvanced] = useState<CompanyAdvanced>(d?.advanced ?? {
     country: "EG", city: "", state: "", postal_code: "", address: "",
@@ -154,7 +159,7 @@ function SetupPage() {
     clearDraft();
     setStep("welcome");
     setShowErrors(false);
-    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "" });
+    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "", emails: [], phones: [], mobiles: [], faxes: [] });
     setAdvanced({
       country: "EG", city: "", state: "", postal_code: "", address: "",
       default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
@@ -197,14 +202,27 @@ function SetupPage() {
       }
       // If user entered any optional structured field, it must be valid
       const c = getCountry(advanced.country ?? "EG");
-      const checks: Array<[string, FieldValidation]> = [
-        ["email", validateEmail(general.email ?? "")],
-        ["website", validateWebsite(general.website ?? "")],
-        ["mobile", validateRule(general.mobile ?? "", c.mobile)],
-        ["phone", validateRule(general.phone ?? "", c.phone)],
-      ];
-      const bad = checks.find(([, r]) => !r.ok);
-      if (bad) return isAr ? bad[1].error!.ar : bad[1].error!.en;
+      const primaryEmail = pickPrimary(general.emails) ?? general.email ?? "";
+      const primaryMobile = pickPrimary(general.mobiles) ?? general.mobile ?? "";
+      const primaryPhone = pickPrimary(general.phones) ?? general.phone ?? "";
+      // Validate every entered contact (not only the primary)
+      const allEmails = [primaryEmail, ...(general.emails ?? []).map((e) => e.value)].filter(Boolean);
+      const allMobiles = [primaryMobile, ...(general.mobiles ?? []).map((e) => e.value)].filter(Boolean);
+      const allPhones = [primaryPhone, ...(general.phones ?? []).map((e) => e.value)].filter(Boolean);
+      for (const v of allEmails) {
+        const r = validateEmail(v);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
+      for (const v of allMobiles) {
+        const r = validateRule(v, c.mobile);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
+      for (const v of allPhones) {
+        const r = validateRule(v, c.phone);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
+      const webR = validateWebsite(general.website ?? "");
+      if (!webR.ok) return isAr ? webR.error!.ar : webR.error!.en;
     }
     if (s === 4) {
       const seen = new Set<string>();
@@ -475,6 +493,116 @@ function SmartField({
   );
 }
 
+// ---------------- Multi-contact editor (email / phone / mobile / fax) ----------------
+
+function MultiContactField({
+  label, icon: Icon, values, onChange, placeholder, hint, format, validate, isAr, T, showErrors,
+  type, inputMode,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  values: ContactEntry[];
+  onChange: (list: ContactEntry[]) => void;
+  placeholder?: string;
+  hint?: string;
+  format?: (v: string) => string;
+  validate?: (v: string) => FieldValidation;
+  isAr: boolean;
+  T: (ar: string, en: string) => string;
+  showErrors?: boolean;
+  type?: "text" | "email";
+  inputMode?: "tel" | "text" | "email";
+}) {
+  const list = values.length ? values : [{ value: "", label: "", is_primary: true }];
+  const update = (idx: number, patch: Partial<ContactEntry>) => {
+    const next = list.map((e, i) => (i === idx ? { ...e, ...patch } : e));
+    onChange(next.filter((_, i) => i < next.length));
+  };
+  const setPrimary = (idx: number) => {
+    onChange(list.map((e, i) => ({ ...e, is_primary: i === idx })));
+  };
+  const add = () => {
+    const next = [...list, { value: "", label: "", is_primary: false }];
+    if (!next.some((e) => e.is_primary)) next[0].is_primary = true;
+    onChange(next);
+  };
+  const remove = (idx: number) => {
+    const next = list.filter((_, i) => i !== idx);
+    if (next.length && !next.some((e) => e.is_primary)) next[0].is_primary = true;
+    onChange(next);
+  };
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span>{label}</span>
+      </Label>
+      <div className="space-y-2">
+        {list.map((entry, idx) => {
+          const v = validate?.(entry.value);
+          const error = showErrors && entry.value && v && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
+          return (
+            <div key={idx} className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPrimary(idx)}
+                  title={T("تعيين كأساسى", "Set as primary")}
+                  className={`shrink-0 h-9 w-9 grid place-items-center rounded-md border transition-colors ${
+                    entry.is_primary ? "bg-primary/10 border-primary text-primary" : "border-input text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Star className={`h-4 w-4 ${entry.is_primary ? "fill-current" : ""}`} />
+                </button>
+                <Input
+                  dir="ltr"
+                  type={type ?? "text"}
+                  inputMode={inputMode}
+                  value={entry.value}
+                  onChange={(e) => update(idx, { value: format ? format(e.target.value) : e.target.value })}
+                  placeholder={placeholder}
+                  className="flex-1"
+                />
+                <Input
+                  value={entry.label ?? ""}
+                  onChange={(e) => update(idx, { label: e.target.value })}
+                  placeholder={T("مسمى (اختيارى)", "Label (optional)")}
+                  className="w-28 sm:w-32 hidden sm:block"
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(idx)}
+                  disabled={list.length <= 1 && !entry.value}
+                  title={T("حذف", "Remove")}
+                  className="shrink-0 h-9 w-9 grid place-items-center rounded-md border border-input text-muted-foreground hover:text-destructive hover:border-destructive disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              {error && (
+                <div className="ps-11 flex items-center gap-1.5 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{error}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={add}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {T("إضافة", "Add another")}
+        </button>
+      </div>
+      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
+    </div>
+  );
+}
+
+
 // ---------------- STEP 1 — General (CV-like layout, weighted progress) ----------------
 
 function StepGeneral({
@@ -496,22 +624,15 @@ function StepGeneral({
   setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
 }) {
   const c = getCountry(country);
-  const set = <K extends keyof CompanyGeneral>(k: K) => (v: string) => setGeneral((g) => ({ ...g, [k]: v }));
+  const set = <K extends keyof CompanyGeneral>(k: K) => (v: CompanyGeneral[K]) => setGeneral((g) => ({ ...g, [k]: v }));
 
   // Live validations
-  const emailV = validateEmail(general.email ?? "");
   const webV = validateWebsite(general.website ?? "");
-  const mobileV = validateRule(general.mobile ?? "", c.mobile);
-  const phoneV = validateRule(general.phone ?? "", c.phone);
 
   const err = (v: FieldValidation, forceShow = false) =>
     (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
   const reqErr = (val: string | null | undefined, msgAr: string, msgEn: string) =>
     showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
-
-  // Auto-format on change for masked fields
-  const onMobile = (v: string) => set("mobile")(c.mobile ? applyMask(v, c.mobile) : v);
-  const onPhone = (v: string) => set("phone")(c.phone ? applyMask(v, c.phone) : v);
 
   return (
     <div className="space-y-6">
@@ -610,43 +731,52 @@ function StepGeneral({
         </div>
       </div>
 
-      {/* Contact block */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("بيانات الاتصال", "Contact")}</h4>
+      {/* Contact block — multi-entry with primary flag */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("بيانات الاتصال", "Contact")}</h4>
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+            <Star className="h-3 w-3 fill-primary text-primary" />
+            {T("النجمة = الأساسى (يُستخدم فى المراسلات)", "Star = primary (used for messaging)")}
+          </div>
+        </div>
         <div className="grid md:grid-cols-2 gap-4">
-          <SmartField
-            label={T("موبايل", "Mobile")}
-            icon={Smartphone}
+          <MultiContactField
+            label={T("موبايل", "Mobile")} icon={Smartphone}
+            values={general.mobiles ?? []} onChange={(list) => set("mobiles")(list)}
+            placeholder={c.mobile?.example}
             hint={c.mobile ? (isAr ? c.mobile.hintAr : c.mobile.hintEn) : undefined}
-            error={err(mobileV)}
-          >
-            <Input
-              dir="ltr"
-              value={general.mobile ?? ""}
-              onChange={(e) => onMobile(e.target.value)}
-              placeholder={c.mobile?.example}
-              inputMode="tel"
-            />
-          </SmartField>
-          <SmartField
-            label={T("البريد الإلكتروني", "Email")}
-            icon={Mail}
-            hint={T("بريد رسمي للشركة", "Official company email")}
-            error={err(emailV)}
-          >
-            <Input dir="ltr" type="email" value={general.email ?? ""} onChange={(e) => set("email")(e.target.value)} placeholder="info@company.com" />
-          </SmartField>
-          <SmartField
-            label={T("تليفون أرضى", "Landline Phone")}
-            icon={Phone}
+            format={(v) => (c.mobile ? applyMask(v, c.mobile) : v)}
+            validate={(v) => validateRule(v, c.mobile)}
+            isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
+          />
+          <MultiContactField
+            label={T("البريد الإلكتروني", "Email")} icon={Mail}
+            values={general.emails ?? []} onChange={(list) => set("emails")(list)}
+            placeholder="info@company.com"
+            hint={T("الأساسى منه يُستخدم لإرسال الإشعارات", "Primary is used for outbound mail")}
+            validate={validateEmail}
+            isAr={isAr} T={T} showErrors={showErrors} type="email"
+          />
+          <MultiContactField
+            label={T("تليفون أرضى", "Landline Phone")} icon={Phone}
+            values={general.phones ?? []} onChange={(list) => set("phones")(list)}
+            placeholder={c.phone?.example}
             hint={c.phone ? (isAr ? c.phone.hintAr : c.phone.hintEn) : T("اختيارى", "Optional")}
-            error={err(phoneV)}
-          >
-            <Input dir="ltr" value={general.phone ?? ""} onChange={(e) => onPhone(e.target.value)} placeholder={c.phone?.example} inputMode="tel" />
-          </SmartField>
+            format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
+            validate={(v) => validateRule(v, c.phone)}
+            isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
+          />
+          <MultiContactField
+            label={T("فاكس", "Fax")} icon={Printer}
+            values={general.faxes ?? []} onChange={(list) => set("faxes")(list)}
+            placeholder={c.phone?.example}
+            hint={T("اختيارى", "Optional")}
+            format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
+            isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
+          />
           <SmartField
-            label={T("الموقع الإلكتروني", "Website")}
-            icon={Globe}
+            label={T("الموقع الإلكتروني", "Website")} icon={Globe}
             hint={T("اختيارى — لازم يكون رابط صحيح", "Optional — must be a valid URL")}
             error={err(webV)}
           >
