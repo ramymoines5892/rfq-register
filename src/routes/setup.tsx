@@ -376,12 +376,13 @@ function SetupPage() {
             </div>
             <CardTitle className="text-3xl">{T("مبروك!", "Congratulations!")}</CardTitle>
             <CardDescription className="text-base mt-2">
-              {T("تم إعداد نظام ERP الخاص بك بنجاح.", "Your ERP system has been configured successfully.")}
+              {T("تم إعداد شركتك بنجاح. سجّل الدخول بالإيميل وكلمة المرور للدخول إلى النظام.",
+                 "Your company was created successfully. Sign in with your email and password to enter the system.")}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button size="lg" className="w-full h-12" onClick={() => navigate({ to: "/" })}>
-              {T("انتقل إلى لوحة التحكم", "Go to Dashboard")}
+            <Button size="lg" className="w-full h-12" onClick={() => navigate({ to: "/auth" })}>
+              {T("الانتقال إلى تسجيل الدخول", "Go to Sign In")}
             </Button>
           </CardContent>
         </Card>
