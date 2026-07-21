@@ -339,6 +339,17 @@ function SetupPage() {
     if (currentIdx > 1) setStep((currentIdx - 1) as Step);
     else setStep("welcome");
   }
+  // Jump to a specific step. Going back or to the current step is always
+  // allowed; jumping forward requires every intermediate step to be valid.
+  function goToStep(target: 1 | 2 | 3 | 4) {
+    if (target <= currentIdx) { setStep(target); return; }
+    for (let s = currentIdx; s < target; s += 1) {
+      const err = validateStep(s);
+      if (err) { setShowErrors(true); setStep(s as Step); toast.error(err); return; }
+    }
+    setShowErrors(false);
+    setStep(target);
+  }
 
   async function handleLogo(file: File) {
     if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
