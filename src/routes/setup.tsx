@@ -1273,7 +1273,7 @@ function CompanyDocumentsSection({
 }
 
 function DocumentsDialog({
-  open, onOpenChange, documents, setDocuments, T, isAr,
+  open, onOpenChange, documents, setDocuments, T, isAr, initialEditIndex,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -1281,6 +1281,7 @@ function DocumentsDialog({
   setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
   T: (ar: string, en: string) => string;
   isAr: boolean;
+  initialEditIndex?: number | null;
 }) {
   // Form state for adding / editing one document at a time
   const emptyForm: SetupDocument = {
@@ -1297,6 +1298,16 @@ function DocumentsDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // When opened with a specific index, jump straight into edit mode
+  useEffect(() => {
+    if (!open) return;
+    if (initialEditIndex != null && documents[initialEditIndex]) {
+      setEditingIndex(initialEditIndex);
+      setForm({ ...documents[initialEditIndex] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialEditIndex]);
+
   // Auto-focus the first field (document type) whenever the dialog opens
   // or after a document is added/edited so the user can chain entries fast.
   const firstInputRef = useRef<HTMLButtonElement | null>(null);
@@ -1305,6 +1316,7 @@ function DocumentsDialog({
     const t = setTimeout(() => firstInputRef.current?.focus(), 80);
     return () => clearTimeout(t);
   }, [open, editingIndex]);
+
 
   function resetForm() {
     setForm(emptyForm);
