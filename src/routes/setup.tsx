@@ -203,6 +203,8 @@ function SetupPage() {
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
     setDocuments([]);
+    setLogoFile(null);
+
   }
 
   const isAr = lang === "ar";
