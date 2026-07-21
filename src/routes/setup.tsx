@@ -29,7 +29,7 @@ const DRAFT_KEY = "eec.setup.draft.v1";
 type PersistedDoc = Omit<SetupDocument, "file"> & {
   file_name?: string | null;
   file_type?: string | null;
-  file_data_url?: string | null;
+  file_data_url?: string | null; // legacy — no longer written, still read for migration
   has_file?: boolean;
 };
 
@@ -40,7 +40,8 @@ type Draft = {
   features: CompanyFeatures;
   numbering: NumberingRow[];
   documents: PersistedDoc[];
-  logo?: { name: string; type: string; dataUrl: string } | null;
+  // Logo metadata only — the binary lives in IndexedDB under "logo".
+  logo?: { name: string; type: string } | null;
 };
 
 
@@ -54,6 +55,8 @@ function loadDraft(): Draft | null {
 }
 function clearDraft() {
   if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
+  // Fire-and-forget — clearing IDB is best-effort.
+  void idbClearSetup();
 }
 
 function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
