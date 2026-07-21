@@ -18,6 +18,8 @@ import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLe
 import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
+import { filterArabic, filterEnglish } from "@/lib/textFilters";
+
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
@@ -793,7 +795,7 @@ function StepGeneral({
                 hint={T("هيظهر فى التقارير الإنجليزى", "Used in English reports")}
                 error={reqErr(general.name, "الاسم الإنجليزى مطلوب", "English name is required")}
               >
-                <Input dir="ltr" className="h-11" value={general.name} onChange={(e) => set("name")(e.target.value)} autoFocus placeholder="Egyptian Europe Company" />
+                <Input dir="ltr" className="h-11" value={general.name} onChange={(e) => set("name")(filterEnglish(e.target.value))} autoFocus placeholder="Egyptian Europe Company" />
               </SmartField>
               <SmartField
                 label={T("الاسم بالعربى", "Company Name (Arabic)")}
@@ -801,7 +803,7 @@ function StepGeneral({
                 hint={T("هيظهر فى التقارير العربى", "Used in Arabic reports")}
                 error={reqErr(general.name_ar, "الاسم العربى مطلوب", "Arabic name is required")}
               >
-                <Input dir="rtl" className="h-11" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(e.target.value)} placeholder="الشركة المصرية الأوروبية" />
+                <Input dir="rtl" className="h-11" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(filterArabic(e.target.value))} placeholder="الشركة المصرية الأوروبية" />
               </SmartField>
               <SmartField
                 label={T("الدولة", "Country")} required icon={MapPin}
@@ -820,7 +822,7 @@ function StepGeneral({
                 label={T("الاسم المختصر", "Short Name")}
                 hint={T("اختيارى — بيظهر فى الشريط الجانبى", "Optional — appears in the sidebar")}
               >
-                <Input className="h-11" value={general.short_name ?? ""} onChange={(e) => set("short_name")(e.target.value)} placeholder="EEC" />
+                <Input dir="ltr" className="h-11" value={general.short_name ?? ""} onChange={(e) => set("short_name")(filterEnglish(e.target.value))} placeholder="EEC" />
               </SmartField>
             </div>
           </div>
