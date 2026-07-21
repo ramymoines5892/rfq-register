@@ -118,7 +118,7 @@ function SetupPage() {
     name: "", name_ar: "", short_name: "", code: "",
     tax_no: "", cr_no: "", vat_no: "",
     email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "",
-    emails: [], phones: [], mobiles: [], faxes: [],
+    emails: [], phones: [], mobiles: [], faxes: [], websites: [],
   });
   const [advanced, setAdvanced] = useState<CompanyAdvanced>(d?.advanced ?? {
     country: "EG", city: "", state: "", postal_code: "", address: "",
