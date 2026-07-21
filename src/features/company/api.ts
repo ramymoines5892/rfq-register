@@ -107,11 +107,13 @@ export type SetupDocument = {
   issue_date?: string | null;   // YYYY-MM-DD
   expiry_date?: string | null;
   notes?: string | null;
-  file?: File | null;           // in-memory; uploaded only on final save
-  file_name?: string | null;     // draft/UI metadata when the File object is already staged
+  file?: File | null;           // legacy — no longer required; kept for typing compat
+  file_name?: string | null;
   file_type?: string | null;
-  file_data_url?: string | null; // persisted draft copy; restored to File on final save
-  has_file?: boolean;            // keeps edit validation stable for staged existing documents
+  file_size?: number | null;
+  file_data_url?: string | null; // legacy migration only
+  storage_path?: string | null;  // uploaded immediately on pick — survives refresh
+  has_file?: boolean;
 };
 
 function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
