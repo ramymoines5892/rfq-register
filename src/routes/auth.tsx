@@ -22,6 +22,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("signin");
   const [checking, setChecking] = useState(true);
+  const [noCompany, setNoCompany] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,21 +30,25 @@ function AuthPage() {
 
   useEffect(() => {
     (async () => {
-      // Validate any existing session against the server. A stale JWT
-      // (user deleted from DB) returns 403 user_not_found — sign it out
-      // so we don't loop through the protected layout.
       const { data: userData, error: userErr } = await supabase.auth.getUser();
       if (userErr || !userData.user) {
         await supabase.auth.signOut().catch(() => {});
       } else {
-        navigate({ to: "/" });
+        // Signed in: route based on company existence.
+        const { data: hasCompany } = await supabase.rpc("has_any_company");
+        navigate({ to: hasCompany ? "/" : "/setup" });
         return;
       }
-      const { data, error } = await supabase.rpc("has_any_user");
-      if (!error && data === false) setMode("setup");
+      const [{ data: hasUser }, { data: hasCompany }] = await Promise.all([
+        supabase.rpc("has_any_user"),
+        supabase.rpc("has_any_company"),
+      ]);
+      if (hasUser === false) setMode("setup");
+      setNoCompany(hasCompany === false);
       setChecking(false);
     })();
   }, [navigate]);
+
 
   function friendlyError(msg: string): string {
     const m = msg.toLowerCase();
@@ -59,11 +64,13 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate({ to: "/" });
+      const { data: hasCompany } = await supabase.rpc("has_any_company");
+      navigate({ to: hasCompany ? "/" : "/setup" });
     } catch (err) {
       toast.error(friendlyError((err as Error).message));
     } finally { setLoading(false); }
   };
+
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +90,9 @@ function AuthPage() {
         return;
       }
       if (data.session) {
-        navigate({ to: "/" });
+        const { data: hasCompany } = await supabase.rpc("has_any_company");
+        navigate({ to: hasCompany ? "/" : "/setup" });
+
       } else {
         toast.success(lang === "ar" ? "تم إنشاء الحساب" : "Account created");
         setMode("signin");
@@ -138,6 +147,22 @@ function AuthPage() {
               </div>
             </div>
           )}
+          {!isSetup && noCompany && (
+            <div className="mb-4 flex items-start gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/30 text-sm">
+              <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold">
+                  {lang === "ar" ? "لا توجد شركة مُعدَّة بعد" : "No company configured yet"}
+                </div>
+                <div className="text-muted-foreground">
+                  {lang === "ar"
+                    ? "سجّل الدخول لإكمال إعداد أول شركة في النظام."
+                    : "Sign in to continue setting up the first company."}
+                </div>
+              </div>
+            </div>
+          )}
+
 
           <form onSubmit={submitFn} className="space-y-4">
             <div className="space-y-2">
