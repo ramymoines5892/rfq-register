@@ -25,6 +25,7 @@ import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings.organization'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
+import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings.appearance'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -112,6 +113,12 @@ const AuthenticatedSettingsFormBuilderRoute =
     path: '/form-builder',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsAppearanceRoute =
+  AuthenticatedSettingsAppearanceRouteImport.update({
+    id: '/appearance',
+    path: '/appearance',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedAdminCustomerFieldsRoute =
   AuthenticatedAdminCustomerFieldsRouteImport.update({
     id: '/admin/customer-fields',
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
+  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
+  '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -167,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
+  '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/workflows'
     | '/admin/customer-fields'
+    | '/settings/appearance'
     | '/settings/form-builder'
     | '/settings/notifications'
     | '/settings/organization'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/workflows'
     | '/'
     | '/admin/customer-fields'
+    | '/settings/appearance'
     | '/settings/form-builder'
     | '/settings/notifications'
     | '/settings/organization'
@@ -223,6 +235,7 @@ export interface FileRouteTypes {
     | '/_authenticated/workflows'
     | '/_authenticated/'
     | '/_authenticated/admin/customer-fields'
+    | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/organization'
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsFormBuilderRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/appearance': {
+      id: '/_authenticated/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/admin/customer-fields': {
       id: '/_authenticated/admin/customer-fields'
       path: '/admin/customer-fields'
@@ -363,6 +383,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
@@ -372,6 +393,7 @@ interface AuthenticatedSettingsRouteChildren {
 }
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
   AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
