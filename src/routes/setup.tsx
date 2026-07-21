@@ -1050,6 +1050,39 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
       <div className="grid md:grid-cols-2 gap-4">{children}</div>
     </div>
   );
+
+  const country: string = advanced.country ?? "EG";
+  const hasGeoData = hasGeo(country);
+  const states = hasGeoData ? getStates(country) : [];
+  const cities = hasGeoData ? getCities(country, advanced.state ?? "") : [];
+
+  // Fiscal year — day + month only (year-agnostic). Stored as "2000-MM-DD".
+  const parseMD = (v?: string | null): { m: string; d: string } => {
+    if (!v) return { m: "", d: "" };
+    const parts = v.split("-");
+    if (parts.length !== 3) return { m: "", d: "" };
+    return { m: parts[1] ?? "", d: parts[2] ?? "" };
+  };
+  const composeMD = (m: string, d: string): string | null => {
+    if (!m || !d) return null;
+    return `2000-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  };
+  const daysInMonth = (m: string): number => {
+    if (!m) return 31;
+    const mi = parseInt(m, 10);
+    if (mi === 2) return 29;
+    if ([4, 6, 9, 11].includes(mi)) return 30;
+    return 31;
+  };
+  const fs = parseMD(advanced.fiscal_year_start);
+  const fe = parseMD(advanced.fiscal_year_end);
+  const months = [
+    ["01", "يناير", "January"], ["02", "فبراير", "February"], ["03", "مارس", "March"],
+    ["04", "أبريل", "April"], ["05", "مايو", "May"], ["06", "يونيو", "June"],
+    ["07", "يوليو", "July"], ["08", "أغسطس", "August"], ["09", "سبتمبر", "September"],
+    ["10", "أكتوبر", "October"], ["11", "نوفمبر", "November"], ["12", "ديسمبر", "December"],
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -1058,8 +1091,43 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
       </div>
 
       <Section title={T("العنوان", "Address")}>
-        <Field label={T("المدينة", "City")}><Input value={advanced.city ?? ""} onChange={set("city")} /></Field>
-        <Field label={T("المحافظة", "State")}><Input value={advanced.state ?? ""} onChange={set("state")} /></Field>
+        <Field label={T("المحافظة / المنطقة", "State / Governorate")}>
+          {hasGeoData ? (
+            <Select
+              value={advanced.state ?? ""}
+              onValueChange={(v) => setAdvanced((a: any) => ({ ...a, state: v, city: "" }))}
+            >
+              <SelectTrigger><SelectValue placeholder={T("اختر المحافظة", "Select governorate")} /></SelectTrigger>
+              <SelectContent>
+                {states.map((s) => (
+                  <SelectItem key={s.key} value={s.key}>{T(s.ar, s.en)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input value={advanced.state ?? ""} onChange={set("state")} placeholder={T("اكتب اسم المحافظة", "Type state name")} />
+          )}
+        </Field>
+        <Field label={T("المدينة", "City")}>
+          {hasGeoData ? (
+            <Select
+              value={advanced.city ?? ""}
+              onValueChange={(v) => set("city")(v)}
+              disabled={!advanced.state}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={advanced.state ? T("اختر المدينة", "Select city") : T("اختر المحافظة أولاً", "Pick governorate first")} />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((ct) => (
+                  <SelectItem key={ct.en} value={ct.en}>{T(ct.ar, ct.en)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input value={advanced.city ?? ""} onChange={set("city")} placeholder={T("اكتب اسم المدينة", "Type city name")} />
+          )}
+        </Field>
         <Field label={T("الرمز البريدي", "Postal Code")}><Input value={advanced.postal_code ?? ""} onChange={set("postal_code")} /></Field>
         <div />
         <div className="md:col-span-2">
@@ -1126,19 +1194,42 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
           </Select>
         </Field>
         <div />
-        <Field label={T("بداية السنة المالية", "Fiscal Year Start")}>
-          <Input type="date" value={advanced.fiscal_year_start ?? ""} onChange={set("fiscal_year_start")} />
+        <Field label={T("بداية السنة المالية (يوم/شهر)", "Fiscal Year Start (day/month)")}>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={fs.d} onValueChange={(v) => setAdvanced((a: any) => ({ ...a, fiscal_year_start: composeMD(fs.m || "01", v) }))}>
+              <SelectTrigger><SelectValue placeholder={T("يوم", "Day")} /></SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: daysInMonth(fs.m) }, (_, i) => String(i + 1).padStart(2, "0")).map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={fs.m} onValueChange={(v) => setAdvanced((a: any) => ({ ...a, fiscal_year_start: composeMD(v, fs.d || "01") }))}>
+              <SelectTrigger><SelectValue placeholder={T("شهر", "Month")} /></SelectTrigger>
+              <SelectContent>
+                {months.map(([val, ar, en]) => <SelectItem key={val} value={val}>{T(ar, en)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </Field>
-        <Field label={T("نهاية السنة المالية", "Fiscal Year End")}>
-          <Input type="date" value={advanced.fiscal_year_end ?? ""} onChange={set("fiscal_year_end")} />
+        <Field label={T("نهاية السنة المالية (يوم/شهر)", "Fiscal Year End (day/month)")}>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={fe.d} onValueChange={(v) => setAdvanced((a: any) => ({ ...a, fiscal_year_end: composeMD(fe.m || "12", v) }))}>
+              <SelectTrigger><SelectValue placeholder={T("يوم", "Day")} /></SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: daysInMonth(fe.m) }, (_, i) => String(i + 1).padStart(2, "0")).map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={fe.m} onValueChange={(v) => setAdvanced((a: any) => ({ ...a, fiscal_year_end: composeMD(v, fe.d || "31") }))}>
+              <SelectTrigger><SelectValue placeholder={T("شهر", "Month")} /></SelectTrigger>
+              <SelectContent>
+                {months.map(([val, ar, en]) => <SelectItem key={val} value={val}>{T(ar, en)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </Field>
-      </Section>
-
-      <Section title={T("جهات اتصال الشركة", "Company Contacts")}>
-        <Field label={T("المدير العام", "General Manager")}><Input value={advanced.gm_name ?? ""} onChange={set("gm_name")} /></Field>
-        <Field label={T("مدير المشتريات", "Purchasing Manager")}><Input value={advanced.purchasing_manager ?? ""} onChange={set("purchasing_manager")} /></Field>
-        <Field label={T("مدير المبيعات", "Sales Manager")}><Input value={advanced.sales_manager ?? ""} onChange={set("sales_manager")} /></Field>
-        <Field label={T("مدير المالية", "Finance Manager")}><Input value={advanced.finance_manager ?? ""} onChange={set("finance_manager")} /></Field>
       </Section>
 
       <Section title={T("ملاحظات إضافية", "Additional Notes")}>
