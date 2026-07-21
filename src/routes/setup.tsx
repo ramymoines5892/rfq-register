@@ -87,7 +87,8 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
   const primaryMobile = pickPrimary(g.mobiles) ?? g.mobile ?? "";
   const primaryPhone = pickPrimary(g.phones) ?? g.phone ?? "";
   const emailV = validateEmail(primaryEmail);
-  const webV = validateWebsite(g.website ?? "");
+  const primaryWebsite = pickPrimary(g.websites) ?? g.website ?? "";
+  const webV = validateWebsite(primaryWebsite);
   const mobileV = validateRule(primaryMobile, c.mobile);
   const phoneV = validateRule(primaryPhone, c.phone);
   return [
@@ -99,7 +100,7 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
     { key: "email",   weight: 8,  filled: nz(primaryEmail), valid: nz(primaryEmail) && emailV.ok },
     { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
     { key: "phone",   weight: 4,  filled: nz(primaryPhone), valid: nz(primaryPhone) && phoneV.ok },
-    { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
+    { key: "website", weight: 4,  filled: nz(primaryWebsite), valid: nz(primaryWebsite) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
   ];
 }
