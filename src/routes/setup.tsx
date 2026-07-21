@@ -43,8 +43,8 @@ type Draft = {
   features: CompanyFeatures;
   numbering: NumberingRow[];
   documents: PersistedDoc[];
-  // Logo metadata only — the binary lives in IndexedDB under "logo".
-  logo?: { name: string; type: string } | null;
+  // Path in the company-logos bucket of the currently staged logo (survives refresh).
+  logo_path?: string | null;
 };
 
 
@@ -58,8 +58,6 @@ function loadDraft(): Draft | null {
 }
 function clearDraft() {
   if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
-  // Fire-and-forget — clearing IDB is best-effort.
-  void idbClearSetup();
 }
 
 function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
