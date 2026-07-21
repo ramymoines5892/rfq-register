@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,10 +86,19 @@ function DocumentsPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-3">
         {!types.length ? (
-          <div className="text-sm text-muted-foreground text-center py-12">
-            {ar ? "لا توجد أنواع مستندات مُعدّة بعد. أضِفها من الإعدادات." : "No document types configured yet. Add them from Settings."}
+          <div className="text-center py-12 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {ar ? "لا توجد أنواع مستندات مُعدّة بعد." : "No document types configured yet."}
+            </p>
+            <Link
+              to="/settings/document-types"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              {ar ? "اذهب إلى الإعدادات لإضافة الأنواع وربطها بالأقسام →" : "Go to Settings to add types and link them to departments →"}
+            </Link>
           </div>
         ) : (
+
           <div className="grid gap-3 md:grid-cols-2">
             {types.map((t) => {
               const cur = currentByType.get(t.id);
