@@ -83,19 +83,22 @@ type Weight = { key: string; weight: number; filled: boolean; valid: boolean; re
 function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0): Weight[] {
   const c = getCountry(country);
   const nz = (s?: string | null) => (s ?? "").trim().length > 0;
-  const emailV = validateEmail(g.email ?? "");
+  const primaryEmail = pickPrimary(g.emails) ?? g.email ?? "";
+  const primaryMobile = pickPrimary(g.mobiles) ?? g.mobile ?? "";
+  const primaryPhone = pickPrimary(g.phones) ?? g.phone ?? "";
+  const emailV = validateEmail(primaryEmail);
   const webV = validateWebsite(g.website ?? "");
-  const mobileV = validateRule(g.mobile ?? "", c.mobile);
-  const phoneV = validateRule(g.phone ?? "", c.phone);
+  const mobileV = validateRule(primaryMobile, c.mobile);
+  const phoneV = validateRule(primaryPhone, c.phone);
   return [
     { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
     { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
     { key: "country", weight: 5,  filled: nz(country),      valid: nz(country),      required: true },
     { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
-    { key: "mobile",  weight: 12, filled: nz(g.mobile),     valid: nz(g.mobile) && mobileV.ok },
-    { key: "email",   weight: 8,  filled: nz(g.email),      valid: nz(g.email) && emailV.ok },
+    { key: "mobile",  weight: 12, filled: nz(primaryMobile),valid: nz(primaryMobile) && mobileV.ok },
+    { key: "email",   weight: 8,  filled: nz(primaryEmail), valid: nz(primaryEmail) && emailV.ok },
     { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
-    { key: "phone",   weight: 4,  filled: nz(g.phone),      valid: nz(g.phone) && phoneV.ok },
+    { key: "phone",   weight: 4,  filled: nz(primaryPhone), valid: nz(primaryPhone) && phoneV.ok },
     { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
   ];
