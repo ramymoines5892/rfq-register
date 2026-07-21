@@ -550,5 +550,3 @@ function StepNumbering({ numbering, setNumbering, T }: any) {
   );
 }
 
-// Silence unused var warning in dev
-void useMemo; void useEffect;
