@@ -1359,6 +1359,36 @@ function CompanyDocumentsSection({
         isAr={isAr}
         initialEditIndex={editIndex}
       />
+
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(v) => { if (!v) setConfirmDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{T("تأكيد حذف المستند", "Confirm document deletion")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete !== null && documents[confirmDelete]
+                ? T(
+                    `هل تريد فعلاً حذف «${isAr ? documents[confirmDelete].name_ar : documents[confirmDelete].name_en}»؟ لا يمكن التراجع.`,
+                    `Delete "${isAr ? documents[confirmDelete].name_ar : documents[confirmDelete].name_en}"? This cannot be undone.`,
+                  )
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{T("لا", "No")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDelete !== null) {
+                  setDocuments((prev) => prev.filter((_, idx) => idx !== confirmDelete));
+                }
+                setConfirmDelete(null);
+              }}
+            >
+              {T("نعم، احذف", "Yes, delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
