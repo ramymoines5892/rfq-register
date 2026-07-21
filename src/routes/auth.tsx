@@ -90,7 +90,9 @@ function AuthPage() {
         return;
       }
       if (data.session) {
-        navigate({ to: "/" });
+        const { data: hasCompany } = await supabase.rpc("has_any_company");
+        navigate({ to: hasCompany ? "/" : "/setup" });
+
       } else {
         toast.success(lang === "ar" ? "تم إنشاء الحساب" : "Account created");
         setMode("signin");
