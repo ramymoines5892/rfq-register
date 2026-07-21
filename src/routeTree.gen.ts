@@ -19,6 +19,7 @@ import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
+import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
@@ -77,6 +78,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedHrRoute = AuthenticatedHrRouteImport.update({
   id: '/hr',
   path: '/hr',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCustomersRoute = AuthenticatedCustomersRouteImport.update({
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/customers': typeof AuthenticatedCustomersRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/team': typeof AuthenticatedTeamRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/customers': typeof AuthenticatedCustomersRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
   '/team': typeof AuthenticatedTeamRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
+  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/hr': typeof AuthenticatedHrRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/team': typeof AuthenticatedTeamRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/customers'
+    | '/documents'
     | '/hr'
     | '/settings'
     | '/team'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/customers'
+    | '/documents'
     | '/hr'
     | '/team'
     | '/workflows'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/_authenticated/customers'
+    | '/_authenticated/documents'
     | '/_authenticated/hr'
     | '/_authenticated/settings'
     | '/_authenticated/team'
@@ -347,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/hr'
       fullPath: '/hr'
       preLoaderRoute: typeof AuthenticatedHrRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/documents': {
+      id: '/_authenticated/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/customers': {
@@ -454,6 +473,7 @@ const AuthenticatedSettingsRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
+  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedHrRoute: typeof AuthenticatedHrRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
@@ -464,6 +484,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
+  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedHrRoute: AuthenticatedHrRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
