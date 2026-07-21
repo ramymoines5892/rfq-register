@@ -1,7 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow, type SetupDocument } from "@/features/company/api";
+import { hasAnyCompany, pickPrimary, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type ContactEntry, type NumberingRow, type SetupDocument } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
