@@ -241,9 +241,13 @@ function SetupPage() {
     });
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
+    // Delete any staged files from storage so we don't leave orphans behind.
+    if (logoPath) { void deleteCompanyLogo(logoPath); }
+    for (const doc of documents) {
+      if (doc.storage_path) void deleteCompanyDocumentDraft(doc.storage_path);
+    }
     setDocuments([]);
-    setLogoFile(null);
-
+    setLogoPath(null);
   }
 
   const isAr = lang === "ar";
