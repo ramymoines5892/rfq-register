@@ -1,866 +1,290 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { sendQuoteForApproval } from "@/lib/send-quote-email.functions";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-
-import {
-  fetchDashboardBase,
-  fetchAttachmentsAndApprovals,
-  fetchStagesForTemplates,
-  softDeleteQuote,
-  createSignedAttachmentUrl,
-  fetchStageApprovers,
-  upsertQuoteApprovals,
-  updateQuoteApprovalState,
-  updateApprovalDecision,
-  fetchApprovalsForQuote,
-  fetchQuoteAttachments,
-  updateQuote,
-  insertQuote,
-  uploadQuoteAttachment,
-  softDeleteAttachment,
-  getCurrentUserId,
-} from "@/features/quotes/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { InputIcon } from "@/components/ui/input-icon";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useI18n } from "@/lib/i18n";
+import { useAccess } from "@/hooks/useAccess";
+import { useCurrentCompany } from "@/features/company/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, AlertTriangle, FileText, Send, Check, X, CheckCircle2, XCircle, Clock, ScrollText, GripVertical, LayoutGrid, RotateCcw } from "lucide-react";
-import { useI18n, type TKey } from "@/lib/i18n";
-import { parseTerms, formatTermsPlain } from "@/lib/terms";
-import { pickLangValue, BilingualText } from "@/lib/bilingual";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  DndContext,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  rectSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+  LayoutDashboard, Users, FileText, Building2, UsersRound, Settings2,
+  ShoppingCart, Store, ClipboardList, CheckCircle2, Bell, ArrowRight,
+  UserPlus, ToggleRight, FolderArchive, TrendingUp, Sparkles,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
-  head: () => ({ meta: [{ title: "متابعة عروض الأسعار" }, { name: "description", content: "سجّل عروض الأسعار وتابع الموافقات والصلاحية" }] }),
+  head: () => ({
+    meta: [
+      { title: "لوحة التحكم | Dashboard" },
+      { name: "description", content: "نظرة عامة مخصصة حسب صلاحياتك" },
+    ],
+  }),
 });
 
-type ApprovalState = "none" | "in_progress" | "approved" | "rejected";
-type Decision = "pending" | "approved" | "rejected";
-
-type Quote = {
-  id: string; user_id: string; supplier_name: string; reference_no: string | null;
-  description: string | null; amount: number | null; currency: string;
-  status: "new" | "reviewing" | "accepted" | "rejected" | "expired";
-  received_date: string; expiry_date: string | null; notes: string | null; created_at: string;
-  workflow_template_id: string | null; current_stage_id: string | null; approval_state: ApprovalState;
-  customer_id: string | null; terms_override: string | null;
+type Counts = {
+  quotesMine: number;
+  quotesPending: number;
+  customers: number;
+  pendingUsers: number;
+  unreadNotifs: number;
+  expiringDocs: number;
 };
-type Attachment = { id: string; quote_id: string; file_name: string; storage_path: string; mime_type: string | null; size_bytes: number | null };
-type Template = { id: string; name: string };
-type Stage = { id: string; template_id: string; position: number; name: string };
-type StageApprover = { id: string; stage_id: string; approver_id: string };
-type Approval = { id: string; quote_id: string; stage_id: string; approver_id: string; decision: Decision; comment: string | null; decided_at: string | null };
-type Profile = { id: string; email: string; full_name: string | null };
-type Customer = {
-  id: string;
-  name: string;
-  name_ar: string | null;
-  name_en: string | null;
-  tax_id: string | null;
-  currency: string;
-  terms: string | null;
-};
-
-const STATUSES: Quote["status"][] = ["new", "reviewing", "accepted", "rejected", "expired"];
-const statusColor: Record<Quote["status"], string> = {
-  new: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  reviewing: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  accepted: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-  rejected: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
-  expired: "bg-muted text-muted-foreground",
-};
-
-function daysBetween(dateStr: string) {
-  const d = new Date(dateStr); const now = new Date();
-  return Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
 
 function Dashboard() {
-  const { t, lang } = useI18n();
-  const [userId, setUserId] = useState("");
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [pendingQuotes, setPendingQuotes] = useState<Quote[]>([]);
-  const [attachments, setAttachments] = useState<Record<string, Attachment[]>>({});
-  const [stagesByTemplate, setStagesByTemplate] = useState<Record<string, Stage[]>>({});
-  const [approvalsByQuote, setApprovalsByQuote] = useState<Record<string, Approval[]>>({});
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | Quote["status"]>("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Quote | null>(null);
-  const [tab, setTab] = useState<"mine" | "pending">("mine");
-  const [kpiOrder, setKpiOrder] = useState<string[]>(["count", "value", "expiring"]);
-  const [kpiEditing, setKpiEditing] = useState(false);
+  const { lang, dir } = useI18n();
+  const ar = lang === "ar";
+  const access = useAccess();
+  const { data: company } = useCurrentCompany();
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState<string | null>(null);
+  const [counts, setCounts] = useState<Counts>({
+    quotesMine: 0, quotesPending: 0, customers: 0,
+    pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0,
+  });
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("dashboard.kpi.order.v1");
-      if (raw) {
-        const arr = JSON.parse(raw) as string[];
-        const defaults = ["count", "value", "expiring"];
-        const missing = defaults.filter((x) => !arr.includes(x));
-        setKpiOrder([...arr.filter((x) => defaults.includes(x)), ...missing]);
-      }
-    } catch {}
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("dashboard.kpi.order.v1", JSON.stringify(kpiOrder));
-  }, [kpiOrder]);
-
-  const kpiSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
-
-  useEffect(() => {
-    getCurrentUserId().then((uid) => setUserId(uid));
-    load();
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      setEmail(u.user.email ?? "");
+      const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", u.user.id).maybeSingle();
+      setFullName(prof?.full_name ?? null);
+    })();
   }, []);
 
-  async function load() {
-    setLoading(true);
-    const base = await fetchDashboardBase();
-    setCustomers(base.customers as Customer[]);
-    const allQuotes = base.quotes as Quote[];
-    const uid = base.userId;
-    setQuotes(allQuotes.filter(q => q.user_id === uid));
-    setPendingQuotes(allQuotes.filter(q => q.user_id !== uid && q.approval_state === "in_progress"));
-    setTemplates(base.templates as Template[]);
-    setProfiles(base.profiles as Profile[]);
+  useEffect(() => {
+    if (!access.ready || !access.userId) return;
+    (async () => {
+      const uid = access.userId!;
+      const in7 = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+      const results = await Promise.allSettled([
+        supabase.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", uid).is("deleted_at", null),
+        supabase.from("quotes").select("id", { count: "exact", head: true }).eq("approval_state", "in_progress").is("deleted_at", null),
+        supabase.from("customers").select("id", { count: "exact", head: true }).is("deleted_at", null),
+        access.canManageUsers
+          ? supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "pending")
+          : Promise.resolve({ count: 0 } as any),
+        supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", uid).is("read_at", null),
+        supabase.from("company_documents").select("id", { count: "exact", head: true })
+          .is("superseded_at", null).not("expiry_date", "is", null).gte("expiry_date", today).lte("expiry_date", in7),
+      ]);
+      const val = (r: any) => (r.status === "fulfilled" ? r.value.count ?? 0 : 0);
+      setCounts({
+        quotesMine: val(results[0]),
+        quotesPending: val(results[1]),
+        customers: val(results[2]),
+        pendingUsers: val(results[3]),
+        unreadNotifs: val(results[4]),
+        expiringDocs: val(results[5]),
+      });
+    })();
+  }, [access.ready, access.userId, access.canManageUsers]);
 
-    if (allQuotes.length) {
-      const ids = allQuotes.map(q => q.id);
-      const { attachments: atts, approvals: apps } = await fetchAttachmentsAndApprovals(ids);
-      const ag: Record<string, Attachment[]> = {};
-      (atts as Attachment[]).forEach(a => { (ag[a.quote_id] ??= []).push(a); });
-      setAttachments(ag);
-      const apg: Record<string, Approval[]> = {};
-      (apps as Approval[]).forEach(a => { (apg[a.quote_id] ??= []).push(a); });
-      setApprovalsByQuote(apg);
+  const displayName = useMemo(() => fullName || email.split("@")[0] || "", [fullName, email]);
+  const brandName = company?.short_name || company?.name_ar || company?.name || "";
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (ar) return h < 5 ? "مساء الخير" : h < 12 ? "صباح الخير" : h < 18 ? "طاب يومك" : "مساء الخير";
+    return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  }, [ar]);
+
+  const roleLabel = access.isOwner
+    ? (ar ? "مالك النظام" : "Owner")
+    : access.isAdmin
+      ? (ar ? "مدير" : "Administrator")
+      : access.canApprove
+        ? (ar ? "مُعتمِد" : "Approver")
+        : (ar ? "عضو الفريق" : "Team Member");
+
+  /* Role-based KPI selection */
+  type Kpi = { key: string; label: string; value: number; icon: any; tint: string; to?: string };
+  const kpis: Kpi[] = useMemo(() => {
+    const all: Kpi[] = [];
+    if (access.isAdmin) {
+      all.push(
+        { key: "pendingUsers", label: ar ? "مستخدمون بانتظار التفعيل" : "Pending Users", value: counts.pendingUsers, icon: UserPlus, tint: "text-amber-600 bg-amber-500/10", to: "/hr" },
+        { key: "quotesPending", label: ar ? "عروض قيد الاعتماد" : "Quotes Awaiting Approval", value: counts.quotesPending, icon: ClipboardList, tint: "text-blue-600 bg-blue-500/10", to: "/workflows" },
+        { key: "expiringDocs", label: ar ? "مستندات تنتهي خلال أسبوع" : "Docs Expiring in 7d", value: counts.expiringDocs, icon: FolderArchive, tint: "text-rose-600 bg-rose-500/10", to: "/settings/company" },
+        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
+      );
+    } else if (access.canApprove) {
+      all.push(
+        { key: "quotesPending", label: ar ? "بانتظار اعتمادك" : "Awaiting Your Approval", value: counts.quotesPending, icon: CheckCircle2, tint: "text-blue-600 bg-blue-500/10", to: "/workflows" },
+        { key: "quotesMine", label: ar ? "عروضي" : "My Quotes", value: counts.quotesMine, icon: FileText, tint: "text-primary bg-primary/10", to: "/workflows" },
+        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
+      );
+    } else {
+      all.push(
+        { key: "quotesMine", label: ar ? "عروضي" : "My Quotes", value: counts.quotesMine, icon: FileText, tint: "text-primary bg-primary/10", to: "/workflows" },
+        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
+        { key: "unreadNotifs", label: ar ? "إشعارات غير مقروءة" : "Unread Notifications", value: counts.unreadNotifs, icon: Bell, tint: "text-amber-600 bg-amber-500/10" },
+      );
     }
+    return all;
+  }, [access, counts, ar]);
 
-    const tplIds = Array.from(new Set(allQuotes.map(q => q.workflow_template_id).filter(Boolean))) as string[];
-    if (tplIds.length) {
-      const stages = await fetchStagesForTemplates(tplIds);
-      const sg: Record<string, Stage[]> = {};
-      (stages as Stage[]).forEach(s => { (sg[s.template_id] ??= []).push(s); });
-      setStagesByTemplate(sg);
+  type Action = { label: string; desc: string; to: string; icon: any };
+  const actions: Action[] = useMemo(() => {
+    const list: Action[] = [
+      { label: ar ? "عروض الأسعار" : "Quotes", desc: ar ? "إنشاء ومتابعة العروض" : "Create & track quotes", to: "/workflows", icon: FileText },
+      { label: ar ? "العملاء" : "Customers", desc: ar ? "قاعدة بيانات العملاء" : "Customer database", to: "/customers", icon: Users },
+    ];
+    if (access.isAdmin) {
+      list.push(
+        { label: ar ? "الموارد البشرية" : "HR", desc: ar ? "الموظفون والإدارات" : "Employees & departments", to: "/hr", icon: Building2 },
+        { label: ar ? "الفريق" : "Team", desc: ar ? "المستخدمون والصلاحيات" : "Users & permissions", to: "/team", icon: UsersRound },
+        { label: ar ? "بيانات الشركة" : "Company Data", desc: ar ? "الإعدادات والمستندات" : "Settings & documents", to: "/settings/company", icon: Settings2 },
+      );
+    } else {
+      list.push({ label: ar ? "الإعدادات" : "Settings", desc: ar ? "تفضيلاتي" : "My preferences", to: "/settings", icon: Settings2 });
     }
-    setLoading(false);
-  }
-
-
-
-
-
-  const filtered = useMemo(() => quotes.filter(q => {
-    if (filterStatus !== "all" && q.status !== filterStatus) return false;
-    if (search) {
-      const s = search.toLowerCase();
-      return q.supplier_name.toLowerCase().includes(s) || (q.reference_no ?? "").toLowerCase().includes(s) || (q.description ?? "").toLowerCase().includes(s);
-    }
-    return true;
-  }), [quotes, filterStatus, search]);
-
-  const stats = useMemo(() => {
-    const totalValue = quotes.filter(q => q.status === "accepted").reduce((s, q) => s + (Number(q.amount) || 0), 0);
-    const expiringWeek = quotes.filter(q => q.expiry_date && q.status !== "expired" && q.status !== "rejected" && daysBetween(q.expiry_date) >= 0 && daysBetween(q.expiry_date) <= 7).length;
-    return { count: quotes.length, totalValue, expiringWeek };
-  }, [quotes]);
-
-  const pendingForMe = useMemo(() => pendingQuotes.filter(q => {
-    if (!q.current_stage_id) return false;
-    const apps = approvalsByQuote[q.id] ?? [];
-    return apps.some(a => a.stage_id === q.current_stage_id && a.approver_id === userId && a.decision === "pending");
-  }), [pendingQuotes, approvalsByQuote, userId]);
+    return list;
+  }, [access, ar]);
 
   return (
-    <div className="min-h-screen">
-      <div className="bg-gradient-to-br from-primary via-primary to-[oklch(0.32_0.07_160)] text-primary-foreground">
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-accent/90 flex items-center justify-center text-accent-foreground">
-              <FileText className="h-6 w-6" />
+    <div className="min-h-screen bg-gradient-to-b from-muted/30 via-background to-background" dir={dir}>
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b bg-gradient-to-br from-primary/10 via-background to-background">
+        <div className="absolute inset-0 pointer-events-none opacity-40 [background:radial-gradient(60%_60%_at_10%_0%,hsl(var(--primary)/0.15),transparent),radial-gradient(50%_60%_at_100%_10%,hsl(var(--primary)/0.10),transparent)]" />
+        <div className="relative max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-12 w-12 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                <LayoutDashboard className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  {brandName && <span className="font-medium">{brandName}</span>}
+                  <Badge variant="secondary" className="text-[10px] font-normal">{roleLabel}</Badge>
+                </div>
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">
+                  {greeting}{displayName ? `، ${displayName}` : ""}
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {ar ? "لوحة تحكم مخصّصة حسب دورك في النظام" : "A workspace tailored to your role"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{t("overview")}</h1>
-              <p className="text-sm opacity-80">{t("tagline")}</p>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/settings"><Settings2 className="h-3.5 w-3.5 me-1.5" />{ar ? "الإعدادات" : "Settings"}</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/workflows"><FileText className="h-3.5 w-3.5 me-1.5" />{ar ? "عرض جديد" : "New Quote"}</Link>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6 -mt-6">
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* KPIs */}
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {kpis.map((k) => {
+            const Icon = k.icon;
+            const body = (
+              <Card className="h-full hover:border-primary/60 hover:shadow-md transition-all">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${k.tint}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground truncate">{k.label}</div>
+                    <div className="text-2xl font-bold tabular-nums">{k.value}</div>
+                  </div>
+                  {k.to && <ArrowRight className="h-4 w-4 text-muted-foreground rtl:rotate-180" />}
+                </CardContent>
+              </Card>
+            );
+            return k.to ? <Link key={k.key} to={k.to}>{body}</Link> : <div key={k.key}>{body}</div>;
+          })}
+        </section>
 
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
-            {kpiEditing ? (lang === "ar" ? "اسحب البطاقات لإعادة الترتيب" : "Drag cards to reorder") : ""}
+        {/* Quick Actions */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              {ar ? "الوصول السريع" : "Quick Access"}
+            </h2>
           </div>
-          <div className="flex items-center gap-1">
-            {kpiEditing && (
-              <Button variant="ghost" size="sm" className="h-8" onClick={() => setKpiOrder(["count", "value", "expiring"])}>
-                <RotateCcw className="h-3.5 w-3.5 me-1" />{lang === "ar" ? "استعادة" : "Reset"}
-              </Button>
-            )}
-            <Button variant={kpiEditing ? "default" : "outline"} size="sm" className="h-8" onClick={() => setKpiEditing(v => !v)}>
-              <LayoutGrid className="h-3.5 w-3.5 me-1" />
-              {kpiEditing ? (lang === "ar" ? "تم" : "Done") : (lang === "ar" ? "تخصيص" : "Customize")}
-            </Button>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {actions.map((a) => {
+              const Icon = a.icon;
+              return (
+                <Link key={a.to} to={a.to} className="group">
+                  <Card className="h-full hover:border-primary/60 hover:shadow-md transition-all">
+                    <CardContent className="p-4 flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm">{a.label}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{a.desc}</div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 rtl:rotate-180 transition-opacity" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
-        </div>
+        </section>
 
-        <DndContext
-          sensors={kpiSensors}
-          collisionDetection={closestCenter}
-          onDragEnd={(e: DragEndEvent) => {
-            const { active, over } = e;
-            if (!over || active.id === over.id) return;
-            setKpiOrder(prev => {
-              const oi = prev.indexOf(String(active.id));
-              const ni = prev.indexOf(String(over.id));
-              if (oi < 0 || ni < 0) return prev;
-              const next = [...prev];
-              next.splice(oi, 1);
-              next.splice(ni, 0, String(active.id));
-              return next;
-            });
-          }}
-        >
-          <SortableContext items={kpiOrder} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {kpiOrder.map((id) => {
-                const map: Record<string, { title: string; value: React.ReactNode }> = {
-                  count: { title: t("quotesCount"), value: <div className="text-2xl font-bold">{stats.count}</div> },
-                  value: { title: `${t("totalValue")} (${t("accepted")})`, value: <div className="text-2xl font-bold">{stats.totalValue.toLocaleString()}</div> },
-                  expiring: { title: t("expiringWeek"), value: <div className="text-2xl font-bold text-amber-600">{stats.expiringWeek}</div> },
-                };
-                const cfg = map[id];
-                if (!cfg) return null;
-                return <KpiCard key={id} id={id} editing={kpiEditing} title={cfg.title}>{cfg.value}</KpiCard>;
-              })}
-            </div>
-          </SortableContext>
-        </DndContext>
-
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList>
-            <TabsTrigger value="mine">{t("tabMyQuotes")} ({quotes.length})</TabsTrigger>
-            <TabsTrigger value="pending">{t("tabPendingMe")} {pendingForMe.length > 0 && <Badge className="ms-2" variant="secondary">{pendingForMe.length}</Badge>}</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="mine" className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1">
-                <InputIcon
-                  leftIcon={<Search />}
-                  placeholder={t("search")}
-                  value={search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                  clearable
-                  onClear={() => setSearch("")}
-                />
-              </div>
-              <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}>
-                <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={t("filterStatus")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("all")}</SelectItem>
-                  {STATUSES.map(s => <SelectItem key={s} value={s}>{t(s as TKey)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 me-1" /> {t("addQuote")}
-              </Button>
-            </div>
-            {loading ? (
-              <div className="text-center py-16 text-muted-foreground">{t("loading")}</div>
-            ) : filtered.length === 0 ? (
-              <Card><CardContent className="text-center py-16 text-muted-foreground">{t("empty")}</CardContent></Card>
-            ) : (
-              <div className="grid gap-3">
-                {filtered.map(q => (
-                  <QuoteCard key={q.id} quote={q} attachments={attachments[q.id] ?? []}
-                    stages={q.workflow_template_id ? (stagesByTemplate[q.workflow_template_id] ?? []) : []}
-                    approvals={approvalsByQuote[q.id] ?? []}
-                    profiles={profiles} isOwner={true} userId={userId}
-                    onEdit={() => { setEditing(q); setDialogOpen(true); }} onChanged={load} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="pending" className="space-y-4">
-            {loading ? (
-              <div className="text-center py-16 text-muted-foreground">{t("loading")}</div>
-            ) : pendingForMe.length === 0 ? (
-              <Card><CardContent className="text-center py-16 text-muted-foreground">{t("noPending")}</CardContent></Card>
-            ) : (
-              <div className="grid gap-3">
-                {pendingForMe.map(q => (
-                  <QuoteCard key={q.id} quote={q} attachments={attachments[q.id] ?? []}
-                    stages={q.workflow_template_id ? (stagesByTemplate[q.workflow_template_id] ?? []) : []}
-                    approvals={approvalsByQuote[q.id] ?? []}
-                    profiles={profiles} isOwner={false} userId={userId}
-                    onEdit={() => {}} onChanged={load} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Admin-only insights row */}
+        {access.isAdmin && (
+          <section className="grid gap-3 md:grid-cols-2">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  {ar ? "صحة النظام" : "System Health"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-3 text-sm">
+                <HealthRow label={ar ? "المستخدمون المعلّقون" : "Pending users"} value={counts.pendingUsers} warn={counts.pendingUsers > 0} />
+                <HealthRow label={ar ? "مستندات قاربت الانتهاء" : "Expiring documents"} value={counts.expiringDocs} warn={counts.expiringDocs > 0} />
+                <HealthRow label={ar ? "عروض بانتظار الاعتماد" : "Quotes in approval"} value={counts.quotesPending} />
+                <HealthRow label={ar ? "إشعارات غير مقروءة" : "Unread notifications"} value={counts.unreadNotifs} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <ToggleRight className="h-4 w-4 text-primary" />
+                  {ar ? "إعدادات الشركة" : "Company Setup"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Link to="/settings/company" className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors">
+                  <span className="flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" />{ar ? "بيانات الشركة والمستندات" : "Company data & documents"}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180" />
+                </Link>
+                <Link to="/settings/features" className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors">
+                  <span className="flex items-center gap-2"><ToggleRight className="h-4 w-4 text-muted-foreground" />{ar ? "مميزات النظام" : "System features"}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180" />
+                </Link>
+                <Link to="/settings/organization" className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors">
+                  <span className="flex items-center gap-2"><UsersRound className="h-4 w-4 text-muted-foreground" />{ar ? "الهيكل التنظيمي" : "Organization"}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180" />
+                </Link>
+              </CardContent>
+            </Card>
+          </section>
+        )}
       </main>
-
-      <QuoteDialog open={dialogOpen} onOpenChange={setDialogOpen} quote={editing} templates={templates} customers={customers} onSaved={load} />
     </div>
   );
 }
 
-function KpiCard({ id, editing, title, children }: { id: string; editing: boolean; title: string; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !editing });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+function HealthRow({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
   return (
-    <div ref={setNodeRef} style={style}>
-      <Card className={editing ? "ring-1 ring-dashed ring-primary/40" : ""}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2">
-            {editing && (
-              <button
-                {...attributes}
-                {...listeners}
-                className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground -ms-1"
-                aria-label="Drag"
-                type="button"
-              >
-                <GripVertical className="h-4 w-4" />
-              </button>
-            )}
-            <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>{children}</CardContent>
-      </Card>
+    <div className="flex items-center justify-between p-2 rounded-lg bg-muted/40">
+      <span className="text-xs text-muted-foreground truncate">{label}</span>
+      <span className={`text-sm font-bold tabular-nums ${warn ? "text-amber-600" : ""}`}>{value}</span>
     </div>
-  );
-}
-
-function ApprovalTimeline({ stages, approvals, currentStageId, profiles }: { stages: Stage[]; approvals: Approval[]; currentStageId: string | null; profiles: Profile[] }) {
-  if (!stages.length) return null;
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      {stages.map((s, i) => {
-        const stageApps = approvals.filter(a => a.stage_id === s.id);
-        const anyRejected = stageApps.some(a => a.decision === "rejected");
-        const allApproved = stageApps.length > 0 && stageApps.every(a => a.decision === "approved");
-        const isCurrent = s.id === currentStageId;
-        let color = "bg-muted text-muted-foreground";
-        let Icon = Clock;
-        if (anyRejected) { color = "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"; Icon = XCircle; }
-        else if (allApproved) { color = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"; Icon = CheckCircle2; }
-        else if (isCurrent) { color = "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"; }
-        return (
-          <div key={s.id} className="flex items-center gap-1">
-            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${color}`}>
-              <Icon className="h-3 w-3" /> {s.name}
-              {stageApps.length > 0 && (
-                <span className="text-[10px] opacity-75">({stageApps.filter(a => a.decision === "approved").length}/{stageApps.length})</span>
-              )}
-            </div>
-            {i < stages.length - 1 && <span className="text-muted-foreground text-xs">→</span>}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function QuoteCard({ quote, attachments, stages, approvals, profiles, isOwner, userId, onEdit, onChanged }: {
-  quote: Quote; attachments: Attachment[]; stages: Stage[]; approvals: Approval[]; profiles: Profile[];
-  isOwner: boolean; userId: string; onEdit: () => void; onChanged: () => void;
-}) {
-  const { t, lang } = useI18n();
-  const sendEmailFn = useServerFn(sendQuoteForApproval);
-  const [sendOpen, setSendOpen] = useState(false);
-  const [decisionDialog, setDecisionDialog] = useState<null | "approved" | "rejected">(null);
-  const [comment, setComment] = useState("");
-  const [sending, setSending] = useState(false);
-
-
-  const expiryDays = quote.expiry_date ? daysBetween(quote.expiry_date) : null;
-  const isSoon = expiryDays !== null && expiryDays >= 0 && expiryDays <= 7 && quote.status !== "expired" && quote.status !== "rejected";
-  const isExpired = expiryDays !== null && expiryDays < 0 && quote.status !== "rejected" && quote.status !== "accepted";
-
-  const myPending = approvals.find(a => a.approver_id === userId && a.stage_id === quote.current_stage_id && a.decision === "pending");
-
-  const approvalBadge = () => {
-    if (quote.approval_state === "approved") return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" variant="secondary"><CheckCircle2 className="h-3 w-3 me-1 inline" />{t("approvalApproved")}</Badge>;
-    if (quote.approval_state === "rejected") return <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300" variant="secondary"><XCircle className="h-3 w-3 me-1 inline" />{t("approvalRejected")}</Badge>;
-    if (quote.approval_state === "in_progress") return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" variant="secondary"><Clock className="h-3 w-3 me-1 inline" />{t("inProgress")}</Badge>;
-    return null;
-  };
-
-  async function handleDelete() {
-    const { error } = await softDeleteQuote(quote.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(lang === "ar" ? "اتنقل لسلة المحذوفات" : "Moved to trash");
-    onChanged();
-  }
-
-  async function downloadFile(a: Attachment) {
-    const { data, error } = await createSignedAttachmentUrl(a.storage_path, 60);
-    if (error) { toast.error(error.message); return; }
-    window.open(data.signedUrl, "_blank");
-  }
-
-  async function startAndSendToApprovers() {
-    setSending(true);
-    try {
-      if (!quote.workflow_template_id || stages.length === 0) {
-        toast.error(t("addStagesFirst"));
-        return;
-      }
-      // Determine current stage: keep existing or use first
-      let currentStage = stages.find(s => s.id === quote.current_stage_id) ?? stages[0];
-
-      // Get approvers for the current stage
-      const stageApprovers = await fetchStageApprovers(currentStage.id);
-      const approverIds = (stageApprovers as StageApprover[]).map(a => a.approver_id);
-      if (approverIds.length === 0) { toast.error(t("noApprovers")); return; }
-
-      // Create pending approvals (upsert)
-      const rows = approverIds.map((aid: string) => ({ quote_id: quote.id, stage_id: currentStage.id, approver_id: aid, decision: "pending" as Decision }));
-      await upsertQuoteApprovals(rows);
-
-      // Update quote state
-      await updateQuoteApprovalState(quote.id, { approval_state: "in_progress", current_stage_id: currentStage.id });
-
-      // Send email via Gmail connector (server function attaches files from storage)
-      try {
-        const result = await sendEmailFn({ data: { quoteId: quote.id } });
-        toast.success(t("workflowStarted"));
-        toast.success(`${lang === "ar" ? "تم إرسال الإيميل إلى" : "Email sent to"}: ${(result as { recipients: string[] }).recipients.join(", ")}`);
-      } catch (mailErr) {
-        toast.success(t("workflowStarted"));
-        toast.error(`${lang === "ar" ? "فشل إرسال الإيميل" : "Email send failed"}: ${(mailErr as Error).message}`);
-      }
-      setSendOpen(false);
-      onChanged();
-
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function submitDecision() {
-    if (!myPending || !decisionDialog) return;
-    const { error } = await updateApprovalDecision(myPending.id, decisionDialog, comment.trim() || null);
-    if (error) { toast.error(error.message); return; }
-
-    // Recompute quote approval state
-    const allApps = await fetchApprovalsForQuote(quote.id);
-    const apps = allApps as Approval[];
-    const anyRejected = apps.some(a => a.decision === "rejected");
-    if (anyRejected) {
-      await updateQuoteApprovalState(quote.id, { approval_state: "rejected" });
-    } else {
-      const currentStageApps = apps.filter(a => a.stage_id === quote.current_stage_id);
-      const allApproved = currentStageApps.length > 0 && currentStageApps.every(a => a.decision === "approved");
-      if (allApproved) {
-        const currentIdx = stages.findIndex(s => s.id === quote.current_stage_id);
-        const next = stages[currentIdx + 1];
-        if (next) {
-          const nextApprovers = await fetchStageApprovers(next.id);
-          const nextIds = (nextApprovers as StageApprover[]).map(a => a.approver_id);
-          if (nextIds.length) {
-            const rows = nextIds.map((aid: string) => ({ quote_id: quote.id, stage_id: next.id, approver_id: aid, decision: "pending" as Decision }));
-            await upsertQuoteApprovals(rows);
-          }
-          await updateQuoteApprovalState(quote.id, { current_stage_id: next.id });
-        } else {
-          await updateQuoteApprovalState(quote.id, { approval_state: "approved" });
-        }
-      }
-    }
-
-    toast.success(t("decisionSaved"));
-    setDecisionDialog(null);
-    setComment("");
-    onChanged();
-  }
-
-
-  const currentStage = stages.find(s => s.id === quote.current_stage_id);
-  const ownerProfile = profiles.find(p => p.id === quote.user_id);
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-lg">{quote.supplier_name}</h3>
-              <Badge className={statusColor[quote.status]} variant="secondary">{t(quote.status as TKey)}</Badge>
-              {approvalBadge()}
-              {quote.reference_no && <span className="text-xs text-muted-foreground">#{quote.reference_no}</span>}
-            </div>
-            {!isOwner && ownerProfile && (
-              <p className="text-xs text-muted-foreground mt-1">{ownerProfile.full_name || ownerProfile.email}</p>
-            )}
-            {quote.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{quote.description}</p>}
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              {quote.amount !== null && <span className="font-medium">{Number(quote.amount).toLocaleString()} {quote.currency}</span>}
-              <span className="text-muted-foreground">{t("receivedDate")}: {quote.received_date}</span>
-              {quote.expiry_date && (
-                <span className={isExpired ? "text-rose-600 font-medium" : isSoon ? "text-amber-600 font-medium" : "text-muted-foreground"}>
-                  {t("expiryDate")}: {quote.expiry_date}
-                  {isSoon && expiryDays !== null && <> ({expiryDays} {t("daysLeft")})</>}
-                  {isExpired && <> <AlertTriangle className="inline h-3 w-3" /></>}
-                </span>
-              )}
-            </div>
-
-            {stages.length > 0 && <ApprovalTimeline stages={stages} approvals={approvals} currentStageId={quote.current_stage_id} profiles={profiles} />}
-            {currentStage && quote.approval_state === "in_progress" && (
-              <p className="text-xs text-muted-foreground mt-2">{t("currentStage")}: <span className="font-medium">{currentStage.name}</span></p>
-            )}
-
-            {attachments.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {attachments.map(a => (
-                  <button key={a.id} onClick={() => downloadFile(a)} className="inline-flex items-center gap-1 text-xs bg-muted hover:bg-muted/70 px-2 py-1 rounded">
-                    <FileText className="h-3 w-3" /> {a.file_name}
-                  </button>
-                ))}
-              </div>
-            )}
-            {quote.notes && <p className="mt-2 text-xs text-muted-foreground italic">{quote.notes}</p>}
-
-            {/* Actions row */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {isOwner && quote.workflow_template_id && quote.approval_state !== "approved" && quote.approval_state !== "rejected" && (
-                <Button size="sm" variant="outline" onClick={() => setSendOpen(true)}>
-                  <Send className="h-3 w-3 me-1" /> {t("sendToApprovers")}
-                </Button>
-              )}
-              {myPending && (
-                <>
-                  <Button size="sm" onClick={() => setDecisionDialog("approved")} className="bg-emerald-600 hover:bg-emerald-700">
-                    <Check className="h-3 w-3 me-1" /> {t("approve")}
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => setDecisionDialog("rejected")}>
-                    <X className="h-3 w-3 me-1" /> {t("reject")}
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-          {isOwner && (
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild><Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-rose-600" /></Button></AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("confirmDelete")}</AlertDialogTitle>
-                    <AlertDialogDescription>{quote.supplier_name}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete}>{t("delete")}</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
-        </div>
-      </CardContent>
-
-      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{t("sendToApprovers")}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {currentStage ? `${t("currentStage")}: ${currentStage.name}` : ""}
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSendOpen(false)}>{t("cancel")}</Button>
-            <Button onClick={startAndSendToApprovers} disabled={sending}>{sending ? t("loading") : t("submit")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={decisionDialog !== null} onOpenChange={(v) => { if (!v) { setDecisionDialog(null); setComment(""); } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{decisionDialog === "approved" ? t("approve") : t("reject")}</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label>{t("decisionComment")}</Label>
-            <Textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setDecisionDialog(null); setComment(""); }}>{t("cancel")}</Button>
-            <Button onClick={submitDecision} className={decisionDialog === "approved" ? "bg-emerald-600 hover:bg-emerald-700" : ""} variant={decisionDialog === "rejected" ? "destructive" : "default"}>{t("submit")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
-
-function QuoteDialog({ open, onOpenChange, quote, templates, customers, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; quote: Quote | null; templates: Template[]; customers: Customer[]; onSaved: () => void }) {
-  const { t, lang } = useI18n();
-  const [form, setForm] = useState({
-    supplier_name: "", reference_no: "", description: "", amount: "",
-    currency: "EGP", status: "new" as Quote["status"],
-    received_date: new Date().toISOString().slice(0, 10),
-    expiry_date: "", notes: "", workflow_template_id: "" as string,
-    customer_id: "" as string, terms_override: "", override_enabled: false,
-  });
-  const [files, setFiles] = useState<File[]>([]);
-  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      if (quote) {
-        setForm({
-          supplier_name: quote.supplier_name, reference_no: quote.reference_no ?? "",
-          description: quote.description ?? "", amount: quote.amount?.toString() ?? "",
-          currency: quote.currency, status: quote.status,
-          received_date: quote.received_date, expiry_date: quote.expiry_date ?? "",
-          notes: quote.notes ?? "", workflow_template_id: quote.workflow_template_id ?? "",
-          customer_id: quote.customer_id ?? "",
-          terms_override: quote.terms_override ?? "",
-          override_enabled: quote.terms_override !== null,
-        });
-        fetchQuoteAttachments(quote.id).then((data) => setExistingAttachments(data as Attachment[]));
-      } else {
-        setForm({ supplier_name: "", reference_no: "", description: "", amount: "", currency: "EGP", status: "new", received_date: new Date().toISOString().slice(0, 10), expiry_date: "", notes: "", workflow_template_id: "", customer_id: "", terms_override: "", override_enabled: false });
-        setExistingAttachments([]);
-      }
-      setFiles([]);
-    }
-  }, [open, quote]);
-
-  const selectedCustomer = customers.find(c => c.id === form.customer_id) ?? null;
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const uid = await getCurrentUserId();
-      if (!uid) throw new Error("Not authenticated");
-
-      const payload = {
-        supplier_name: form.supplier_name.trim(),
-        reference_no: form.reference_no.trim() || null,
-        description: form.description.trim() || null,
-        amount: form.amount ? Number(form.amount) : null,
-        currency: form.currency, status: form.status,
-        received_date: form.received_date,
-        expiry_date: form.expiry_date || null,
-        notes: form.notes.trim() || null,
-        workflow_template_id: form.workflow_template_id || null,
-        customer_id: form.customer_id || null,
-        terms_override: form.override_enabled ? (form.terms_override.trim() || null) : null,
-      };
-
-      let quoteId: string;
-      if (quote) {
-        const { error } = await updateQuote(quote.id, payload);
-        if (error) throw error;
-        quoteId = quote.id;
-      } else {
-        quoteId = await insertQuote(payload, uid);
-      }
-
-      for (const f of files) {
-        await uploadQuoteAttachment(uid, quoteId, f);
-      }
-
-      toast.success(lang === "ar" ? "تم الحفظ" : "Saved");
-      onOpenChange(false);
-      onSaved();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removeAttachment(a: Attachment) {
-    await softDeleteAttachment(a.id);
-    setExistingAttachments(prev => prev.filter(x => x.id !== a.id));
-  }
-
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{quote ? t("editQuote") : t("newQuote")}</DialogTitle></DialogHeader>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t("customer")}</Label>
-              <Select
-                value={form.customer_id || "none"}
-                onValueChange={(v) => {
-                  const cid = v === "none" ? "" : v;
-                  const c = customers.find(x => x.id === cid);
-                  setForm({ ...form, customer_id: cid, currency: c ? c.currency : form.currency });
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("noCustomer")}</SelectItem>
-                  {customers.map(c => {
-                    const disp = pickLangValue(c as any, "name", lang).value || c.name;
-                    return <SelectItem key={c.id} value={c.id}>{disp}{c.tax_id ? ` — ${c.tax_id}` : ""}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t("supplier")} *</Label>
-              <Input required value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} maxLength={200} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("reference")}</Label>
-              <Input value={form.reference_no} onChange={(e) => setForm({ ...form, reference_no: e.target.value })} maxLength={100} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("status")}</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Quote["status"] })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{t(s as TKey)}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("amount")}</Label>
-              <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} dir="ltr" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("currency")}</Label>
-              <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["EGP","USD","EUR","SAR","AED","GBP"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("receivedDate")}</Label>
-              <Input type="date" required value={form.received_date} onChange={(e) => setForm({ ...form, received_date: e.target.value })} dir="ltr" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{t("expiryDate")}</Label>
-              <Input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} dir="ltr" />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t("workflow")}</Label>
-              <Select value={form.workflow_template_id || "none"} onValueChange={(v) => setForm({ ...form, workflow_template_id: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("noWorkflow")}</SelectItem>
-                  {templates.map(tpl => <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t("description")}</Label>
-              <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={2000} />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t("notes")}</Label>
-              <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={2000} />
-            </div>
-            {selectedCustomer && (
-              <div className="space-y-1.5 sm:col-span-2 border rounded-lg p-3 bg-muted/40">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <ScrollText className="h-4 w-4 text-primary" />
-                  {t("effectiveTerms")}
-                </div>
-                {(() => {
-                  const items = parseTerms(selectedCustomer.terms);
-                  return items.length > 0 ? (
-                    <ul className="space-y-1.5 bg-background rounded p-2 border">
-                      {items.map((it, i) => {
-                        const title = lang === "ar" ? (it.title_ar || it.title_en) : (it.title_en || it.title_ar);
-                        const body = lang === "ar" ? (it.body_ar || it.body_en) : (it.body_en || it.body_ar);
-                        return (
-                          <li key={i} className="text-xs">
-                            {title && <span className="font-semibold">{title}: </span>}
-                            <span className="whitespace-pre-wrap">{body}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">{lang === "ar" ? "لا شروط مسجلة لهذا العميل" : "No terms set for this customer"}</p>
-                  );
-                })()}
-                <label className="flex items-center gap-2 text-xs cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
-                    checked={form.override_enabled}
-                    onChange={(e) => setForm({ ...form, override_enabled: e.target.checked, terms_override: e.target.checked ? (form.terms_override || formatTermsPlain(parseTerms(selectedCustomer.terms), lang)) : "" })}
-                  />
-                  {t("overrideTerms")}
-                </label>
-                {form.override_enabled && (
-                  <Textarea rows={3} value={form.terms_override} onChange={(e) => setForm({ ...form, terms_override: e.target.value })} maxLength={4000} placeholder={t("termsPlaceholder")} />
-                )}
-              </div>
-            )}
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>{t("attachments")}</Label>
-              {existingAttachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {existingAttachments.map(a => (
-                    <div key={a.id} className="inline-flex items-center gap-2 bg-muted px-2 py-1 rounded text-xs">
-                      <FileText className="h-3 w-3" /> {a.file_name}
-                      <button type="button" onClick={() => removeAttachment(a)} className="text-rose-600 hover:text-rose-700"><Trash2 className="h-3 w-3" /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <Input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-              {files.length > 0 && <p className="text-xs text-muted-foreground">{files.length} {files.length === 1 ? t("file") : t("files")}</p>}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t("cancel")}</Button>
-            <Button type="submit" disabled={saving}>{saving ? t("loading") : t("save")}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
