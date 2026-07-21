@@ -551,7 +551,7 @@ function SetupPage() {
             )}
             {step === 2 && <StepAdvanced advanced={advanced} setAdvanced={setAdvanced} T={T} />}
             {step === 3 && <StepFeatures features={features} setFeatures={setFeatures} T={T} />}
-            {step === 4 && <StepNumbering numbering={numbering} setNumbering={setNumbering} T={T} />}
+            {step === 4 && <StepNumbering numbering={numbering} setNumbering={setNumbering} T={T} isAr={isAr} />}
           </CardContent>
         </Card>
 
