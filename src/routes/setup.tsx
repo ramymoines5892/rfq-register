@@ -164,7 +164,7 @@ function SetupPage() {
       const restoredFile = pd.file_data_url && pd.file_name
         ? fileFromDataUrl(pd.file_data_url, pd.file_name, pd.file_type)
         : null;
-      return { ...pd, file: restoredFile, has_file: pd.has_file ?? (!!restoredFile || !!pd.file_name) } as SetupDocument;
+      return { ...pd, file: restoredFile, has_file: !!restoredFile || (!!pd.has_file && !!pd.file_data_url) } as SetupDocument;
     }),
   );
   const [logoUploading, setLogoUploading] = useState(false);
@@ -204,7 +204,7 @@ function SetupPage() {
           file_name: file?.name ?? doc.file_name ?? null,
           file_type: file?.type ?? doc.file_type ?? null,
           file_data_url: doc.file_data_url ?? null,
-          has_file: !!file || !!doc.has_file || !!doc.file_name,
+          has_file: !!file || (!!doc.has_file && !!doc.file_data_url),
         };
       });
       const logo = logoFile && logoDataUrl
@@ -1409,9 +1409,11 @@ function DocumentsDialog({
       editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
     const existingFileName =
       editingIndex !== null ? documents[editingIndex]?.file_name ?? null : null;
+    const existingFileDataUrl =
+      editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null;
     const keepsExistingFile = form.has_file !== false;
     const hasExistingFile =
-      editingIndex !== null && keepsExistingFile && (!!existingFile || !!documents[editingIndex]?.has_file || !!existingFileName);
+      editingIndex !== null && keepsExistingFile && (!!existingFile || !!existingFileDataUrl);
     const effectiveFile = form.file ?? existingFile;
     if (!effectiveFile && !hasExistingFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
@@ -1420,7 +1422,7 @@ function DocumentsDialog({
 
     const effectiveFileDataUrl = effectiveFile
       ? form.file_data_url ?? await fileToDataUrl(effectiveFile).catch(() => null)
-      : keepsExistingFile ? form.file_data_url ?? (editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null) : null;
+      : keepsExistingFile ? form.file_data_url ?? existingFileDataUrl : null;
 
 
     const entry: SetupDocument = {
