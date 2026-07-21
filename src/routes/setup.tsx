@@ -263,8 +263,8 @@ function SetupPage() {
   const currentIdx = typeof step === "number" ? step : 0;
 
   const weights = useMemo(
-    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length, !!logoFile),
-    [general, advanced.country, documents.length, logoFile],
+    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length, !!general.logo_url),
+    [general, advanced.country, documents.length, general.logo_url],
   );
   const completion = useMemo(() => {
     const total = weights.reduce((a, w) => a + w.weight, 0);
