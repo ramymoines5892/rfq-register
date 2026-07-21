@@ -31,3 +31,13 @@ export function useCreateCompany() {
     },
   });
 }
+
+export function useUpdateCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateCompanyPatch }) => updateCompany(id, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.company.all });
+    },
+  });
+}
