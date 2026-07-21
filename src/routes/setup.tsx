@@ -728,13 +728,14 @@ function StepGeneral({
     showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
 
   // Detect scroll to collapse the completion header into a slim floating bar
-  const [scrolled, setScrolled] = React.useState(false);
-  React.useEffect(() => {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 140);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
 
   const barColor = completion === 100 ? "bg-emerald-500" : completion >= 60 ? "bg-primary" : "bg-amber-500";
 
