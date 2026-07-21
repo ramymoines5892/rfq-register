@@ -13,6 +13,8 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
+    const { data: hasCompany } = await supabase.rpc("has_any_company");
+    if (!hasCompany) throw redirect({ to: "/setup" });
     const { data: prof } = await supabase.from("profiles").select("status").eq("id", data.user.id).maybeSingle();
     if (prof && prof.status !== "active") throw redirect({ to: "/pending" });
     return { user: data.user };

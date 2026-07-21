@@ -54,4 +54,9 @@ export const qk = {
     all: ["organization"] as const,
     data: () => ["organization", "data"] as const,
   },
+  company: {
+    all: ["company"] as const,
+    exists: () => ["company", "exists"] as const,
+    current: () => ["company", "current"] as const,
+  },
 } as const;
