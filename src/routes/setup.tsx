@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
@@ -12,8 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
+import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
@@ -39,7 +40,6 @@ function clearDraft() {
 
 export const Route = createFileRoute("/setup")({
   beforeLoad: async () => {
-    // Must be signed in to bootstrap; RLS will still enforce
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
     const exists = await hasAnyCompany().catch(() => false);
@@ -68,6 +68,36 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
   { doc_type: "GRN", prefix: "GRN", year_segment: true, padding: 6, next_seq: 1 },
 ];
 
+// -------- Weighted completion for the "General" step --------
+// Only what the business truly needs on day one.
+// Required (bilingual name + country) counts heavier; everything else is
+// weighted by usefulness, not by count. Landline / website are tiny weight.
+type Weight = { key: string; weight: number; filled: boolean; valid: boolean; required?: boolean };
+
+function computeGeneralWeights(g: CompanyGeneral, country: string): Weight[] {
+  const c = getCountry(country);
+  const nz = (s?: string | null) => (s ?? "").trim().length > 0;
+  const emailV = validateEmail(g.email ?? "");
+  const webV = validateWebsite(g.website ?? "");
+  const mobileV = validateRule(g.mobile ?? "", c.mobile);
+  const phoneV = validateRule(g.phone ?? "", c.phone);
+  const taxV = validateRule(g.tax_no ?? "", c.tax);
+  const crV = validateRule(g.cr_no ?? "", c.cr);
+  return [
+    { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
+    { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
+    { key: "country", weight: 5,  filled: nz(country),      valid: nz(country),      required: true },
+    { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
+    { key: "mobile",  weight: 12, filled: nz(g.mobile),     valid: nz(g.mobile) && mobileV.ok },
+    { key: "email",   weight: 8,  filled: nz(g.email),      valid: nz(g.email) && emailV.ok },
+    { key: "tax_no",  weight: 8,  filled: nz(g.tax_no),     valid: nz(g.tax_no) && taxV.ok },
+    { key: "cr_no",   weight: 5,  filled: nz(g.cr_no),      valid: nz(g.cr_no) && crV.ok },
+    { key: "phone",   weight: 4,  filled: nz(g.phone),      valid: nz(g.phone) && phoneV.ok },
+    { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
+    { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
+  ];
+}
+
 function SetupPage() {
   const { lang, setLang, dir } = useI18n();
   const navigate = useNavigate();
@@ -83,7 +113,7 @@ function SetupPage() {
     tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "",
   });
   const [advanced, setAdvanced] = useState<CompanyAdvanced>(d?.advanced ?? {
-    country: "Egypt", city: "", state: "", postal_code: "", address: "",
+    country: "EG", city: "", state: "", postal_code: "", address: "",
     default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
     base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
     gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
@@ -91,30 +121,29 @@ function SetupPage() {
   const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
-  // Persist every change so a refresh/close returns to the exact same place.
   useEffect(() => {
     if (step === "done") return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, general, advanced, features, numbering }));
-    } catch { /* ignore quota errors */ }
+    } catch { /* ignore */ }
   }, [step, general, advanced, features, numbering]);
 
   async function resetAll() {
     const ok = await confirm({
       title: lang === "ar" ? "البدء من جديد؟" : "Start over?",
-      description: lang === "ar"
-        ? "هيتم مسح كل البيانات اللى دخلتها فى المعالج."
-        : "All data entered in the wizard will be cleared.",
+      description: lang === "ar" ? "هيتم مسح كل البيانات اللى دخلتها فى المعالج." : "All data entered in the wizard will be cleared.",
       confirmText: lang === "ar" ? "نعم، ابدأ من جديد" : "Yes, start over",
       variant: "destructive",
     });
     if (!ok) return;
     clearDraft();
     setStep("welcome");
+    setShowErrors(false);
     setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "" });
     setAdvanced({
-      country: "Egypt", city: "", state: "", postal_code: "", address: "",
+      country: "EG", city: "", state: "", postal_code: "", address: "",
       default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
       base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
       gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
@@ -122,8 +151,6 @@ function SetupPage() {
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
   }
-
-
 
   const isAr = lang === "ar";
   const T = (ar: string, en: string) => (isAr ? ar : en);
@@ -136,13 +163,36 @@ function SetupPage() {
   ];
 
   const currentIdx = typeof step === "number" ? step : 0;
-  const progress = typeof step === "number" ? (step / 4) * 100 : 0;
+
+  const weights = useMemo(
+    () => computeGeneralWeights(general, advanced.country ?? "EG"),
+    [general, advanced.country],
+  );
+  const completion = useMemo(() => {
+    const total = weights.reduce((a, w) => a + w.weight, 0);
+    const done = weights.reduce((a, w) => a + (w.valid ? w.weight : 0), 0);
+    return Math.round((done / total) * 100);
+  }, [weights]);
+
+  const requiredMissing = weights.filter((w) => w.required && !w.valid);
 
   function validateStep(s: number): string | null {
     if (s === 1) {
-      if (!general.name.trim()) return T("اسم الشركة مطلوب", "Company name is required");
-      if (!general.code.trim()) return T("كود الشركة مطلوب", "Company code is required");
-      if (general.email && !/^\S+@\S+\.\S+$/.test(general.email)) return T("بريد إلكتروني غير صحيح", "Invalid email");
+      if (requiredMissing.length > 0) {
+        return T("لازم تكمل الحقول المطلوبة (المميزة بنجمة حمراء).", "Please complete the required fields (marked with a red asterisk).");
+      }
+      // If user entered any optional structured field, it must be valid
+      const c = getCountry(advanced.country ?? "EG");
+      const checks: Array<[string, FieldValidation]> = [
+        ["email", validateEmail(general.email ?? "")],
+        ["website", validateWebsite(general.website ?? "")],
+        ["mobile", validateRule(general.mobile ?? "", c.mobile)],
+        ["phone", validateRule(general.phone ?? "", c.phone)],
+        ["tax_no", validateRule(general.tax_no ?? "", c.tax)],
+        ["cr_no", validateRule(general.cr_no ?? "", c.cr)],
+      ];
+      const bad = checks.find(([, r]) => !r.ok);
+      if (bad) return isAr ? bad[1].error!.ar : bad[1].error!.en;
     }
     if (s === 4) {
       const seen = new Set<string>();
@@ -156,8 +206,10 @@ function SetupPage() {
   }
 
   function next() {
+    setShowErrors(true);
     const err = validateStep(currentIdx);
     if (err) { toast.error(err); return; }
+    setShowErrors(false);
     if (currentIdx < 4) setStep((currentIdx + 1) as Step);
   }
   function back() {
@@ -166,6 +218,8 @@ function SetupPage() {
   }
 
   async function handleLogo(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
+    if (file.size > 3 * 1024 * 1024) { toast.error(T("الحجم أكبر من 3MB", "File is larger than 3MB")); return; }
     setLogoUploading(true);
     try {
       const url = await uploadCompanyLogo(file);
@@ -179,12 +233,22 @@ function SetupPage() {
   }
 
   async function submit() {
+    setShowErrors(true);
     for (const s of [1, 2, 3, 4]) {
       const err = validateStep(s);
       if (err) { toast.error(err); setStep(s as Step); return; }
     }
     try {
-      await createMut.mutateAsync({ general, advanced, features, numbering });
+      // Auto-generate company code if user hasn't set one
+      const payloadGeneral = { ...general, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
+      // Auto-align regional settings from country
+      const c = getCountry(advanced.country ?? "EG");
+      const payloadAdvanced = {
+        ...advanced,
+        base_currency: advanced.base_currency || c.currency,
+        timezone: advanced.timezone || c.timezone,
+      };
+      await createMut.mutateAsync({ general: payloadGeneral, advanced: payloadAdvanced, features, numbering });
       clearDraft();
       setStep("done");
     } catch (e: any) {
@@ -201,9 +265,7 @@ function SetupPage() {
           <div className="absolute -bottom-24 -start-24 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
           <div className="relative">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-white/15 backdrop-blur grid place-items-center">
-                <Gem className="h-6 w-6" />
-              </div>
+              <div className="h-12 w-12 rounded-2xl bg-white/15 backdrop-blur grid place-items-center"><Gem className="h-6 w-6" /></div>
               <div className="font-display text-2xl font-bold">EEC ERP</div>
             </div>
           </div>
@@ -233,9 +295,7 @@ function SetupPage() {
             </div>
             <div className="space-y-2">
               <Button size="lg" className="w-full h-12 text-base" onClick={() => setStep(d ? (typeof d.step === "number" ? d.step : 1) : 1)}>
-                {d && typeof d.step === "number"
-                  ? T("متابعة الإعداد", "Continue Setup")
-                  : T("إنشاء الشركة", "Create Company")}
+                {d && typeof d.step === "number" ? T("متابعة الإعداد", "Continue Setup") : T("إنشاء الشركة", "Create Company")}
                 {isAr ? <ArrowLeft className="ms-2 h-5 w-5" /> : <ArrowRight className="ms-2 h-5 w-5" />}
               </Button>
               {d && typeof d.step === "number" && (
@@ -276,9 +336,10 @@ function SetupPage() {
   }
 
   // ----------- WIZARD -----------
+  const staticProgress = typeof step === "number" ? (step / 4) * 100 : 0;
   return (
-    <div className="min-h-screen bg-muted/30 py-6 md:py-10 px-4" dir={dir}>
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-muted/30 py-6 md:py-10 px-3 sm:px-4" dir={dir}>
+      <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground grid place-items-center"><Gem className="h-5 w-5" /></div>
           <div>
@@ -288,23 +349,23 @@ function SetupPage() {
         </div>
 
         {/* Stepper */}
-        <div className="bg-card border rounded-2xl p-4 md:p-5">
-          <div className="flex items-center justify-between gap-2">
+        <div className="bg-card border rounded-2xl p-3 sm:p-4 md:p-5">
+          <div className="flex items-center justify-between gap-1 sm:gap-2">
             {tabs.map((t, i) => {
               const active = t.id === currentIdx;
               const done = t.id < currentIdx;
               const Icon = t.icon;
               return (
-                <div key={t.id} className="flex-1 flex items-center">
+                <div key={t.id} className="flex-1 flex items-center min-w-0">
                   <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <div className={`h-10 w-10 rounded-full grid place-items-center transition-all ${
+                    <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full grid place-items-center transition-all ${
                       done ? "bg-primary text-primary-foreground" :
                       active ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
                       "bg-muted text-muted-foreground"
                     }`}>
                       {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
                     </div>
-                    <div className={`text-[11px] md:text-xs font-medium truncate text-center max-w-[120px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[120px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
                       {t.label}
                     </div>
                   </div>
@@ -314,14 +375,25 @@ function SetupPage() {
             })}
           </div>
           <div className="mt-4 h-1 bg-muted rounded overflow-hidden">
-            <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-primary transition-all" style={{ width: `${staticProgress}%` }} />
           </div>
         </div>
 
         <Card>
-          <CardContent className="p-6 md:p-8 space-y-6">
+          <CardContent className="p-4 sm:p-6 md:p-8 space-y-6">
             {step === 1 && (
-              <StepGeneral general={general} setGeneral={setGeneral} T={T} onLogoFile={handleLogo} logoUploading={logoUploading} />
+              <StepGeneral
+                general={general} setGeneral={setGeneral}
+                country={advanced.country ?? "EG"}
+                setCountry={(v) => setAdvanced((a) => {
+                  const c = getCountry(v);
+                  return { ...a, country: v, base_currency: c.currency, timezone: c.timezone };
+                })}
+                T={T} isAr={isAr}
+                onLogoFile={handleLogo} logoUploading={logoUploading}
+                completion={completion} weights={weights}
+                showErrors={showErrors}
+              />
             )}
             {step === 2 && <StepAdvanced advanced={advanced} setAdvanced={setAdvanced} T={T} />}
             {step === 3 && <StepFeatures features={features} setFeatures={setFeatures} T={T} />}
@@ -358,73 +430,258 @@ function SetupPage() {
   );
 }
 
-// ---------------- STEPS ----------------
+// ---------------- Reusable field with inline validation ----------------
 
-function Field({ label, children, required, hint }: { label: string; children: React.ReactNode; required?: boolean; hint?: string }) {
+function SmartField({
+  label, icon: Icon, required, hint, error, children,
+}: {
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  required?: boolean;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm">{label}{required && <span className="text-destructive ms-1">*</span>}</Label>
+      <Label className="text-sm flex items-center gap-1.5">
+        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
+        <span>{label}</span>
+        {required && <span className="text-destructive">*</span>}
+      </Label>
       {children}
-      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+      {error ? (
+        <div className="flex items-center gap-1.5 text-xs text-destructive">
+          <AlertCircle className="h-3 w-3" />
+          <span>{error}</span>
+        </div>
+      ) : hint ? (
+        <div className="text-[11px] text-muted-foreground">{hint}</div>
+      ) : null}
     </div>
   );
 }
 
-function StepGeneral({ general, setGeneral, T, onLogoFile, logoUploading }: any) {
-  const set = (k: keyof CompanyGeneral) => (e: any) => setGeneral((g: any) => ({ ...g, [k]: e.target.value }));
+// ---------------- STEP 1 — General (CV-like layout, weighted progress) ----------------
+
+function StepGeneral({
+  general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, completion, weights, showErrors,
+}: {
+  general: CompanyGeneral;
+  setGeneral: React.Dispatch<React.SetStateAction<CompanyGeneral>>;
+  country: string;
+  setCountry: (v: string) => void;
+  T: (ar: string, en: string) => string;
+  isAr: boolean;
+  onLogoFile: (f: File) => void;
+  logoUploading: boolean;
+  completion: number;
+  weights: Weight[];
+  showErrors: boolean;
+}) {
+  const c = getCountry(country);
+  const set = <K extends keyof CompanyGeneral>(k: K) => (v: string) => setGeneral((g) => ({ ...g, [k]: v }));
+
+  // Live validations
+  const emailV = validateEmail(general.email ?? "");
+  const webV = validateWebsite(general.website ?? "");
+  const mobileV = validateRule(general.mobile ?? "", c.mobile);
+  const phoneV = validateRule(general.phone ?? "", c.phone);
+  const taxV = validateRule(general.tax_no ?? "", c.tax);
+  const crV = validateRule(general.cr_no ?? "", c.cr);
+
+  const err = (v: FieldValidation, forceShow = false) =>
+    (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
+  const reqErr = (val: string | null | undefined, msgAr: string, msgEn: string) =>
+    showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
+
+  // Auto-format on change for masked fields
+  const onMobile = (v: string) => set("mobile")(c.mobile ? applyMask(v, c.mobile) : v);
+  const onPhone = (v: string) => set("phone")(c.phone ? applyMask(v, c.phone) : v);
+  const onTax = (v: string) => set("tax_no")(c.tax ? applyMask(v, c.tax) : v);
+  const onCr = (v: string) => set("cr_no")(c.cr ? applyMask(v, c.cr) : v);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">{T("البيانات الأساسية", "General Information")}</h3>
-        <p className="text-sm text-muted-foreground">{T("أدخل البيانات الأساسية للشركة.", "Basic company information.")}</p>
-      </div>
-      <div className="grid md:grid-cols-2 gap-4">
-        <Field label={T("اسم الشركة", "Company Name")} required>
-          <Input value={general.name} onChange={set("name")} autoFocus />
-        </Field>
-        <Field label={T("الاسم بالعربي", "Arabic Company Name")}>
-          <Input value={general.name_ar ?? ""} onChange={set("name_ar")} dir="rtl" />
-        </Field>
-        <Field label={T("الاسم المختصر", "Short Name")}>
-          <Input value={general.short_name ?? ""} onChange={set("short_name")} />
-        </Field>
-        <Field label={T("كود الشركة", "Company Code")} required>
-          <Input value={general.code} onChange={set("code")} placeholder="EEC-001" />
-        </Field>
-        <Field label={T("الرقم الضريبي", "Tax Registration Number")}>
-          <Input value={general.tax_no ?? ""} onChange={set("tax_no")} />
-        </Field>
-        <Field label={T("السجل التجاري", "Commercial Registration Number")}>
-          <Input value={general.cr_no ?? ""} onChange={set("cr_no")} />
-        </Field>
-        <Field label={T("رقم القيمة المضافة", "VAT Number")}>
-          <Input value={general.vat_no ?? ""} onChange={set("vat_no")} />
-        </Field>
-        <Field label={T("البريد الإلكتروني", "Email")}>
-          <Input type="email" value={general.email ?? ""} onChange={set("email")} />
-        </Field>
-        <Field label={T("تليفون أرضي", "Phone")}>
-          <Input value={general.phone ?? ""} onChange={set("phone")} />
-        </Field>
-        <Field label={T("موبايل", "Mobile")}>
-          <Input value={general.mobile ?? ""} onChange={set("mobile")} />
-        </Field>
-        <Field label={T("الموقع الإلكتروني", "Website")}>
-          <Input value={general.website ?? ""} onChange={set("website")} placeholder="https://..." />
-        </Field>
-        <Field label={T("لوجو الشركة", "Company Logo")}>
-          <div className="flex items-center gap-3">
-            <label className="flex-1 cursor-pointer">
-              <div className="border border-dashed rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 flex items-center gap-2">
-                {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                <span className="truncate">{general.logo_url ? T("تم رفع اللوجو", "Logo uploaded") : T("اختر ملف صورة", "Choose an image")}</span>
-              </div>
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
-            </label>
-            {general.logo_url && <img src={general.logo_url} alt="logo" className="h-10 w-10 rounded object-contain border" />}
+      {/* Header + smart progress */}
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-lg font-semibold">{T("بطاقة الشركة", "Company Profile")}</h3>
+            <p className="text-sm text-muted-foreground">
+              {T("املأ البيانات الأساسية للشركة. المطلوب فقط الاسم (عربى وإنجليزى) والدولة.",
+                 "Fill the company's basic profile. Only company name (AR + EN) and country are required.")}
+            </p>
           </div>
-        </Field>
+          <div className="rounded-xl bg-muted/60 border px-3 py-2 min-w-[180px]">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{T("اكتمال البيانات", "Profile completeness")}</span>
+              <span className="font-semibold text-foreground">{completion}%</span>
+            </div>
+            <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all ${completion === 100 ? "bg-emerald-500" : completion >= 60 ? "bg-primary" : "bg-amber-500"}`}
+                style={{ width: `${completion}%` }}
+              />
+            </div>
+            <div className="mt-1.5 text-[10px] text-muted-foreground">
+              {completion === 100
+                ? T("ممتاز! كل شى مكتمل", "Excellent — profile is complete")
+                : T("الحقول المهمة بتزود النسبة أكتر", "Important fields contribute more")}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* CV-style header: logo + names + country */}
+      <div className="rounded-2xl border bg-gradient-to-br from-muted/40 to-transparent p-4 sm:p-6">
+        <div className="flex flex-col items-center text-center gap-4 sm:gap-5">
+          <label className="relative group cursor-pointer">
+            <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-background grid place-items-center overflow-hidden group-hover:border-primary/60 transition-colors">
+              {logoUploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : general.logo_url ? (
+                <img src={general.logo_url} alt="logo" className="h-full w-full object-contain" />
+              ) : (
+                <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                  <ImagePlus className="h-7 w-7" />
+                  <span className="text-[10px] font-medium">{T("اللوجو", "Logo")}</span>
+                </div>
+              )}
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-primary/0 group-hover:bg-primary/5 transition-colors" />
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onLogoFile(e.target.files[0])} />
+            <div className="mt-2 text-[11px] text-muted-foreground">{T("انقر للتغيير", "Click to change")}</div>
+          </label>
+
+          <div className="w-full max-w-2xl grid sm:grid-cols-2 gap-3 text-start">
+            <SmartField
+              label={T("الاسم بالإنجليزى", "Company Name (English)")}
+              required
+              icon={Building2}
+              hint={T("هيظهر فى التقارير الإنجليزى", "Used in English reports")}
+              error={reqErr(general.name, "الاسم الإنجليزى مطلوب", "English name is required")}
+            >
+              <Input dir="ltr" value={general.name} onChange={(e) => set("name")(e.target.value)} autoFocus placeholder="Egyptian Europe Company" />
+            </SmartField>
+            <SmartField
+              label={T("الاسم بالعربى", "Company Name (Arabic)")}
+              required
+              icon={Building2}
+              hint={T("هيظهر فى التقارير العربى", "Used in Arabic reports")}
+              error={reqErr(general.name_ar, "الاسم العربى مطلوب", "Arabic name is required")}
+            >
+              <Input dir="rtl" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(e.target.value)} placeholder="الشركة المصرية الأوروبية" />
+            </SmartField>
+            <SmartField
+              label={T("الدولة", "Country")}
+              required
+              icon={MapPin}
+              hint={T("بتحدد فورمات الأرقام والعملة", "Determines number formats & currency")}
+            >
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((cc) => (
+                    <SelectItem key={cc.code} value={cc.code}>{isAr ? cc.labelAr : cc.labelEn}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SmartField>
+            <SmartField
+              label={T("الاسم المختصر", "Short Name")}
+              hint={T("اختيارى — بيظهر فى الشريط الجانبى", "Optional — appears in the sidebar")}
+            >
+              <Input value={general.short_name ?? ""} onChange={(e) => set("short_name")(e.target.value)} placeholder="EEC" />
+            </SmartField>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact block */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("بيانات الاتصال", "Contact")}</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <SmartField
+            label={T("موبايل", "Mobile")}
+            icon={Smartphone}
+            hint={c.mobile ? (isAr ? c.mobile.hintAr : c.mobile.hintEn) : undefined}
+            error={err(mobileV)}
+          >
+            <Input
+              dir="ltr"
+              value={general.mobile ?? ""}
+              onChange={(e) => onMobile(e.target.value)}
+              placeholder={c.mobile?.example}
+              inputMode="tel"
+            />
+          </SmartField>
+          <SmartField
+            label={T("البريد الإلكتروني", "Email")}
+            icon={Mail}
+            hint={T("بريد رسمي للشركة", "Official company email")}
+            error={err(emailV)}
+          >
+            <Input dir="ltr" type="email" value={general.email ?? ""} onChange={(e) => set("email")(e.target.value)} placeholder="info@company.com" />
+          </SmartField>
+          <SmartField
+            label={T("تليفون أرضى", "Landline Phone")}
+            icon={Phone}
+            hint={c.phone ? (isAr ? c.phone.hintAr : c.phone.hintEn) : T("اختيارى", "Optional")}
+            error={err(phoneV)}
+          >
+            <Input dir="ltr" value={general.phone ?? ""} onChange={(e) => onPhone(e.target.value)} placeholder={c.phone?.example} inputMode="tel" />
+          </SmartField>
+          <SmartField
+            label={T("الموقع الإلكتروني", "Website")}
+            icon={Globe}
+            hint={T("اختيارى — لازم يكون رابط صحيح", "Optional — must be a valid URL")}
+            error={err(webV)}
+          >
+            <Input dir="ltr" value={general.website ?? ""} onChange={(e) => set("website")(e.target.value)} placeholder="https://company.com" />
+          </SmartField>
+        </div>
+      </div>
+
+      {/* Legal block */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("البيانات القانونية", "Legal & Tax")}</h4>
+        <div className="grid md:grid-cols-2 gap-4">
+          <SmartField
+            label={T("الرقم الضريبي", "Tax Registration No.")}
+            icon={Receipt}
+            hint={c.tax ? (isAr ? c.tax.hintAr : c.tax.hintEn) : T("اختيارى", "Optional")}
+            error={err(taxV)}
+          >
+            <Input dir="ltr" value={general.tax_no ?? ""} onChange={(e) => onTax(e.target.value)} placeholder={c.tax?.example} />
+          </SmartField>
+          <SmartField
+            label={T("السجل التجارى", "Commercial Registration")}
+            icon={FileText}
+            hint={c.cr ? (isAr ? c.cr.hintAr : c.cr.hintEn) : T("اختيارى", "Optional")}
+            error={err(crV)}
+          >
+            <Input dir="ltr" value={general.cr_no ?? ""} onChange={(e) => onCr(e.target.value)} placeholder={c.cr?.example} />
+          </SmartField>
+        </div>
+      </div>
+
+      <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border">
+        {T("ملاحظة: كود الشركة هيتولّد تلقائيًا من الاسم — تقدر تعدّله بعد كده من إعدادات الشركة. الكود بيتستخدم كبادئة داخلية للمستندات وسهولة التعريف.",
+           "Note: The company code is auto-generated from the name — you can change it later from company settings. The code is used as an internal prefix for documents and quick identification.")}
+      </div>
+    </div>
+  );
+}
+
+// ---------------- STEP 2 — Advanced ----------------
+
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">{label}</Label>
+      {children}
+      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
 }
@@ -441,14 +698,14 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
     <div className="space-y-8">
       <div>
         <h3 className="text-lg font-semibold">{T("البيانات المتقدمة", "Advanced Information")}</h3>
-        <p className="text-sm text-muted-foreground">{T("العنوان والإعدادات الإقليمية والمالية.", "Address, regional and financial settings.")}</p>
+        <p className="text-sm text-muted-foreground">{T("العنوان والإعدادات الإقليمية والمالية (اختيارى — تقدر تكملها بعدين).", "Address, regional and financial settings (optional — you can complete later).")}</p>
       </div>
 
       <Section title={T("العنوان", "Address")}>
-        <Field label={T("الدولة", "Country")}><Input value={advanced.country ?? ""} onChange={set("country")} autoFocus /></Field>
         <Field label={T("المدينة", "City")}><Input value={advanced.city ?? ""} onChange={set("city")} /></Field>
         <Field label={T("المحافظة", "State")}><Input value={advanced.state ?? ""} onChange={set("state")} /></Field>
         <Field label={T("الرمز البريدي", "Postal Code")}><Input value={advanced.postal_code ?? ""} onChange={set("postal_code")} /></Field>
+        <div />
         <div className="md:col-span-2">
           <Field label={T("العنوان الكامل", "Full Address")}><Textarea rows={2} value={advanced.address ?? ""} onChange={set("address")} /></Field>
         </div>
@@ -507,6 +764,8 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
               <SelectItem value="GBP">GBP - British Pound</SelectItem>
               <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
               <SelectItem value="AED">AED - UAE Dirham</SelectItem>
+              <SelectItem value="KWD">KWD - Kuwaiti Dinar</SelectItem>
+              <SelectItem value="QAR">QAR - Qatari Riyal</SelectItem>
             </SelectContent>
           </Select>
         </Field>
@@ -626,4 +885,3 @@ function StepNumbering({ numbering, setNumbering, T }: any) {
     </div>
   );
 }
-
