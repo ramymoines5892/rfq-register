@@ -265,7 +265,7 @@ function SetupPage() {
         base_currency: advanced.base_currency || c.currency,
         timezone: advanced.timezone || c.timezone,
       };
-      await createMut.mutateAsync({ general: payloadGeneral, advanced: payloadAdvanced, features, numbering });
+      await createMut.mutateAsync({ general: payloadGeneral, advanced: payloadAdvanced, features, numbering, documents });
       clearDraft();
       setStep("done");
     } catch (e: any) {
