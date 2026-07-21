@@ -1184,37 +1184,37 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
       <Section title={T("العنوان", "Address")}>
         <Field label={T("المحافظة / المنطقة", "State / Governorate")}>
           {hasGeoData ? (
-            <Select
+            <SearchableSelect
               value={advanced.state ?? ""}
               onValueChange={(v) => setAdvanced((a: any) => ({ ...a, state: v, city: "" }))}
-            >
-              <SelectTrigger><SelectValue placeholder={T("اختر المحافظة", "Select governorate")} /></SelectTrigger>
-              <SelectContent>
-                {states.map((s) => (
-                  <SelectItem key={s.key} value={s.key}>{T(s.ar, s.en)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={T("اختر المحافظة", "Select governorate")}
+              searchPlaceholder={T("ابحث…", "Search…")}
+              emptyText={T("لا توجد نتائج", "No results")}
+              options={states.map((s): SearchableSelectOption => ({
+                value: s.key,
+                label: T(s.ar, s.en),
+                keywords: `${s.ar} ${s.en} ${s.key}`,
+              }))}
+            />
           ) : (
             <Input value={advanced.state ?? ""} onChange={set("state")} placeholder={T("اكتب اسم المحافظة", "Type state name")} />
           )}
         </Field>
         <Field label={T("المدينة", "City")}>
           {hasGeoData ? (
-            <Select
+            <SearchableSelect
               value={advanced.city ?? ""}
               onValueChange={(v) => set("city")(v)}
               disabled={!advanced.state}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={advanced.state ? T("اختر المدينة", "Select city") : T("اختر المحافظة أولاً", "Pick governorate first")} />
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map((ct) => (
-                  <SelectItem key={ct.en} value={ct.en}>{T(ct.ar, ct.en)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder={advanced.state ? T("اختر المدينة", "Select city") : T("اختر المحافظة أولاً", "Pick governorate first")}
+              searchPlaceholder={T("ابحث…", "Search…")}
+              emptyText={T("لا توجد نتائج", "No results")}
+              options={cities.map((ct): SearchableSelectOption => ({
+                value: ct.en,
+                label: T(ct.ar, ct.en),
+                keywords: `${ct.ar} ${ct.en}`,
+              }))}
+            />
           ) : (
             <Input value={advanced.city ?? ""} onChange={set("city")} placeholder={T("اكتب اسم المدينة", "Type city name")} />
           )}
