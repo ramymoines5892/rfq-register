@@ -444,6 +444,24 @@ function SetupPage() {
     }
   }
 
+  // Hooks must run on every render regardless of `step`. Compute step-derived
+  // memos BEFORE any early return (welcome/done) so React sees a stable hook
+  // count — otherwise transitioning to the "done" screen after Create Company
+  // throws "rendered fewer hooks than expected" and the root error boundary
+  // shows "This page didn't load".
+  const stepErrEarly = typeof step === "number" ? validateStep(currentIdx) : null;
+  const allStepsValid = useMemo(
+    () => [1, 2, 3, 4].every((s) => validateStep(s) === null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [general, advanced, features, numbering, documents, requiredMissing.length],
+  );
+  const submitBlockError = useMemo(
+    () => [1, 2, 3, 4].map((s) => ({ s, err: validateStep(s) })).find((x) => x.err),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [general, advanced, features, numbering, documents, requiredMissing.length],
+  );
+
+
   // ----------- WELCOME -----------
   if (step === "welcome") {
     return (
