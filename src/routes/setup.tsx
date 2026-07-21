@@ -179,8 +179,8 @@ function SetupPage() {
   const currentIdx = typeof step === "number" ? step : 0;
 
   const weights = useMemo(
-    () => computeGeneralWeights(general, advanced.country ?? "EG"),
-    [general, advanced.country],
+    () => computeGeneralWeights(general, advanced.country ?? "EG", documents.length),
+    [general, advanced.country, documents.length],
   );
   const completion = useMemo(() => {
     const total = weights.reduce((a, w) => a + w.weight, 0);
@@ -202,8 +202,6 @@ function SetupPage() {
         ["website", validateWebsite(general.website ?? "")],
         ["mobile", validateRule(general.mobile ?? "", c.mobile)],
         ["phone", validateRule(general.phone ?? "", c.phone)],
-        ["tax_no", validateRule(general.tax_no ?? "", c.tax)],
-        ["cr_no", validateRule(general.cr_no ?? "", c.cr)],
       ];
       const bad = checks.find(([, r]) => !r.ok);
       if (bad) return isAr ? bad[1].error!.ar : bad[1].error!.en;
