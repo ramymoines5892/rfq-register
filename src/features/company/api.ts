@@ -310,23 +310,35 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
         .single();
       if (dErr) throw dErr;
 
-      const fileToUpload = d.file ?? (d.file_data_url && d.file_name
+      const preUploadedPath = d.storage_path ?? null;
+      const fileToUpload = !preUploadedPath && (d.file ?? (d.file_data_url && d.file_name
         ? fileFromDataUrl(d.file_data_url, d.file_name, d.file_type)
-        : null);
+        : null));
 
-      if (fileToUpload) {
+      let finalPath: string | null = preUploadedPath;
+      let fileMeta = {
+        name: d.file_name ?? (fileToUpload ? fileToUpload.name : null),
+        type: d.file_type ?? (fileToUpload ? fileToUpload.type : null),
+        size: d.file_size ?? (fileToUpload ? fileToUpload.size : null),
+      };
+
+      if (!preUploadedPath && fileToUpload) {
         const ext = fileToUpload.name.split(".").pop() || "bin";
-        const path = `${doc.id}/${crypto.randomUUID()}.${ext}`;
+        finalPath = `${doc.id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("company-documents")
-          .upload(path, fileToUpload, { cacheControl: "3600", upsert: false, contentType: fileToUpload.type });
+          .upload(finalPath, fileToUpload, { cacheControl: "3600", upsert: false, contentType: fileToUpload.type });
         if (upErr) throw upErr;
+        fileMeta = { name: fileToUpload.name, type: fileToUpload.type, size: fileToUpload.size };
+      }
+
+      if (finalPath) {
         const { error: fErr2 } = await supabase.from("company_document_files").insert({
           document_id: doc.id,
-          storage_path: path,
-          file_name: fileToUpload.name,
-          mime_type: fileToUpload.type || null,
-          size_bytes: fileToUpload.size,
+          storage_path: finalPath,
+          file_name: fileMeta.name ?? "file",
+          mime_type: fileMeta.type ?? null,
+          size_bytes: fileMeta.size ?? 0,
           uploaded_by: userId,
         });
         if (fErr2) throw fErr2;
