@@ -986,14 +986,17 @@ function StepGeneral({
                 label={T("الدولة", "Country")} required icon={MapPin}
                 hint={T("بتحدد فورمات الأرقام والعملة", "Determines number formats & currency")}
               >
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map((cc) => (
-                      <SelectItem key={cc.code} value={cc.code}>{isAr ? cc.labelAr : cc.labelEn}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={country} onValueChange={setCountry}
+                  className="h-11" dir={isAr ? "rtl" : "ltr"}
+                  searchPlaceholder={T("ابحث…", "Search…")}
+                  emptyText={T("لا توجد نتائج", "No results")}
+                  options={COUNTRIES.map((cc): SearchableSelectOption => ({
+                    value: cc.code,
+                    label: isAr ? cc.labelAr : cc.labelEn,
+                    keywords: `${cc.labelAr} ${cc.labelEn} ${cc.code}`,
+                  }))}
+                />
               </SmartField>
               <SmartField
                 label={T("الاسم المختصر (إنجليزى)", "Short Name (English)")}
