@@ -530,7 +530,7 @@ function SetupPage() {
                 country={advanced.country ?? "EG"}
                 setCountry={(v) => setAdvanced((a) => {
                   const c = getCountry(v);
-                  return { ...a, country: v, base_currency: c.currency, timezone: c.timezone };
+                  return { ...a, country: v, state: "", city: "", base_currency: c.currency, timezone: c.timezone };
                 })}
                 T={T} isAr={isAr}
                 onLogoFile={handleLogo} logoUploading={logoUploading} logoPreview={general.logo_url ?? null} clearLogo={clearLogo}
