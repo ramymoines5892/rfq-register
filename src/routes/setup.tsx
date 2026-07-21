@@ -1286,7 +1286,7 @@ function DocumentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto" dir={isAr ? "rtl" : "ltr"}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-5" dir={isAr ? "rtl" : "ltr"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />
