@@ -27,6 +27,7 @@ import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings.organization'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
+import { Route as AuthenticatedSettingsFeaturesRouteImport } from './routes/_authenticated/settings.features'
 import { Route as AuthenticatedSettingsDocumentTypesRouteImport } from './routes/_authenticated/settings.document-types'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings.appearance'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
@@ -126,6 +127,12 @@ const AuthenticatedSettingsFormBuilderRoute =
     path: '/form-builder',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsFeaturesRoute =
+  AuthenticatedSettingsFeaturesRouteImport.update({
+    id: '/features',
+    path: '/features',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsDocumentTypesRoute =
   AuthenticatedSettingsDocumentTypesRouteImport.update({
     id: '/document-types',
@@ -160,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
+  '/settings/features': typeof AuthenticatedSettingsFeaturesRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -181,6 +189,7 @@ export interface FileRoutesByTo {
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
+  '/settings/features': typeof AuthenticatedSettingsFeaturesRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -205,6 +214,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
+  '/_authenticated/settings/features': typeof AuthenticatedSettingsFeaturesRoute
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/admin/customer-fields'
     | '/settings/appearance'
     | '/settings/document-types'
+    | '/settings/features'
     | '/settings/form-builder'
     | '/settings/notifications'
     | '/settings/organization'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/admin/customer-fields'
     | '/settings/appearance'
     | '/settings/document-types'
+    | '/settings/features'
     | '/settings/form-builder'
     | '/settings/notifications'
     | '/settings/organization'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/customer-fields'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/document-types'
+    | '/_authenticated/settings/features'
     | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/organization'
@@ -417,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsFormBuilderRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/features': {
+      id: '/_authenticated/settings/features'
+      path: '/features'
+      fullPath: '/settings/features'
+      preLoaderRoute: typeof AuthenticatedSettingsFeaturesRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/document-types': {
       id: '/_authenticated/settings/document-types'
       path: '/document-types'
@@ -444,6 +464,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
   AuthenticatedSettingsDocumentTypesRoute: typeof AuthenticatedSettingsDocumentTypesRoute
+  AuthenticatedSettingsFeaturesRoute: typeof AuthenticatedSettingsFeaturesRoute
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
@@ -456,6 +477,7 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
   AuthenticatedSettingsDocumentTypesRoute:
     AuthenticatedSettingsDocumentTypesRoute,
+  AuthenticatedSettingsFeaturesRoute: AuthenticatedSettingsFeaturesRoute,
   AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
