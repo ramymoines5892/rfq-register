@@ -108,6 +108,8 @@ export type SetupDocument = {
   expiry_date?: string | null;
   notes?: string | null;
   file?: File | null;           // in-memory; uploaded only on final save
+  file_name?: string | null;     // draft/UI metadata when the File object is already staged
+  has_file?: boolean;            // keeps edit validation stable for staged existing documents
 };
 
 export type CreateCompanyPayload = {
