@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/features/_shared/queryKeys";
-import { createCompanyBundle, fetchCurrentCompany, hasAnyCompany, type CreateCompanyPayload } from "./api";
+import { createCompanyBundle, fetchCurrentCompany, hasAnyCompany, updateCompany, type CreateCompanyPayload, type UpdateCompanyPatch } from "./api";
 
 export const hasAnyCompanyQueryOptions = queryOptions({
   queryKey: qk.company.exists(),
@@ -26,6 +26,16 @@ export function useCreateCompany() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateCompanyPayload) => createCompanyBundle(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.company.all });
+    },
+  });
+}
+
+export function useUpdateCompany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateCompanyPatch }) => updateCompany(id, patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.company.all });
     },

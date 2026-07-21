@@ -348,3 +348,60 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
 
   return company;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// UPDATE existing company (used by Settings → Company page)
+// ─────────────────────────────────────────────────────────────────────────
+export type UpdateCompanyPatch = Partial<{
+  name: string;
+  name_ar: string | null;
+  short_name: string | null;
+  code: string;
+  tax_no: string | null;
+  cr_no: string | null;
+  vat_no: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  fax: string | null;
+  website: string | null;
+  logo_url: string | null;
+  country: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  address: string | null;
+  default_language: string | null;
+  timezone: string | null;
+  date_format: string | null;
+  number_format: string | null;
+  base_currency: string | null;
+  fiscal_year_start: string | null;
+  fiscal_year_end: string | null;
+  gm_name: string | null;
+  purchasing_manager: string | null;
+  sales_manager: string | null;
+  finance_manager: string | null;
+  notes: string | null;
+  emails: ContactEntry[];
+  phones: ContactEntry[];
+  mobiles: ContactEntry[];
+  faxes: ContactEntry[];
+  websites: ContactEntry[];
+}>;
+
+export async function updateCompany(id: string, patch: UpdateCompanyPatch) {
+  // sanitize multi-contact arrays if present
+  const clean: any = { ...patch };
+  for (const key of ["emails", "phones", "mobiles", "faxes", "websites"] as const) {
+    if (clean[key]) clean[key] = sanitizeContacts(clean[key]);
+  }
+  const { data, error } = await supabase
+    .from("companies")
+    .update(clean)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
