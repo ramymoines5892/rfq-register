@@ -1211,6 +1211,11 @@ function CompanyDocumentsSection({
   isAr: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+
+  function openAdd() { setEditIndex(null); setOpen(true); }
+  function openEdit(i: number) { setEditIndex(i); setOpen(true); }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1224,7 +1229,7 @@ function CompanyDocumentsSection({
                "Commercial registration, tax card, import/export licenses… any official company document.")}
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        <Button type="button" variant="outline" onClick={openAdd}>
           <FolderOpen className="me-2 h-4 w-4" />
           {documents.length > 0
             ? T(`إدارة المستندات (${documents.length})`, `Manage documents (${documents.length})`)
@@ -1233,25 +1238,40 @@ function CompanyDocumentsSection({
       </div>
 
       {documents.length > 0 ? (
-        <div className="grid sm:grid-cols-2 gap-2">
-          {documents.map((d, i) => (
-            <div key={i} className="border rounded-lg p-3 bg-muted/30 flex items-start gap-3">
-              <div className="h-9 w-9 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
-                <FileText className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-sm truncate">{isAr ? d.name_ar : d.name_en}</div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                  {[d.doc_number, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)].filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details")}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(113px,1fr))] gap-3">
+          {documents.map((d, i) => {
+            const label = isAr ? d.name_ar : d.name_en;
+            const details = [d.doc_number, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
+              .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details");
+            return (
+              <button
+                type="button"
+                key={i}
+                title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
+                onClick={() => openEdit(i)}
+                className="group relative w-[113px] h-[113px] rounded-xl border bg-card hover:border-primary/60 hover:shadow-md transition text-start flex flex-col items-center justify-center gap-1.5 p-2"
+              >
+                <div className="relative">
+                  <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  {d.file && (
+                    <span className="absolute -bottom-1 -end-1 h-4 w-4 rounded-full bg-emerald-500 text-white grid place-items-center ring-2 ring-card">
+                      <Paperclip className="h-2.5 w-2.5" />
+                    </span>
+                  )}
                 </div>
-                {d.file ? (
-                  <Badge variant="secondary" className="mt-1 text-[10px]">
-                    <Paperclip className="h-2.5 w-2.5 me-1" />{d.file.name}
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-          ))}
+                <div className="text-[11px] leading-tight text-center font-medium line-clamp-2 w-full px-1 text-foreground">
+                  {label}
+                </div>
+                {d.expiry_date && (
+                  <div className="text-[9px] text-muted-foreground truncate w-full text-center px-1">
+                    {T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)}
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       ) : (
         <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border">
@@ -1262,18 +1282,20 @@ function CompanyDocumentsSection({
 
       <DocumentsDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(v) => { setOpen(v); if (!v) setEditIndex(null); }}
         documents={documents}
         setDocuments={setDocuments}
         T={T}
         isAr={isAr}
+        initialEditIndex={editIndex}
       />
     </div>
   );
 }
 
+
 function DocumentsDialog({
-  open, onOpenChange, documents, setDocuments, T, isAr,
+  open, onOpenChange, documents, setDocuments, T, isAr, initialEditIndex,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -1281,6 +1303,7 @@ function DocumentsDialog({
   setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
   T: (ar: string, en: string) => string;
   isAr: boolean;
+  initialEditIndex?: number | null;
 }) {
   // Form state for adding / editing one document at a time
   const emptyForm: SetupDocument = {
@@ -1297,6 +1320,16 @@ function DocumentsDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // When opened with a specific index, jump straight into edit mode
+  useEffect(() => {
+    if (!open) return;
+    if (initialEditIndex != null && documents[initialEditIndex]) {
+      setEditingIndex(initialEditIndex);
+      setForm({ ...documents[initialEditIndex] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialEditIndex]);
+
   // Auto-focus the first field (document type) whenever the dialog opens
   // or after a document is added/edited so the user can chain entries fast.
   const firstInputRef = useRef<HTMLButtonElement | null>(null);
@@ -1305,6 +1338,7 @@ function DocumentsDialog({
     const t = setTimeout(() => firstInputRef.current?.focus(), 80);
     return () => clearTimeout(t);
   }, [open, editingIndex]);
+
 
   function resetForm() {
     setForm(emptyForm);
@@ -1335,7 +1369,10 @@ function DocumentsDialog({
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
-    if (!form.file) {
+    const existingFile =
+      editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
+    const effectiveFile = form.file ?? existingFile;
+    if (!effectiveFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
       return;
     }
@@ -1351,7 +1388,7 @@ function DocumentsDialog({
       issue_date: form.issue_date || null,
       expiry_date: form.expiry_date || null,
       notes: form.notes?.trim() || null,
-      file: form.file ?? null,
+      file: effectiveFile,
     };
 
     setDocuments((prev) => {
