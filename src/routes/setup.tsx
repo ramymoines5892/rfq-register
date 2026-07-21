@@ -1294,35 +1294,52 @@ function CompanyDocumentsSection({
         <div className="grid grid-cols-[repeat(auto-fill,minmax(113px,1fr))] gap-3">
           {documents.map((d, i) => {
             const label = isAr ? d.name_ar : d.name_en;
+            const exp = expiryLabel(d.expiry_date);
             const details = [d.doc_number, d.expiry_date && T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)]
               .filter(Boolean).join(" • ") || T("بدون تفاصيل", "no details");
+            const toneClass =
+              exp?.tone === "danger" ? "text-destructive font-semibold"
+              : exp?.tone === "warn" ? "text-amber-600 dark:text-amber-500 font-medium"
+              : "text-emerald-600 dark:text-emerald-500";
             return (
-              <button
-                type="button"
+              <div
                 key={i}
-                title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
-                onClick={() => openEdit(i)}
-                className="group relative w-[113px] h-[113px] rounded-xl border bg-card hover:border-primary/60 hover:shadow-md transition text-start flex flex-col items-center justify-center gap-1.5 p-2"
+                className="group relative w-[113px] h-[113px] rounded-xl border bg-card hover:border-primary/60 hover:shadow-md transition flex flex-col items-center justify-center gap-1.5 p-2"
               >
-                <div className="relative">
-                  <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
-                    <FileText className="h-5 w-5" />
+                <button
+                  type="button"
+                  title={`${label}\n${details}${d.file ? `\n${d.file.name}` : ""}`}
+                  onClick={() => openEdit(i)}
+                  className="absolute inset-0 rounded-xl flex flex-col items-center justify-center gap-1.5 p-2"
+                >
+                  <div className="relative">
+                    <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    {d.file && (
+                      <span className="absolute -bottom-1 -end-1 h-4 w-4 rounded-full bg-emerald-500 text-white grid place-items-center ring-2 ring-card">
+                        <Paperclip className="h-2.5 w-2.5" />
+                      </span>
+                    )}
                   </div>
-                  {d.file && (
-                    <span className="absolute -bottom-1 -end-1 h-4 w-4 rounded-full bg-emerald-500 text-white grid place-items-center ring-2 ring-card">
-                      <Paperclip className="h-2.5 w-2.5" />
-                    </span>
+                  <div className="text-[11px] leading-tight text-center font-medium line-clamp-2 w-full px-1 text-foreground">
+                    {label}
+                  </div>
+                  {exp && (
+                    <div className={`text-[9px] truncate w-full text-center px-1 ${toneClass}`}>
+                      {exp.text}
+                    </div>
                   )}
-                </div>
-                <div className="text-[11px] leading-tight text-center font-medium line-clamp-2 w-full px-1 text-foreground">
-                  {label}
-                </div>
-                {d.expiry_date && (
-                  <div className="text-[9px] text-muted-foreground truncate w-full text-center px-1">
-                    {T(`ينتهى ${d.expiry_date}`, `exp ${d.expiry_date}`)}
-                  </div>
-                )}
-              </button>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(i); }}
+                  className="absolute -top-1.5 -end-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground grid place-items-center opacity-0 group-hover:opacity-100 transition shadow z-10"
+                  aria-label={T("حذف", "Remove")}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
             );
           })}
         </div>
