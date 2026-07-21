@@ -484,6 +484,7 @@ function SmartField({
 
 function StepGeneral({
   general, setGeneral, country, setCountry, T, isAr, onLogoFile, logoUploading, completion, weights, showErrors,
+  documents, setDocuments,
 }: {
   general: CompanyGeneral;
   setGeneral: React.Dispatch<React.SetStateAction<CompanyGeneral>>;
@@ -496,6 +497,8 @@ function StepGeneral({
   completion: number;
   weights: Weight[];
   showErrors: boolean;
+  documents: SetupDocument[];
+  setDocuments: React.Dispatch<React.SetStateAction<SetupDocument[]>>;
 }) {
   const c = getCountry(country);
   const set = <K extends keyof CompanyGeneral>(k: K) => (v: string) => setGeneral((g) => ({ ...g, [k]: v }));
