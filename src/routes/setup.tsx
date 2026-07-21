@@ -1249,9 +1249,25 @@ function CompanyDocumentsSection({
 }) {
   const [open, setOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   function openAdd() { setEditIndex(null); setOpen(true); }
   function openEdit(i: number) { setEditIndex(i); setOpen(true); }
+  function daysLeft(date?: string | null): number | null {
+    if (!date) return null;
+    const d = new Date(date + "T00:00:00");
+    if (isNaN(d.getTime())) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return Math.ceil((d.getTime() - today.getTime()) / 86400000);
+  }
+  function expiryLabel(date?: string | null): { text: string; tone: "ok" | "warn" | "danger" } | null {
+    const n = daysLeft(date);
+    if (n === null) return null;
+    if (n < 0) return { text: T(`منتهى منذ ${Math.abs(n)} يوم`, `expired ${Math.abs(n)}d ago`), tone: "danger" };
+    if (n === 0) return { text: T("ينتهى اليوم", "expires today"), tone: "danger" };
+    const tone = n <= 30 ? "warn" : "ok";
+    return { text: T(`${n} يوم على التجديد`, `${n}d to renewal`), tone };
+  }
 
   return (
     <div className="space-y-3">
