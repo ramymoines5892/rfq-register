@@ -302,6 +302,8 @@ function SetupPage() {
       };
       await createMut.mutateAsync({ general: payloadGeneral, advanced: payloadAdvanced, features, numbering, documents });
       clearDraft();
+      // Sign the bootstrap user out so they log in fresh into the newly-created company.
+      await supabase.auth.signOut().catch(() => {});
       setStep("done");
     } catch (e: any) {
       toast.error(e?.message ?? T("فشل إنشاء الشركة", "Failed to create company"));
