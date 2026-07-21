@@ -1,5 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type ContactEntry = {
+  value: string;
+  label?: string | null;
+  is_primary?: boolean;
+};
+
 export type CompanyGeneral = {
   name: string;
   name_ar?: string | null;
@@ -11,9 +17,37 @@ export type CompanyGeneral = {
   email?: string | null;
   phone?: string | null;
   mobile?: string | null;
+  fax?: string | null;
   website?: string | null;
   logo_url?: string | null;
+  emails?: ContactEntry[];
+  phones?: ContactEntry[];
+  mobiles?: ContactEntry[];
+  faxes?: ContactEntry[];
 };
+
+export function pickPrimary(list?: ContactEntry[] | null): string | null {
+  if (!list?.length) return null;
+  const clean = list.filter((e) => (e?.value ?? "").trim());
+  if (!clean.length) return null;
+  return (clean.find((e) => e.is_primary) ?? clean[0]).value.trim();
+}
+
+function sanitizeContacts(list?: ContactEntry[] | null): ContactEntry[] {
+  if (!list?.length) return [];
+  const clean = list
+    .map((e) => ({ value: (e.value ?? "").trim(), label: e.label?.trim() || null, is_primary: !!e.is_primary }))
+    .filter((e) => e.value.length > 0);
+  if (!clean.length) return [];
+  if (!clean.some((e) => e.is_primary)) clean[0].is_primary = true;
+  // only one primary
+  let seen = false;
+  for (const e of clean) {
+    if (e.is_primary && !seen) seen = true;
+    else e.is_primary = false;
+  }
+  return clean;
+}
 
 export type CompanyAdvanced = {
   country?: string | null;
