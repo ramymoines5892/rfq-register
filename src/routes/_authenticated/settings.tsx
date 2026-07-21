@@ -30,6 +30,7 @@ const TABS: TabDef[] = [
   { to: "/settings/appearance", labelAr: "المظهر", labelEn: "Appearance", icon: Palette },
   { to: "/settings/organization", labelAr: "الهيكل التنظيمي", labelEn: "Organization", icon: Network },
   { to: "/settings/document-types", labelAr: "أنواع مستندات الشركة", labelEn: "Company Document Types", icon: FolderArchive },
+  { to: "/settings/features", labelAr: "مميزات النظام", labelEn: "System Features", icon: ToggleRight, ownerOnly: false },
   { to: "/settings/form-builder", labelAr: "منشئ الحقول", labelEn: "Form Builder", icon: LayoutGrid, perm: "manage_form_fields" },
 
 
