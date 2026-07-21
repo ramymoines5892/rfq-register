@@ -127,7 +127,7 @@ function SetupPage() {
   const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [documents, setDocuments] = useState<SetupDocument[]>(
-    (d?.documents ?? []).map((pd) => ({ ...pd, file: null })),
+    (d?.documents ?? []).map((pd) => ({ ...pd, file: null } as SetupDocument)),
   );
   const [logoUploading, setLogoUploading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
