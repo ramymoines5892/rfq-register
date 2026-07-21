@@ -792,18 +792,18 @@ function StepGeneral({
               <SmartField
                 label={T("الاسم بالإنجليزى", "Company Name (English)")}
                 required icon={Building2}
-                hint={T("هيظهر فى التقارير الإنجليزى", "Used in English reports")}
+                hint={T("هيظهر فى التقارير الإنجليزى — إنجليزى فقط", "Used in English reports — English only")}
                 error={reqErr(general.name, "الاسم الإنجليزى مطلوب", "English name is required")}
               >
-                <Input dir="ltr" className="h-11" value={general.name} onChange={(e) => set("name")(filterEnglish(e.target.value))} autoFocus placeholder="Egyptian Europe Company" />
+                <ScriptInput script="en" isAr={isAr} className="h-11" value={general.name} onChange={set("name")} autoFocus placeholder="Egyptian Europe Company" />
               </SmartField>
               <SmartField
                 label={T("الاسم بالعربى", "Company Name (Arabic)")}
                 required icon={Building2}
-                hint={T("هيظهر فى التقارير العربى", "Used in Arabic reports")}
+                hint={T("هيظهر فى التقارير العربى — عربى فقط", "Used in Arabic reports — Arabic only")}
                 error={reqErr(general.name_ar, "الاسم العربى مطلوب", "Arabic name is required")}
               >
-                <Input dir="rtl" className="h-11" value={general.name_ar ?? ""} onChange={(e) => set("name_ar")(filterArabic(e.target.value))} placeholder="الشركة المصرية الأوروبية" />
+                <ScriptInput script="ar" isAr={isAr} className="h-11" value={general.name_ar ?? ""} onChange={set("name_ar")} placeholder="الشركة المصرية الأوروبية" />
               </SmartField>
               <SmartField
                 label={T("الدولة", "Country")} required icon={MapPin}
@@ -819,12 +819,13 @@ function StepGeneral({
                 </Select>
               </SmartField>
               <SmartField
-                label={T("الاسم المختصر", "Short Name")}
-                hint={T("اختيارى — بيظهر فى الشريط الجانبى", "Optional — appears in the sidebar")}
+                label={T("الاسم المختصر (إنجليزى)", "Short Name (English)")}
+                hint={T("اختيارى — بيظهر فى الشريط الجانبى — إنجليزى فقط", "Optional — appears in the sidebar — English only")}
               >
-                <Input dir="ltr" className="h-11" value={general.short_name ?? ""} onChange={(e) => set("short_name")(filterEnglish(e.target.value))} placeholder="EEC" />
+                <ScriptInput script="en" isAr={isAr} className="h-11" value={general.short_name ?? ""} onChange={set("short_name")} placeholder="EEC" />
               </SmartField>
             </div>
+
           </div>
         </div>
       </section>
