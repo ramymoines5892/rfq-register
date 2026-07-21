@@ -1417,6 +1417,7 @@ function DocumentsDialog({
               <div className="space-y-1.5">
                 <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
                 <Input
+                  ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                   onChange={(e) => {
@@ -1425,8 +1426,15 @@ function DocumentsDialog({
                   }}
                 />
                 {form.file ? (
-                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
+                  <div className="text-[11px] text-muted-foreground flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 min-w-0 truncate">
+                      <Paperclip className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{form.file.name}</span>
+                      <span className="shrink-0">· {(form.file.size / 1024).toFixed(1)} KB</span>
+                    </span>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-destructive" onClick={clearFile}>
+                      <X className="h-3.5 w-3.5 me-1" />{T("إزالة", "Remove")}
+                    </Button>
                   </div>
                 ) : (
                   <div className="text-[11px] text-muted-foreground">
