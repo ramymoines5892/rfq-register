@@ -154,18 +154,48 @@ export async function fetchCurrentCompany() {
   return data;
 }
 
-export async function uploadCompanyLogo(file: File): Promise<string> {
+export async function uploadCompanyLogo(file: File): Promise<{ path: string; url: string }> {
   const ext = file.name.split(".").pop() || "png";
   const path = `${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("company-logos").upload(path, file, {
     cacheControl: "3600",
     upsert: false,
+    contentType: file.type,
   });
   if (error) throw error;
-  const { data } = supabase.storage.from("company-logos").createSignedUrl
-    ? await supabase.storage.from("company-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
-    : ({ data: null } as any);
-  return data?.signedUrl ?? path;
+  const { data } = await supabase.storage.from("company-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+  return { path, url: data?.signedUrl ?? path };
+}
+
+export async function deleteCompanyLogo(path: string): Promise<void> {
+  if (!path) return;
+  try { await supabase.storage.from("company-logos").remove([path]); } catch { /* ignore */ }
+}
+
+// Upload a document file to the shared bucket during setup, before we have a company id.
+// Draft files live under `_drafts/{uuid}.ext` and are stitched into the real record on submit.
+export async function uploadCompanyDocumentDraft(file: File): Promise<{ path: string; url: string }> {
+  const ext = file.name.split(".").pop() || "bin";
+  const path = `_drafts/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("company-documents").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type,
+  });
+  if (error) throw error;
+  const { data } = await supabase.storage.from("company-documents").createSignedUrl(path, 60 * 60 * 24 * 7);
+  return { path, url: data?.signedUrl ?? path };
+}
+
+export async function deleteCompanyDocumentDraft(path: string): Promise<void> {
+  if (!path) return;
+  try { await supabase.storage.from("company-documents").remove([path]); } catch { /* ignore */ }
+}
+
+export async function getCompanyDocumentSignedUrl(path: string): Promise<string | null> {
+  if (!path) return null;
+  const { data } = await supabase.storage.from("company-documents").createSignedUrl(path, 60 * 60 * 24 * 7);
+  return data?.signedUrl ?? null;
 }
 
 export async function createCompanyBundle(payload: CreateCompanyPayload) {
