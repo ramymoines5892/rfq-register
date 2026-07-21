@@ -167,62 +167,33 @@ function SetupPage() {
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [documents, setDocuments] = useState<SetupDocument[]>(
     (d?.documents ?? []).map((pd) => {
-      // Legacy migration: some old drafts still carry file_data_url in localStorage.
-      const restoredFile = pd.file_data_url && pd.file_name
-        ? fileFromDataUrl(pd.file_data_url, pd.file_name, pd.file_type)
-        : null;
-      return { ...pd, file: restoredFile, has_file: !!restoredFile || !!pd.has_file } as SetupDocument;
+      const has = !!pd.storage_path || !!pd.has_file || (!!pd.file_data_url && !!pd.file_name);
+      return { ...pd, file: null, has_file: has } as SetupDocument;
     }),
   );
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  // Immediately-uploaded logo (path in storage + a signed URL for preview live in general.logo_url).
+  const [logoPath, setLogoPath] = useState<string | null>(d?.logo_path ?? null);
 
-  // Hydrate binary blobs (logo + document files) from IndexedDB after mount.
+  // Re-sign the doc preview URLs on mount so previously-uploaded drafts show a valid link.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const logoRec = await idbGet<{ name: string; type: string; blob: Blob }>("logo");
-      if (!cancelled && logoRec?.blob) {
-        try { setLogoFile(new File([logoRec.blob], logoRec.name, { type: logoRec.type })); } catch { /* ignore */ }
-      }
-      const docs = await idbGet<Array<{ code: string; name: string; type: string; blob: Blob }>>("documents");
-      if (!cancelled && Array.isArray(docs) && docs.length) {
-        setDocuments((prev) => prev.map((doc) => {
-          if (doc.file) return doc;
-          const rec = docs.find((r) => r.code === doc.code);
-          if (!rec?.blob) return doc;
-          try {
-            const f = new File([rec.blob], rec.name, { type: rec.type });
-            return { ...doc, file: f, file_name: rec.name, file_type: rec.type, has_file: true };
-          } catch { return doc; }
-        }));
-      }
+      const staged = documents.filter((doc) => doc.storage_path);
+      if (!staged.length) return;
+      const updated = await Promise.all(staged.map(async (doc) => {
+        const url = await getCompanyDocumentSignedUrl(doc.storage_path!).catch(() => null);
+        return { code: doc.code, url };
+      }));
+      if (cancelled) return;
+      setDocuments((prev) => prev.map((doc) => {
+        const hit = updated.find((u) => u.code === doc.code);
+        return hit?.url ? ({ ...doc, file_data_url: hit.url } as SetupDocument) : doc;
+      }));
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!logoFile) { setLogoPreview(null); return; }
-    const url = URL.createObjectURL(logoFile);
-    setLogoPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [logoFile]);
-
-  // Persist the logo blob to IDB whenever it changes.
-  useEffect(() => {
-    if (logoFile) void idbSet("logo", { name: logoFile.name, type: logoFile.type, blob: logoFile });
-    else void idbSet("logo", null);
-  }, [logoFile]);
-
-  // Persist document blobs (by code) to IDB whenever documents change.
-  useEffect(() => {
-    const withFiles = documents
-      .filter((d) => d.file instanceof File)
-      .map((d) => ({ code: d.code, name: d.file!.name, type: d.file!.type, blob: d.file! as Blob }));
-    void idbSet("documents", withFiles);
-  }, [documents]);
 
   const [showErrors, setShowErrors] = useState(false);
 
@@ -230,22 +201,24 @@ function SetupPage() {
     if (step === "done") return;
     try {
       const persistedDocs: PersistedDoc[] = documents.map((doc) => {
-        const { file, ...rest } = doc;
+        const { file, file_data_url, ...rest } = doc;
         return {
           ...rest,
-          file_name: file?.name ?? doc.file_name ?? null,
-          file_type: file?.type ?? doc.file_type ?? null,
-          file_data_url: null, // never store base64 in localStorage — IDB holds the blob
-          has_file: !!file || !!doc.has_file,
+          file_name: doc.file_name ?? null,
+          file_type: doc.file_type ?? null,
+          file_size: doc.file_size ?? null,
+          storage_path: doc.storage_path ?? null,
+          // preview URL is signed and expires; don't persist it.
+          file_data_url: null,
+          has_file: !!doc.storage_path || !!doc.has_file,
         };
       });
-      const logo = logoFile ? { name: logoFile.name, type: logoFile.type } : null;
       localStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs, logo }),
+        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs, logo_path: logoPath }),
       );
     } catch { /* ignore — likely quota exceeded */ }
-  }, [step, general, advanced, features, numbering, documents, logoFile]);
+  }, [step, general, advanced, features, numbering, documents, logoPath]);
 
 
   async function resetAll() {
