@@ -653,12 +653,8 @@ function MultiContactField({
                   placeholder={placeholder}
                   className={`flex-1 ${error ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
                 />
-                <Input
-                  value={entry.label ?? ""}
-                  onChange={(e) => update(idx, { label: e.target.value })}
-                  placeholder={T("مسمى (اختيارى)", "Label (optional)")}
-                  className="w-28 sm:w-32 hidden sm:block"
-                />
+
+
                 <button
                   type="button"
                   onClick={() => remove(idx)}
