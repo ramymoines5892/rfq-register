@@ -698,7 +698,7 @@ function StepGeneral({
   const set = <K extends keyof CompanyGeneral>(k: K) => (v: CompanyGeneral[K]) => setGeneral((g) => ({ ...g, [k]: v }));
 
   // Live validations
-  const webV = validateWebsite(general.website ?? "");
+  
 
   const err = (v: FieldValidation, forceShow = false) =>
     (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
