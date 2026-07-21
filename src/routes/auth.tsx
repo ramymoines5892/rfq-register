@@ -64,11 +64,13 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate({ to: "/" });
+      const { data: hasCompany } = await supabase.rpc("has_any_company");
+      navigate({ to: hasCompany ? "/" : "/setup" });
     } catch (err) {
       toast.error(friendlyError((err as Error).message));
     } finally { setLoading(false); }
   };
+
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
