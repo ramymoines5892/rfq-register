@@ -621,43 +621,52 @@ function StepGeneral({
         </div>
       </div>
 
-      {/* Contact block */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("بيانات الاتصال", "Contact")}</h4>
+      {/* Contact block — multi-entry with primary flag */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("بيانات الاتصال", "Contact")}</h4>
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+            <Star className="h-3 w-3 fill-primary text-primary" />
+            {T("النجمة = الأساسى (يُستخدم فى المراسلات)", "Star = primary (used for messaging)")}
+          </div>
+        </div>
         <div className="grid md:grid-cols-2 gap-4">
-          <SmartField
-            label={T("موبايل", "Mobile")}
-            icon={Smartphone}
+          <MultiContactField
+            label={T("موبايل", "Mobile")} icon={Smartphone}
+            values={general.mobiles ?? []} onChange={(list) => set("mobiles")(list)}
+            placeholder={c.mobile?.example}
             hint={c.mobile ? (isAr ? c.mobile.hintAr : c.mobile.hintEn) : undefined}
-            error={err(mobileV)}
-          >
-            <Input
-              dir="ltr"
-              value={general.mobile ?? ""}
-              onChange={(e) => onMobile(e.target.value)}
-              placeholder={c.mobile?.example}
-              inputMode="tel"
-            />
-          </SmartField>
-          <SmartField
-            label={T("البريد الإلكتروني", "Email")}
-            icon={Mail}
-            hint={T("بريد رسمي للشركة", "Official company email")}
-            error={err(emailV)}
-          >
-            <Input dir="ltr" type="email" value={general.email ?? ""} onChange={(e) => set("email")(e.target.value)} placeholder="info@company.com" />
-          </SmartField>
-          <SmartField
-            label={T("تليفون أرضى", "Landline Phone")}
-            icon={Phone}
+            format={(v) => (c.mobile ? applyMask(v, c.mobile) : v)}
+            validate={(v) => validateRule(v, c.mobile)}
+            isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
+          />
+          <MultiContactField
+            label={T("البريد الإلكتروني", "Email")} icon={Mail}
+            values={general.emails ?? []} onChange={(list) => set("emails")(list)}
+            placeholder="info@company.com"
+            hint={T("الأساسى منه يُستخدم لإرسال الإشعارات", "Primary is used for outbound mail")}
+            validate={validateEmail}
+            isAr={isAr} T={T} showErrors={showErrors} type="email"
+          />
+          <MultiContactField
+            label={T("تليفون أرضى", "Landline Phone")} icon={Phone}
+            values={general.phones ?? []} onChange={(list) => set("phones")(list)}
+            placeholder={c.phone?.example}
             hint={c.phone ? (isAr ? c.phone.hintAr : c.phone.hintEn) : T("اختيارى", "Optional")}
-            error={err(phoneV)}
-          >
-            <Input dir="ltr" value={general.phone ?? ""} onChange={(e) => onPhone(e.target.value)} placeholder={c.phone?.example} inputMode="tel" />
-          </SmartField>
+            format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
+            validate={(v) => validateRule(v, c.phone)}
+            isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
+          />
+          <MultiContactField
+            label={T("فاكس", "Fax")} icon={Printer}
+            values={general.faxes ?? []} onChange={(list) => set("faxes")(list)}
+            placeholder={c.phone?.example}
+            hint={T("اختيارى", "Optional")}
+            format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
+            isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
+          />
           <SmartField
-            label={T("الموقع الإلكتروني", "Website")}
-            icon={Globe}
+            label={T("الموقع الإلكتروني", "Website")} icon={Globe}
             hint={T("اختيارى — لازم يكون رابط صحيح", "Optional — must be a valid URL")}
             error={err(webV)}
           >
