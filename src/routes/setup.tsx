@@ -1202,8 +1202,8 @@ function DocumentsDialog({
   isAr: boolean;
 }) {
   // Form state for adding / editing one document at a time
-  const emptyForm: SetupDocument & { customName?: string } = {
-    code: "CR",
+  const emptyForm: SetupDocument = {
+    code: "",
     name_ar: "",
     name_en: "",
     doc_number: "",
@@ -1211,11 +1211,10 @@ function DocumentsDialog({
     expiry_date: "",
     notes: "",
     file: null,
-    customName: "",
   };
-  const [form, setForm] = useState<SetupDocument & { customName?: string }>(emptyForm);
+  const [form, setForm] = useState<SetupDocument>(emptyForm);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [isCustom, setIsCustom] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-focus the first field (document type) whenever the dialog opens
   // or after a document is added/edited so the user can chain entries fast.
@@ -1229,16 +1228,10 @@ function DocumentsDialog({
   function resetForm() {
     setForm(emptyForm);
     setEditingIndex(null);
-    setIsCustom(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function pickPreset(code: string) {
-    if (code === "__custom__") {
-      setIsCustom(true);
-      setForm((f) => ({ ...f, code: "", name_ar: "", name_en: "", customName: "" }));
-      return;
-    }
-    setIsCustom(false);
     const preset = DOC_PRESETS.find((p) => p.code === code);
     if (!preset) return;
     setForm((f) => ({
@@ -1249,6 +1242,11 @@ function DocumentsDialog({
       notify_days_before: preset.notify_days_before,
       notify_repeat: preset.notify_repeat,
     }));
+  }
+
+  function clearFile() {
+    setForm((f) => ({ ...f, file: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function addOrUpdate() {
