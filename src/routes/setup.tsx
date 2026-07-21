@@ -95,7 +95,7 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
     { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
     { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
     { key: "country", weight: 5,  filled: nz(country),      valid: nz(country),      required: true },
-    { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
+    { key: "logo",    weight: 10, filled: hasLogo || nz(g.logo_url), valid: hasLogo || nz(g.logo_url) },
     { key: "mobile",  weight: 12, filled: nz(primaryMobile),valid: nz(primaryMobile) && mobileV.ok },
     { key: "email",   weight: 8,  filled: nz(primaryEmail), valid: nz(primaryEmail) && emailV.ok },
     { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
