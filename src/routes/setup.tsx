@@ -80,15 +80,13 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
 // weighted by usefulness, not by count. Landline / website are tiny weight.
 type Weight = { key: string; weight: number; filled: boolean; valid: boolean; required?: boolean };
 
-function computeGeneralWeights(g: CompanyGeneral, country: string): Weight[] {
+function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0): Weight[] {
   const c = getCountry(country);
   const nz = (s?: string | null) => (s ?? "").trim().length > 0;
   const emailV = validateEmail(g.email ?? "");
   const webV = validateWebsite(g.website ?? "");
   const mobileV = validateRule(g.mobile ?? "", c.mobile);
   const phoneV = validateRule(g.phone ?? "", c.phone);
-  const taxV = validateRule(g.tax_no ?? "", c.tax);
-  const crV = validateRule(g.cr_no ?? "", c.cr);
   return [
     { key: "name",    weight: 20, filled: nz(g.name),       valid: nz(g.name),       required: true },
     { key: "name_ar", weight: 20, filled: nz(g.name_ar),    valid: nz(g.name_ar),    required: true },
@@ -96,8 +94,7 @@ function computeGeneralWeights(g: CompanyGeneral, country: string): Weight[] {
     { key: "logo",    weight: 10, filled: nz(g.logo_url),   valid: nz(g.logo_url) },
     { key: "mobile",  weight: 12, filled: nz(g.mobile),     valid: nz(g.mobile) && mobileV.ok },
     { key: "email",   weight: 8,  filled: nz(g.email),      valid: nz(g.email) && emailV.ok },
-    { key: "tax_no",  weight: 8,  filled: nz(g.tax_no),     valid: nz(g.tax_no) && taxV.ok },
-    { key: "cr_no",   weight: 5,  filled: nz(g.cr_no),      valid: nz(g.cr_no) && crV.ok },
+    { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
     { key: "phone",   weight: 4,  filled: nz(g.phone),      valid: nz(g.phone) && phoneV.ok },
     { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
