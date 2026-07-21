@@ -24,6 +24,7 @@ export type CompanyGeneral = {
   phones?: ContactEntry[];
   mobiles?: ContactEntry[];
   faxes?: ContactEntry[];
+  websites?: ContactEntry[];
 };
 
 export function pickPrimary(list?: ContactEntry[] | null): string | null {
