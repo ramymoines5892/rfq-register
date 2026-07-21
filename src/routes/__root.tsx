@@ -126,6 +126,7 @@ function RootComponent() {
         <ConfirmProvider>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
+          <TabFlowManager />
           <Toaster richColors position="top-center" />
         </ConfirmProvider>
       </I18nProvider>
