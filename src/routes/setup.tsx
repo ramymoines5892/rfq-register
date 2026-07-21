@@ -1183,8 +1183,14 @@ function DocumentsDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isCustom, setIsCustom] = useState(false);
 
-  // Auto-focus first input when dialog opens
+  // Auto-focus the first field (document type) whenever the dialog opens
+  // or after a document is added/edited so the user can chain entries fast.
   const firstInputRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => firstInputRef.current?.focus(), 80);
+    return () => clearTimeout(t);
+  }, [open, editingIndex]);
 
   function resetForm() {
     setForm(emptyForm);
