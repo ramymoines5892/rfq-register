@@ -339,7 +339,6 @@ function SetupPage() {
       }
     }
     if (s === 4) {
-      if (numbering.length === 0) return T("أضف نوع مستند واحد على الأقل", "Add at least one document type");
       const seenType = new Set<string>();
       const seenPrefix = new Set<string>();
       for (const row of numbering) {
