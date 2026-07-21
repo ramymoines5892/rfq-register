@@ -33,7 +33,9 @@ type Draft = {
   features: CompanyFeatures;
   numbering: NumberingRow[];
   documents: PersistedDoc[];
+  logo?: { name: string; type: string; dataUrl: string } | null;
 };
+
 
 function loadDraft(): Draft | null {
   if (typeof window === "undefined") return null;
