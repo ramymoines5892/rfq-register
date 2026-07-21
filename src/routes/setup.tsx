@@ -600,8 +600,16 @@ function MultiContactField({
       </Label>
       <div className="space-y-2">
         {list.map((entry, idx) => {
-          const v = validate?.(entry.value);
-          const error = showErrors && entry.value && v && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
+          const trimmed = (entry.value ?? "").trim();
+          const v = trimmed ? validate?.(trimmed) : undefined;
+          // Show empty-error when there's more than one entry — prevents the
+          // cheat: fill first → add another → clear the first.
+          let error: string | undefined;
+          if (!trimmed && list.length > 1) {
+            error = T("لازم تملأ ده أو تحذفه", "Fill this or remove it");
+          } else if (v && !v.ok && (trimmed || showErrors)) {
+            error = isAr ? v.error?.ar : v.error?.en;
+          }
           return (
             <div key={idx} className="space-y-1">
               <div className="flex items-center gap-1.5">
@@ -622,7 +630,7 @@ function MultiContactField({
                   value={entry.value}
                   onChange={(e) => update(idx, { value: format ? format(e.target.value) : e.target.value })}
                   placeholder={placeholder}
-                  className="flex-1"
+                  className={`flex-1 ${error ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
                 />
                 <Input
                   value={entry.label ?? ""}
@@ -652,7 +660,9 @@ function MultiContactField({
         <button
           type="button"
           onClick={add}
-          className="text-xs text-primary hover:underline flex items-center gap-1"
+          disabled={anyInvalid}
+          title={anyInvalid ? T("املأ القيمة السابقة أولاً", "Fill the previous entry first") : undefined}
+          className="text-xs text-primary hover:underline flex items-center gap-1 disabled:text-muted-foreground disabled:hover:no-underline disabled:cursor-not-allowed"
         >
           <Plus className="h-3.5 w-3.5" />
           {T("إضافة", "Add another")}
