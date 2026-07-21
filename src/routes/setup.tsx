@@ -842,7 +842,7 @@ function StepGeneral({
             </div>
           }
         />
-        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+        <div className="grid md:grid-cols-3 gap-4 md:gap-5">
           <MultiContactField
             label={T("موبايل", "Mobile")} icon={Smartphone}
             values={general.mobiles ?? []} onChange={(list) => set("mobiles")(list)}
@@ -851,14 +851,6 @@ function StepGeneral({
             format={(v) => (c.mobile ? applyMask(v, c.mobile) : v)}
             validate={(v) => validateRule(v, c.mobile)}
             isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
-          />
-          <MultiContactField
-            label={T("البريد الإلكتروني", "Email")} icon={Mail}
-            values={general.emails ?? []} onChange={(list) => set("emails")(list)}
-            placeholder="info@company.com"
-            hint={T("الأساسى منه يُستخدم لإرسال الإشعارات", "Primary is used for outbound mail")}
-            validate={validateEmail}
-            isAr={isAr} T={T} showErrors={showErrors} type="email"
           />
           <MultiContactField
             label={T("تليفون أرضى", "Landline Phone")} icon={Phone}
@@ -877,6 +869,16 @@ function StepGeneral({
             format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
             isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
           />
+        </div>
+        <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+          <MultiContactField
+            label={T("البريد الإلكتروني", "Email")} icon={Mail}
+            values={general.emails ?? []} onChange={(list) => set("emails")(list)}
+            placeholder="info@company.com"
+            hint={T("الأساسى منه يُستخدم لإرسال الإشعارات", "Primary is used for outbound mail")}
+            validate={validateEmail}
+            isAr={isAr} T={T} showErrors={showErrors} type="email"
+          />
           <MultiContactField
             label={T("الموقع الإلكتروني", "Website")} icon={Globe}
             values={general.websites ?? []} onChange={(list) => set("websites")(list)}
@@ -886,6 +888,7 @@ function StepGeneral({
             isAr={isAr} T={T} showErrors={showErrors}
           />
         </div>
+
       </section>
 
       {/* Section 3 — Documents */}
