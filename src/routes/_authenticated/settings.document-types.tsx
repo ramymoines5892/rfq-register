@@ -34,7 +34,7 @@ function DocumentTypesPage() {
   const { data: types = [], isLoading } = useDocumentTypes();
   const upsert = useUpsertDocumentType();
   const del = useDeleteDocumentType();
-  const { confirm, ConfirmDialog } = useConfirm();
+  const confirm = useConfirm();
   const [depts, setDepts] = useState<Dept[]>([]);
   const [editing, setEditing] = useState<Partial<DocumentType> | null>(null);
 
