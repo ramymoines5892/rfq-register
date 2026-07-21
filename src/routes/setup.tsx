@@ -278,8 +278,21 @@ function SetupPage() {
       if (err) { toast.error(err); setStep(s as Step); return; }
     }
     try {
+      // Upload logo now (deferred from the wizard) if a new file was picked.
+      let logoUrl = general.logo_url ?? "";
+      if (logoFile) {
+        setLogoUploading(true);
+        try {
+          logoUrl = await uploadCompanyLogo(logoFile);
+        } catch (e: any) {
+          toast.error(e?.message ?? T("فشل رفع اللوجو", "Failed to upload logo"));
+          setLogoUploading(false);
+          return;
+        }
+        setLogoUploading(false);
+      }
       // Auto-generate company code if user hasn't set one
-      const payloadGeneral = { ...general, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
+      const payloadGeneral = { ...general, logo_url: logoUrl, code: general.code?.trim() || generateCompanyCode(general.name || general.short_name || "") };
       // Auto-align regional settings from country
       const c = getCountry(advanced.country ?? "EG");
       const payloadAdvanced = {
