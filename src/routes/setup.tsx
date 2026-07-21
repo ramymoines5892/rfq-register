@@ -1335,7 +1335,10 @@ function DocumentsDialog({
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
-    if (!form.file) {
+    const existingFile =
+      editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
+    const effectiveFile = form.file ?? existingFile;
+    if (!effectiveFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
       return;
     }
@@ -1351,7 +1354,7 @@ function DocumentsDialog({
       issue_date: form.issue_date || null,
       expiry_date: form.expiry_date || null,
       notes: form.notes?.trim() || null,
-      file: form.file ?? null,
+      file: effectiveFile,
     };
 
     setDocuments((prev) => {
