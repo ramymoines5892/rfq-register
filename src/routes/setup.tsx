@@ -259,19 +259,16 @@ function SetupPage() {
     else setStep("welcome");
   }
 
-  async function handleLogo(file: File) {
+  function handleLogo(file: File) {
     if (!file.type.startsWith("image/")) { toast.error(T("لازم تختار صورة", "Please choose an image")); return; }
     if (file.size > 3 * 1024 * 1024) { toast.error(T("الحجم أكبر من 3MB", "File is larger than 3MB")); return; }
-    setLogoUploading(true);
-    try {
-      const url = await uploadCompanyLogo(file);
-      setGeneral((g) => ({ ...g, logo_url: url }));
-      toast.success(T("تم رفع اللوجو", "Logo uploaded"));
-    } catch (e: any) {
-      toast.error(e?.message ?? T("فشل رفع اللوجو", "Upload failed"));
-    } finally {
-      setLogoUploading(false);
-    }
+    setLogoFile(file);
+    // Clear any previously uploaded URL — new pick replaces it and we defer upload to save.
+    setGeneral((g) => ({ ...g, logo_url: "" }));
+  }
+  function clearLogo() {
+    setLogoFile(null);
+    setGeneral((g) => ({ ...g, logo_url: "" }));
   }
 
   async function submit() {
