@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/features/_shared/queryKeys";
-import { createCompanyBundle, fetchCurrentCompany, hasAnyCompany, type CreateCompanyPayload } from "./api";
+import { createCompanyBundle, fetchCurrentCompany, hasAnyCompany, updateCompany, type CreateCompanyPayload, type UpdateCompanyPatch } from "./api";
 
 export const hasAnyCompanyQueryOptions = queryOptions({
   queryKey: qk.company.exists(),
