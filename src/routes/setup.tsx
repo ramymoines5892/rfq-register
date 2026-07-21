@@ -80,7 +80,7 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
 // weighted by usefulness, not by count. Landline / website are tiny weight.
 type Weight = { key: string; weight: number; filled: boolean; valid: boolean; required?: boolean };
 
-function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0): Weight[] {
+function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: number = 0, hasLogo: boolean = false): Weight[] {
   const c = getCountry(country);
   const nz = (s?: string | null) => (s ?? "").trim().length > 0;
   const primaryEmail = pickPrimary(g.emails) ?? g.email ?? "";
