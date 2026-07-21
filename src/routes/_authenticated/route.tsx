@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2, Pin, PinOff } from "lucide-react";
+import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2, Pin, PinOff, FolderArchive } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
@@ -52,7 +52,9 @@ function AuthenticatedLayout() {
     { to: "/", label: t("overview"), icon: LayoutDashboard, match: (p: string) => p === "/" },
     { to: "/customers", label: t("customers"), icon: Users, match: (p: string) => p.startsWith("/customers") },
     { to: "/workflows", label: t("workflows"), icon: Workflow, match: (p: string) => p.startsWith("/workflows") },
+    { to: "/documents", label: lang === "ar" ? "مستندات الشركة" : "Company Documents", icon: FolderArchive, match: (p: string) => p.startsWith("/documents") },
   ];
+
   const adminNav = [
     ...(isAdmin ? [
       { to: "/hr", label: t("hr"), icon: Building2, match: (p: string) => p.startsWith("/hr") },

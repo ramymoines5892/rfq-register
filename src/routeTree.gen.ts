@@ -19,6 +19,7 @@ import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
+import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
@@ -26,6 +27,7 @@ import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authe
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings.organization'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
+import { Route as AuthenticatedSettingsDocumentTypesRouteImport } from './routes/_authenticated/settings.document-types'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings.appearance'
 import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
 
@@ -78,6 +80,11 @@ const AuthenticatedHrRoute = AuthenticatedHrRouteImport.update({
   path: '/hr',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDocumentsRoute = AuthenticatedDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCustomersRoute = AuthenticatedCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -119,6 +126,12 @@ const AuthenticatedSettingsFormBuilderRoute =
     path: '/form-builder',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsDocumentTypesRoute =
+  AuthenticatedSettingsDocumentTypesRouteImport.update({
+    id: '/document-types',
+    path: '/document-types',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsAppearanceRoute =
   AuthenticatedSettingsAppearanceRouteImport.update({
     id: '/appearance',
@@ -139,12 +152,14 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/customers': typeof AuthenticatedCustomersRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/team': typeof AuthenticatedTeamRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -158,12 +173,14 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/customers': typeof AuthenticatedCustomersRoute
+  '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
   '/team': typeof AuthenticatedTeamRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -179,6 +196,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
+  '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/hr': typeof AuthenticatedHrRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/team': typeof AuthenticatedTeamRoute
@@ -186,6 +204,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/_authenticated/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
@@ -202,12 +221,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/customers'
+    | '/documents'
     | '/hr'
     | '/settings'
     | '/team'
     | '/workflows'
     | '/admin/customer-fields'
     | '/settings/appearance'
+    | '/settings/document-types'
     | '/settings/form-builder'
     | '/settings/notifications'
     | '/settings/organization'
@@ -221,12 +242,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/customers'
+    | '/documents'
     | '/hr'
     | '/team'
     | '/workflows'
     | '/'
     | '/admin/customer-fields'
     | '/settings/appearance'
+    | '/settings/document-types'
     | '/settings/form-builder'
     | '/settings/notifications'
     | '/settings/organization'
@@ -241,6 +264,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/_authenticated/customers'
+    | '/_authenticated/documents'
     | '/_authenticated/hr'
     | '/_authenticated/settings'
     | '/_authenticated/team'
@@ -248,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/admin/customer-fields'
     | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/document-types'
     | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/organization'
@@ -336,6 +361,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHrRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/documents': {
+      id: '/_authenticated/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AuthenticatedDocumentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/customers': {
       id: '/_authenticated/customers'
       path: '/customers'
@@ -385,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsFormBuilderRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/document-types': {
+      id: '/_authenticated/settings/document-types'
+      path: '/document-types'
+      fullPath: '/settings/document-types'
+      preLoaderRoute: typeof AuthenticatedSettingsDocumentTypesRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/appearance': {
       id: '/_authenticated/settings/appearance'
       path: '/appearance'
@@ -404,6 +443,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
+  AuthenticatedSettingsDocumentTypesRoute: typeof AuthenticatedSettingsDocumentTypesRoute
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
@@ -414,6 +454,8 @@ interface AuthenticatedSettingsRouteChildren {
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
+  AuthenticatedSettingsDocumentTypesRoute:
+    AuthenticatedSettingsDocumentTypesRoute,
   AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
@@ -431,6 +473,7 @@ const AuthenticatedSettingsRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
+  AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedHrRoute: typeof AuthenticatedHrRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
@@ -441,6 +484,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
+  AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedHrRoute: AuthenticatedHrRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
