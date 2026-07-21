@@ -141,6 +141,7 @@ export type Database = {
           updated_at: string
           vat_no: string | null
           website: string | null
+          websites: Json
         }
         Insert: {
           address?: string | null
@@ -182,6 +183,7 @@ export type Database = {
           updated_at?: string
           vat_no?: string | null
           website?: string | null
+          websites?: Json
         }
         Update: {
           address?: string | null
@@ -223,6 +225,7 @@ export type Database = {
           updated_at?: string
           vat_no?: string | null
           website?: string | null
+          websites?: Json
         }
         Relationships: []
       }
