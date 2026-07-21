@@ -289,8 +289,6 @@
 @utility scrollbar-slim {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, currentColor 20%, transparent) transparent;
-}
-@utility scrollbar-slim {
   &::-webkit-scrollbar { width: 6px; height: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb {
@@ -301,6 +299,7 @@
     background: color-mix(in oklab, currentColor 32%, transparent);
   }
 }
+
 
 @utility no-scrollbar {
   scrollbar-width: none;
