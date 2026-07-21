@@ -211,6 +211,189 @@ export type Database = {
         }
         Relationships: []
       }
+      company_document_files: {
+        Row: {
+          document_id: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          document_id: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          document_id?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_document_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "company_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_document_types: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          default_department_ids: string[]
+          description: string | null
+          id: string
+          is_system: boolean
+          name_ar: string
+          name_en: string
+          notify_days_before: number
+          notify_repeat: Database["public"]["Enums"]["doc_notify_repeat"]
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_id: string
+          created_at?: string
+          default_department_ids?: string[]
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name_ar: string
+          name_en: string
+          notify_days_before?: number
+          notify_repeat?: Database["public"]["Enums"]["doc_notify_repeat"]
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          default_department_ids?: string[]
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name_ar?: string
+          name_en?: string
+          notify_days_before?: number
+          notify_repeat?: Database["public"]["Enums"]["doc_notify_repeat"]
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_document_types_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          department_ids: string[] | null
+          doc_number: string | null
+          expiry_date: string | null
+          extra: Json
+          id: string
+          issue_date: string | null
+          last_notified_at: string | null
+          notes: string | null
+          notify_days_before: number | null
+          notify_repeat: Database["public"]["Enums"]["doc_notify_repeat"] | null
+          superseded_at: string | null
+          superseded_by: string | null
+          type_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          department_ids?: string[] | null
+          doc_number?: string | null
+          expiry_date?: string | null
+          extra?: Json
+          id?: string
+          issue_date?: string | null
+          last_notified_at?: string | null
+          notes?: string | null
+          notify_days_before?: number | null
+          notify_repeat?:
+            | Database["public"]["Enums"]["doc_notify_repeat"]
+            | null
+          superseded_at?: string | null
+          superseded_by?: string | null
+          type_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          department_ids?: string[] | null
+          doc_number?: string | null
+          expiry_date?: string | null
+          extra?: Json
+          id?: string
+          issue_date?: string | null
+          last_notified_at?: string | null
+          notes?: string | null
+          notify_days_before?: number | null
+          notify_repeat?:
+            | Database["public"]["Enums"]["doc_notify_repeat"]
+            | null
+          superseded_at?: string | null
+          superseded_by?: string | null
+          type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_documents_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "company_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_documents_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "company_document_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_features: {
         Row: {
           approval_workflow: boolean
@@ -1791,6 +1974,34 @@ export type Database = {
         Args: { _stage_id: string; _user_id: string }
         Returns: boolean
       }
+      current_company_document: {
+        Args: { _type_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          department_ids: string[] | null
+          doc_number: string | null
+          expiry_date: string | null
+          extra: Json
+          id: string
+          issue_date: string | null
+          last_notified_at: string | null
+          notes: string | null
+          notify_days_before: number | null
+          notify_repeat: Database["public"]["Enums"]["doc_notify_repeat"] | null
+          superseded_at: string | null
+          superseded_by: string | null
+          type_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_profile_locked_fields: {
         Args: never
         Returns: {
@@ -1812,6 +2023,7 @@ export type Database = {
           owner_id: string
         }[]
       }
+      generate_company_document_notifications: { Args: never; Returns: number }
       global_search: {
         Args: { _limit?: number; _q: string }
         Returns: {
@@ -1915,6 +2127,7 @@ export type Database = {
         | "file"
         | "multiselect"
         | "bilingual_text"
+      doc_notify_repeat: "none" | "daily" | "weekly" | "monthly"
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -2097,6 +2310,7 @@ export const Constants = {
         "multiselect",
         "bilingual_text",
       ],
+      doc_notify_repeat: ["none", "daily", "weekly", "monthly"],
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
