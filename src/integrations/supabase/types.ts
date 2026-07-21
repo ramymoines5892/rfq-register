@@ -1268,6 +1268,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_ui_preferences: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          density: string
+          font_family: string
+          lang: string
+          preset: string
+          primary_color: string | null
+          radius: string
+          sidebar_collapsed: boolean
+          theme_mode: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          density?: string
+          font_family?: string
+          lang?: string
+          preset?: string
+          primary_color?: string | null
+          radius?: string
+          sidebar_collapsed?: boolean
+          theme_mode?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          density?: string
+          font_family?: string
+          lang?: string
+          preset?: string
+          primary_color?: string | null
+          radius?: string
+          sidebar_collapsed?: boolean
+          theme_mode?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workflow_stage_approvers: {
         Row: {
           approver_id: string

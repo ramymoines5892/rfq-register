@@ -6,22 +6,20 @@
 @custom-variant rtl (&:is([dir="rtl"] *, [dir="rtl"]));
 
 /*
- * Design system definition.
+ * Design system with per-user personalization.
  *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * Presets are selected via `data-theme` on <html>:
+ *   navy | emerald | slate | indigo | custom
+ * Fonts via `data-font` on <html>:
+ *   outfit | sora | space-grotesk | urbanist | cairo
+ * Radius via `data-radius` on <html>: sm | md | lg
+ * Dark mode: `.dark` class on <html>.
+ * Density via `data-density` on <html>: comfortable | compact
  */
 
 @theme inline {
-  --font-sans: "Epilogue", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Urbanist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--app-font-sans, "Outfit", ui-sans-serif, system-ui, sans-serif);
+  --font-display: var(--app-font-display, "Outfit", ui-sans-serif, system-ui, sans-serif);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -64,22 +62,22 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ========== Default (Navy Trust — light) ========== */
 :root {
-  /* Navy Trust — #0f1b3d / #1e3a5f / #3b6fa0 / #e8edf3 */
-  --radius: 0.875rem;
-  --background: oklch(0.975 0.008 250);
+  --radius: 0.75rem;
+  --background: oklch(0.98 0.008 250);
   --foreground: oklch(0.22 0.08 265);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.08 265);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.08 265);
-  --primary: oklch(0.35 0.08 258);           /* #1e3a5f */
+  --primary: oklch(0.35 0.08 258);
   --primary-foreground: oklch(0.98 0.005 250);
-  --secondary: oklch(0.94 0.012 250);         /* #e8edf3 */
+  --secondary: oklch(0.94 0.012 250);
   --secondary-foreground: oklch(0.22 0.08 265);
   --muted: oklch(0.94 0.012 250);
   --muted-foreground: oklch(0.5 0.04 255);
-  --accent: oklch(0.56 0.10 250);             /* #3b6fa0 */
+  --accent: oklch(0.56 0.10 250);
   --accent-foreground: oklch(0.98 0.005 250);
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.98 0 0);
@@ -91,49 +89,183 @@
   --chart-3: oklch(0.7 0.09 220);
   --chart-4: oklch(0.65 0.15 40);
   --chart-5: oklch(0.6 0.12 155);
-  --sidebar: oklch(0.22 0.08 265);            /* #0f1b3d */
+  --sidebar: oklch(0.22 0.08 265);
   --sidebar-foreground: oklch(0.94 0.012 250);
-  --sidebar-primary: oklch(0.56 0.10 250);    /* #3b6fa0 */
+  --sidebar-primary: oklch(0.56 0.10 250);
   --sidebar-primary-foreground: oklch(0.98 0.005 250);
-  --sidebar-accent: oklch(0.35 0.08 258);     /* #1e3a5f */
+  --sidebar-accent: oklch(0.35 0.08 258);
   --sidebar-accent-foreground: oklch(0.98 0.005 250);
   --sidebar-border: oklch(0.35 0.08 258 / 40%);
   --sidebar-ring: oklch(0.56 0.10 250);
 }
 
+/* ========== Preset: Emerald Prestige (light) ========== */
+[data-theme="emerald"] {
+  --background: oklch(0.98 0.01 155);
+  --foreground: oklch(0.22 0.06 155);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.06 155);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.06 155);
+  --primary: oklch(0.38 0.11 160);
+  --primary-foreground: oklch(0.98 0.01 90);
+  --secondary: oklch(0.94 0.02 155);
+  --secondary-foreground: oklch(0.22 0.06 155);
+  --muted: oklch(0.94 0.02 155);
+  --muted-foreground: oklch(0.5 0.04 155);
+  --accent: oklch(0.72 0.13 85);
+  --accent-foreground: oklch(0.22 0.06 155);
+  --border: oklch(0.9 0.02 155);
+  --input: oklch(0.9 0.02 155);
+  --ring: oklch(0.72 0.13 85);
+  --sidebar: oklch(0.25 0.08 160);
+  --sidebar-foreground: oklch(0.94 0.02 155);
+  --sidebar-primary: oklch(0.72 0.13 85);
+  --sidebar-primary-foreground: oklch(0.22 0.06 155);
+  --sidebar-accent: oklch(0.35 0.10 160);
+  --sidebar-accent-foreground: oklch(0.98 0.01 90);
+  --sidebar-border: oklch(0.35 0.10 160 / 40%);
+  --sidebar-ring: oklch(0.72 0.13 85);
+}
+
+/* ========== Preset: Slate & Steel (light) ========== */
+[data-theme="slate"] {
+  --background: oklch(0.98 0.005 250);
+  --foreground: oklch(0.25 0.03 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.03 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.03 260);
+  --primary: oklch(0.38 0.04 260);
+  --primary-foreground: oklch(0.98 0.005 250);
+  --secondary: oklch(0.94 0.008 260);
+  --secondary-foreground: oklch(0.25 0.03 260);
+  --muted: oklch(0.94 0.008 260);
+  --muted-foreground: oklch(0.55 0.02 260);
+  --accent: oklch(0.62 0.05 250);
+  --accent-foreground: oklch(0.98 0.005 250);
+  --border: oklch(0.9 0.01 260);
+  --input: oklch(0.9 0.01 260);
+  --ring: oklch(0.62 0.05 250);
+  --sidebar: oklch(0.28 0.03 260);
+  --sidebar-foreground: oklch(0.94 0.008 260);
+  --sidebar-primary: oklch(0.62 0.05 250);
+  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-accent: oklch(0.38 0.04 260);
+  --sidebar-accent-foreground: oklch(0.98 0.005 250);
+  --sidebar-border: oklch(0.38 0.04 260 / 40%);
+  --sidebar-ring: oklch(0.62 0.05 250);
+}
+
+/* ========== Preset: Midnight Indigo (light) ========== */
+[data-theme="indigo"] {
+  --background: oklch(0.98 0.01 280);
+  --foreground: oklch(0.22 0.08 280);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.08 280);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.08 280);
+  --primary: oklch(0.5 0.22 275);
+  --primary-foreground: oklch(0.98 0.01 280);
+  --secondary: oklch(0.94 0.02 280);
+  --secondary-foreground: oklch(0.22 0.08 280);
+  --muted: oklch(0.94 0.02 280);
+  --muted-foreground: oklch(0.5 0.04 280);
+  --accent: oklch(0.65 0.2 285);
+  --accent-foreground: oklch(0.98 0.01 280);
+  --border: oklch(0.9 0.02 280);
+  --input: oklch(0.9 0.02 280);
+  --ring: oklch(0.5 0.22 275);
+  --sidebar: oklch(0.15 0.06 280);
+  --sidebar-foreground: oklch(0.94 0.02 280);
+  --sidebar-primary: oklch(0.65 0.2 285);
+  --sidebar-primary-foreground: oklch(0.98 0.01 280);
+  --sidebar-accent: oklch(0.28 0.1 280);
+  --sidebar-accent-foreground: oklch(0.98 0.01 280);
+  --sidebar-border: oklch(0.28 0.1 280 / 40%);
+  --sidebar-ring: oklch(0.65 0.2 285);
+}
+
+/* ========== Dark mode (base + presets) ========== */
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --background: oklch(0.15 0.03 260);
+  --foreground: oklch(0.98 0.005 250);
+  --card: oklch(0.20 0.03 260);
+  --card-foreground: oklch(0.98 0.005 250);
+  --popover: oklch(0.20 0.03 260);
+  --popover-foreground: oklch(0.98 0.005 250);
+  --primary: oklch(0.7 0.14 250);
+  --primary-foreground: oklch(0.15 0.03 260);
+  --secondary: oklch(0.26 0.03 260);
+  --secondary-foreground: oklch(0.98 0.005 250);
+  --muted: oklch(0.26 0.03 260);
+  --muted-foreground: oklch(0.7 0.02 260);
+  --accent: oklch(0.6 0.15 250);
+  --accent-foreground: oklch(0.98 0.005 250);
+  --destructive: oklch(0.65 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.6 0.15 250);
+  --sidebar: oklch(0.13 0.03 260);
+  --sidebar-foreground: oklch(0.94 0.008 260);
+  --sidebar-primary: oklch(0.7 0.14 250);
+  --sidebar-primary-foreground: oklch(0.15 0.03 260);
+  --sidebar-accent: oklch(0.22 0.04 260);
+  --sidebar-accent-foreground: oklch(0.98 0.005 250);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: oklch(0.7 0.14 250);
+}
+
+.dark[data-theme="emerald"] {
+  --primary: oklch(0.75 0.15 155);
+  --accent: oklch(0.78 0.14 85);
+  --ring: oklch(0.78 0.14 85);
+  --sidebar-primary: oklch(0.78 0.14 85);
+  --sidebar-accent: oklch(0.28 0.06 160);
+}
+
+.dark[data-theme="slate"] {
+  --primary: oklch(0.75 0.03 260);
+  --accent: oklch(0.65 0.05 250);
+  --ring: oklch(0.65 0.05 250);
+  --sidebar-primary: oklch(0.75 0.03 260);
+  --sidebar-accent: oklch(0.24 0.02 260);
+}
+
+.dark[data-theme="indigo"] {
+  --primary: oklch(0.72 0.2 285);
+  --accent: oklch(0.78 0.18 285);
+  --ring: oklch(0.72 0.2 285);
+  --sidebar-primary: oklch(0.72 0.2 285);
+  --sidebar-accent: oklch(0.24 0.08 280);
+}
+
+/* ========== Radius scale ========== */
+[data-radius="sm"] { --radius: 0.375rem; }
+[data-radius="md"] { --radius: 0.75rem; }
+[data-radius="lg"] { --radius: 1.125rem; }
+
+/* ========== Font families ========== */
+[data-font="outfit"] {
+  --app-font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+[data-font="sora"] {
+  --app-font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+}
+[data-font="space-grotesk"] {
+  --app-font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+[data-font="urbanist"] {
+  --app-font-sans: "Epilogue", ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: "Urbanist", ui-sans-serif, system-ui, sans-serif;
+}
+[data-font="cairo"] {
+  --app-font-sans: "Cairo", ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: "Cairo", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
