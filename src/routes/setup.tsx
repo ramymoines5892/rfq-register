@@ -822,7 +822,7 @@ function StepGeneral({
                 label={T("الاسم المختصر", "Short Name")}
                 hint={T("اختيارى — بيظهر فى الشريط الجانبى", "Optional — appears in the sidebar")}
               >
-                <Input className="h-11" value={general.short_name ?? ""} onChange={(e) => set("short_name")(e.target.value)} placeholder="EEC" />
+                <Input dir="ltr" className="h-11" value={general.short_name ?? ""} onChange={(e) => set("short_name")(filterEnglish(e.target.value))} placeholder="EEC" />
               </SmartField>
             </div>
           </div>
