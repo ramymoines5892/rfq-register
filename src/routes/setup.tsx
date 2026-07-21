@@ -1,7 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow } from "@/features/company/api";
+import { hasAnyCompany, uploadCompanyLogo, type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type NumberingRow, type SetupDocument } from "@/features/company/api";
 import { useCreateCompany } from "@/features/company/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt } from "lucide-react";
+import { Building2, Sparkles, Settings2, Hash, CheckCircle2, ArrowRight, ArrowLeft, Upload, Loader2, Gem, RotateCcw, AlertCircle, ImagePlus, Mail, Phone, Smartphone, Globe, MapPin, FileText, Receipt, FolderOpen, Plus, Trash2, Paperclip, CalendarDays, Info } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
+import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
