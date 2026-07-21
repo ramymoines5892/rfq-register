@@ -576,12 +576,14 @@ function SetupPage() {
                     aria-label={`${T("الخطوة", "Step")} ${t.id}: ${t.label}`}
                     className="flex flex-col items-center gap-1.5 flex-1 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-lg py-1 group disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 ${
-                      done ? "bg-primary text-primary-foreground shadow-sm group-hover:brightness-110" :
+                    <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 text-xs font-bold tabular-nums ${
+                      (stepPct[t.id as 1 | 2 | 3 | 4] ?? 0) >= 100 ? "bg-emerald-500 text-white shadow-sm group-hover:brightness-110" :
                       active ? "bg-primary text-primary-foreground ring-4 ring-primary/15 scale-110" :
                       "bg-muted text-muted-foreground group-hover:bg-muted-foreground/15 group-hover:text-foreground"
                     }`}>
-                      {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
+                      {(stepPct[t.id as 1 | 2 | 3 | 4] ?? 0) >= 100
+                        ? <CheckCircle2 className="h-5 w-5" />
+                        : <span className="text-[10px] sm:text-[11px]">{stepPct[t.id as 1 | 2 | 3 | 4] ?? 0}%</span>}
                     </div>
                     <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}>
                       {t.label}
