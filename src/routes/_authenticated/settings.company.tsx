@@ -135,11 +135,11 @@ function SettingsCompanyPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <Label className="text-xs">{ar ? "الاسم بالعربية" : "Arabic Name"}</Label>
-                  <ScriptInput script="arabic" value={form.name_ar ?? ""} onChange={(v) => set("name_ar", v)} />
+                  <ScriptInput script="ar" value={form.name_ar ?? ""} onChange={(v) => set("name_ar", v)} />
                 </div>
                 <div>
                   <Label className="text-xs">{ar ? "الاسم بالإنجليزية" : "English Name"}</Label>
-                  <ScriptInput script="english" value={form.name ?? ""} onChange={(v) => set("name", v)} />
+                  <ScriptInput script="en" value={form.name ?? ""} onChange={(v) => set("name", v)} />
                 </div>
                 <div>
                   <Label className="text-xs">{ar ? "الاسم المختصر" : "Short Name"}</Label>
