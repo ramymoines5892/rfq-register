@@ -517,19 +517,12 @@ function StepGeneral({
   const set = <K extends keyof CompanyGeneral>(k: K) => (v: string) => setGeneral((g) => ({ ...g, [k]: v }));
 
   // Live validations
-  const emailV = validateEmail(general.email ?? "");
   const webV = validateWebsite(general.website ?? "");
-  const mobileV = validateRule(general.mobile ?? "", c.mobile);
-  const phoneV = validateRule(general.phone ?? "", c.phone);
 
   const err = (v: FieldValidation, forceShow = false) =>
     (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
   const reqErr = (val: string | null | undefined, msgAr: string, msgEn: string) =>
     showErrors && !(val ?? "").trim() ? T(msgAr, msgEn) : undefined;
-
-  // Auto-format on change for masked fields
-  const onMobile = (v: string) => set("mobile")(c.mobile ? applyMask(v, c.mobile) : v);
-  const onPhone = (v: string) => set("phone")(c.phone ? applyMask(v, c.phone) : v);
 
   return (
     <div className="space-y-6">
