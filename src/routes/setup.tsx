@@ -664,28 +664,14 @@ function StepGeneral({
         </div>
       </div>
 
-      {/* Legal block */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{T("البيانات القانونية", "Legal & Tax")}</h4>
-        <div className="grid md:grid-cols-2 gap-4">
-          <SmartField
-            label={T("الرقم الضريبي", "Tax Registration No.")}
-            icon={Receipt}
-            hint={c.tax ? (isAr ? c.tax.hintAr : c.tax.hintEn) : T("اختيارى", "Optional")}
-            error={err(taxV)}
-          >
-            <Input dir="ltr" value={general.tax_no ?? ""} onChange={(e) => onTax(e.target.value)} placeholder={c.tax?.example} />
-          </SmartField>
-          <SmartField
-            label={T("السجل التجارى", "Commercial Registration")}
-            icon={FileText}
-            hint={c.cr ? (isAr ? c.cr.hintAr : c.cr.hintEn) : T("اختيارى", "Optional")}
-            error={err(crV)}
-          >
-            <Input dir="ltr" value={general.cr_no ?? ""} onChange={(e) => onCr(e.target.value)} placeholder={c.cr?.example} />
-          </SmartField>
-        </div>
-      </div>
+      {/* Company documents */}
+      <CompanyDocumentsSection
+        documents={documents}
+        setDocuments={setDocuments}
+        T={T}
+        isAr={isAr}
+      />
+
 
       <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-lg p-3 border">
         {T("ملاحظة: كود الشركة هيتولّد تلقائيًا من الاسم — تقدر تعدّله بعد كده من إعدادات الشركة. الكود بيتستخدم كبادئة داخلية للمستندات وسهولة التعريف.",
