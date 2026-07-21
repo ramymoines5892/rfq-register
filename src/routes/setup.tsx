@@ -1358,7 +1358,7 @@ function DocumentsDialog({
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
-                <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
+                <Select value={form.code || undefined} onValueChange={pickPreset}>
                   <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
                   <SelectContent>
                     {DOC_PRESETS.map((p) => (
@@ -1370,22 +1370,13 @@ function DocumentsDialog({
                         {isAr ? p.name_ar : p.name_en}
                       </SelectItem>
                     ))}
-                    <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {T("تقدر تضيف أنواع إضافية بعد إنشاء الشركة من إعدادات «أنواع مستندات الشركة».",
+                     "You can add more types later from Settings › Company Document Types.")}
+                </p>
               </div>
-
-              {isCustom && (
-                <div className="space-y-1.5">
-                  <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={form.customName ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
-                    placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
-                    autoFocus
-                  />
-                </div>
-              )}
 
               <div className="space-y-1.5">
                 <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
