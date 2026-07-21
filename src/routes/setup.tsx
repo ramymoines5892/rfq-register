@@ -603,6 +603,36 @@ function SetupPage() {
           </div>
         </nav>
 
+        {/* Per-step title + completion bar — visible on every step */}
+        {typeof step === "number" && (() => {
+          const pct = stepPct[step as 1 | 2 | 3 | 4] ?? 0;
+          const tone = pct >= 100 ? "bg-emerald-500" : pct >= 60 ? "bg-primary" : "bg-amber-500";
+          return (
+            <div className="bg-card border rounded-2xl px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 flex-wrap">
+              {currentTab && (
+                <div className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${pct >= 100 ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"}`}>
+                  <currentTab.icon className="h-5 w-5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {T("الخطوة", "Step")} {currentIdx}/4
+                </div>
+                <div className="text-sm sm:text-base font-semibold truncate">{currentTab?.label}</div>
+              </div>
+              <div className="min-w-[140px] sm:min-w-[200px] shrink-0">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-muted-foreground">{T("الاكتمال", "Completeness")}</span>
+                  <span className="font-semibold tabular-nums">{pct}%</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full transition-all duration-500 ${tone}`} style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         <Card className="border-border/60 shadow-sm">
           <CardContent className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8">
             {step === 1 && (
