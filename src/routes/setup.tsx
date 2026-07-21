@@ -493,6 +493,116 @@ function SmartField({
   );
 }
 
+// ---------------- Multi-contact editor (email / phone / mobile / fax) ----------------
+
+function MultiContactField({
+  label, icon: Icon, values, onChange, placeholder, hint, format, validate, isAr, T, showErrors,
+  type, inputMode,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  values: ContactEntry[];
+  onChange: (list: ContactEntry[]) => void;
+  placeholder?: string;
+  hint?: string;
+  format?: (v: string) => string;
+  validate?: (v: string) => FieldValidation;
+  isAr: boolean;
+  T: (ar: string, en: string) => string;
+  showErrors?: boolean;
+  type?: "text" | "email";
+  inputMode?: "tel" | "text" | "email";
+}) {
+  const list = values.length ? values : [{ value: "", label: "", is_primary: true }];
+  const update = (idx: number, patch: Partial<ContactEntry>) => {
+    const next = list.map((e, i) => (i === idx ? { ...e, ...patch } : e));
+    onChange(next.filter((_, i) => i < next.length));
+  };
+  const setPrimary = (idx: number) => {
+    onChange(list.map((e, i) => ({ ...e, is_primary: i === idx })));
+  };
+  const add = () => {
+    const next = [...list, { value: "", label: "", is_primary: false }];
+    if (!next.some((e) => e.is_primary)) next[0].is_primary = true;
+    onChange(next);
+  };
+  const remove = (idx: number) => {
+    const next = list.filter((_, i) => i !== idx);
+    if (next.length && !next.some((e) => e.is_primary)) next[0].is_primary = true;
+    onChange(next);
+  };
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span>{label}</span>
+      </Label>
+      <div className="space-y-2">
+        {list.map((entry, idx) => {
+          const v = validate?.(entry.value);
+          const error = showErrors && entry.value && v && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
+          return (
+            <div key={idx} className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPrimary(idx)}
+                  title={T("تعيين كأساسى", "Set as primary")}
+                  className={`shrink-0 h-9 w-9 grid place-items-center rounded-md border transition-colors ${
+                    entry.is_primary ? "bg-primary/10 border-primary text-primary" : "border-input text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Star className={`h-4 w-4 ${entry.is_primary ? "fill-current" : ""}`} />
+                </button>
+                <Input
+                  dir="ltr"
+                  type={type ?? "text"}
+                  inputMode={inputMode}
+                  value={entry.value}
+                  onChange={(e) => update(idx, { value: format ? format(e.target.value) : e.target.value })}
+                  placeholder={placeholder}
+                  className="flex-1"
+                />
+                <Input
+                  value={entry.label ?? ""}
+                  onChange={(e) => update(idx, { label: e.target.value })}
+                  placeholder={T("مسمى (اختيارى)", "Label (optional)")}
+                  className="w-28 sm:w-32 hidden sm:block"
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(idx)}
+                  disabled={list.length <= 1 && !entry.value}
+                  title={T("حذف", "Remove")}
+                  className="shrink-0 h-9 w-9 grid place-items-center rounded-md border border-input text-muted-foreground hover:text-destructive hover:border-destructive disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              {error && (
+                <div className="ps-11 flex items-center gap-1.5 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{error}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          onClick={add}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {T("إضافة", "Add another")}
+        </button>
+      </div>
+      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
+    </div>
+  );
+}
+
+
 // ---------------- STEP 1 — General (CV-like layout, weighted progress) ----------------
 
 function StepGeneral({
