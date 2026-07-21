@@ -21,6 +21,7 @@ import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, v
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 import { filterArabic, filterEnglish } from "@/lib/textFilters";
 import { ScriptInput } from "@/components/ScriptInput";
+import { idbSet, idbGet, idbClearSetup } from "@/lib/setupBlobStore";
 
 
 const DRAFT_KEY = "eec.setup.draft.v1";
@@ -28,7 +29,7 @@ const DRAFT_KEY = "eec.setup.draft.v1";
 type PersistedDoc = Omit<SetupDocument, "file"> & {
   file_name?: string | null;
   file_type?: string | null;
-  file_data_url?: string | null;
+  file_data_url?: string | null; // legacy — no longer written, still read for migration
   has_file?: boolean;
 };
 
@@ -39,7 +40,8 @@ type Draft = {
   features: CompanyFeatures;
   numbering: NumberingRow[];
   documents: PersistedDoc[];
-  logo?: { name: string; type: string; dataUrl: string } | null;
+  // Logo metadata only — the binary lives in IndexedDB under "logo".
+  logo?: { name: string; type: string } | null;
 };
 
 
@@ -53,6 +55,8 @@ function loadDraft(): Draft | null {
 }
 function clearDraft() {
   if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
+  // Fire-and-forget — clearing IDB is best-effort.
+  void idbClearSetup();
 }
 
 function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
@@ -162,37 +166,63 @@ function SetupPage() {
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [documents, setDocuments] = useState<SetupDocument[]>(
     (d?.documents ?? []).map((pd) => {
+      // Legacy migration: some old drafts still carry file_data_url in localStorage.
       const restoredFile = pd.file_data_url && pd.file_name
         ? fileFromDataUrl(pd.file_data_url, pd.file_name, pd.file_type)
         : null;
-      return { ...pd, file: restoredFile, has_file: !!restoredFile || (!!pd.has_file && !!pd.file_data_url) } as SetupDocument;
+      return { ...pd, file: restoredFile, has_file: !!restoredFile || !!pd.has_file } as SetupDocument;
     }),
   );
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(() => {
-    const lg = d?.logo;
-    if (!lg?.dataUrl) return null;
-    try {
-      const [meta, b64] = lg.dataUrl.split(",");
-      const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? lg.type;
-      const bin = atob(b64);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      return new File([arr], lg.name, { type: mime });
-    } catch { return null; }
-  });
-  const [logoPreview, setLogoPreview] = useState<string | null>(d?.logo?.dataUrl ?? null);
-  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(d?.logo?.dataUrl ?? null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // Hydrate binary blobs (logo + document files) from IndexedDB after mount.
   useEffect(() => {
-    if (!logoFile) { setLogoPreview(null); setLogoDataUrl(null); return; }
+    let cancelled = false;
+    (async () => {
+      const logoRec = await idbGet<{ name: string; type: string; blob: Blob }>("logo");
+      if (!cancelled && logoRec?.blob) {
+        try { setLogoFile(new File([logoRec.blob], logoRec.name, { type: logoRec.type })); } catch { /* ignore */ }
+      }
+      const docs = await idbGet<Array<{ code: string; name: string; type: string; blob: Blob }>>("documents");
+      if (!cancelled && Array.isArray(docs) && docs.length) {
+        setDocuments((prev) => prev.map((doc) => {
+          if (doc.file) return doc;
+          const rec = docs.find((r) => r.code === doc.code);
+          if (!rec?.blob) return doc;
+          try {
+            const f = new File([rec.blob], rec.name, { type: rec.type });
+            return { ...doc, file: f, file_name: rec.name, file_type: rec.type, has_file: true };
+          } catch { return doc; }
+        }));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!logoFile) { setLogoPreview(null); return; }
     const url = URL.createObjectURL(logoFile);
     setLogoPreview(url);
-    // Also read as data URL so the pick survives reloads / step navigation persistence.
-    const reader = new FileReader();
-    reader.onload = () => { if (typeof reader.result === "string") setLogoDataUrl(reader.result); };
-    reader.readAsDataURL(logoFile);
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
+
+  // Persist the logo blob to IDB whenever it changes.
+  useEffect(() => {
+    if (logoFile) void idbSet("logo", { name: logoFile.name, type: logoFile.type, blob: logoFile });
+    else void idbSet("logo", null);
+  }, [logoFile]);
+
+  // Persist document blobs (by code) to IDB whenever documents change.
+  useEffect(() => {
+    const withFiles = documents
+      .filter((d) => d.file instanceof File)
+      .map((d) => ({ code: d.code, name: d.file!.name, type: d.file!.type, blob: d.file! as Blob }));
+    void idbSet("documents", withFiles);
+  }, [documents]);
+
   const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
@@ -204,19 +234,17 @@ function SetupPage() {
           ...rest,
           file_name: file?.name ?? doc.file_name ?? null,
           file_type: file?.type ?? doc.file_type ?? null,
-          file_data_url: doc.file_data_url ?? null,
-          has_file: !!file || (!!doc.has_file && !!doc.file_data_url),
+          file_data_url: null, // never store base64 in localStorage — IDB holds the blob
+          has_file: !!file || !!doc.has_file,
         };
       });
-      const logo = logoFile && logoDataUrl
-        ? { name: logoFile.name, type: logoFile.type, dataUrl: logoDataUrl }
-        : null;
+      const logo = logoFile ? { name: logoFile.name, type: logoFile.type } : null;
       localStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs, logo }),
       );
     } catch { /* ignore — likely quota exceeded */ }
-  }, [step, general, advanced, features, numbering, documents, logoFile, logoDataUrl]);
+  }, [step, general, advanced, features, numbering, documents, logoFile]);
 
 
   async function resetAll() {
