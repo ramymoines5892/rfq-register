@@ -580,6 +580,13 @@ function MultiContactField({
     if (!next.some((e) => e.is_primary)) next[0].is_primary = true;
     onChange(next);
   };
+  // Blocked when any existing entry is empty or fails validation.
+  const anyInvalid = list.some((e) => {
+    const v = (e.value ?? "").trim();
+    if (!v) return true;
+    if (!validate) return false;
+    return !validate(v).ok;
+  });
   const remove = (idx: number) => {
     const next = list.filter((_, i) => i !== idx);
     if (next.length && !next.some((e) => e.is_primary)) next[0].is_primary = true;
