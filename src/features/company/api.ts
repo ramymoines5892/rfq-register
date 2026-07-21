@@ -152,10 +152,25 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
   const { data: userData } = await supabase.auth.getUser();
   const userId = userData.user?.id ?? null;
 
-  // 1) Create company
+  // 1) Create company — denormalize primary contact into the flat columns
+  const emails = sanitizeContacts(payload.general.emails);
+  const phones = sanitizeContacts(payload.general.phones);
+  const mobiles = sanitizeContacts(payload.general.mobiles);
+  const faxes = sanitizeContacts(payload.general.faxes);
+  const generalRow = {
+    ...payload.general,
+    emails,
+    phones,
+    mobiles,
+    faxes,
+    email: pickPrimary(emails) ?? payload.general.email ?? null,
+    phone: pickPrimary(phones) ?? payload.general.phone ?? null,
+    mobile: pickPrimary(mobiles) ?? payload.general.mobile ?? null,
+    fax: pickPrimary(faxes) ?? payload.general.fax ?? null,
+  };
   const { data: company, error: cErr } = await supabase
     .from("companies")
-    .insert({ ...payload.general, ...payload.advanced, created_by: userId })
+    .insert({ ...generalRow, ...payload.advanced, created_by: userId } as never)
     .select()
     .single();
   if (cErr) throw cErr;
