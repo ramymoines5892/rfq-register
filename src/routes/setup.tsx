@@ -24,7 +24,12 @@ import { ScriptInput } from "@/components/ScriptInput";
 
 const DRAFT_KEY = "eec.setup.draft.v1";
 
-type PersistedDoc = Omit<SetupDocument, "file"> & { file_name?: string | null };
+type PersistedDoc = Omit<SetupDocument, "file"> & {
+  file_name?: string | null;
+  file_type?: string | null;
+  file_data_url?: string | null;
+  has_file?: boolean;
+};
 
 type Draft = {
   step: Step;
@@ -47,6 +52,26 @@ function loadDraft(): Draft | null {
 }
 function clearDraft() {
   if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY);
+}
+
+function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
+  try {
+    const [meta, b64] = dataUrl.split(",");
+    const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? fallbackType ?? "application/octet-stream";
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, { type: mime });
+  } catch { return null; }
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Invalid file data"));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export const Route = createFileRoute("/setup")({
@@ -135,7 +160,12 @@ function SetupPage() {
   const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
   const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [documents, setDocuments] = useState<SetupDocument[]>(
-    (d?.documents ?? []).map((pd) => ({ ...pd, file: null } as SetupDocument)),
+    (d?.documents ?? []).map((pd) => {
+      const restoredFile = pd.file_data_url && pd.file_name
+        ? fileFromDataUrl(pd.file_data_url, pd.file_name, pd.file_type)
+        : null;
+      return { ...pd, file: restoredFile, has_file: !!restoredFile || (!!pd.has_file && !!pd.file_data_url) } as SetupDocument;
+    }),
   );
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(() => {
@@ -169,7 +199,13 @@ function SetupPage() {
     try {
       const persistedDocs: PersistedDoc[] = documents.map((doc) => {
         const { file, ...rest } = doc;
-        return { ...rest, file_name: file?.name ?? null };
+        return {
+          ...rest,
+          file_name: file?.name ?? doc.file_name ?? null,
+          file_type: file?.type ?? doc.file_type ?? null,
+          file_data_url: doc.file_data_url ?? null,
+          has_file: !!file || (!!doc.has_file && !!doc.file_data_url),
+        };
       });
       const logo = logoFile && logoDataUrl
         ? { name: logoFile.name, type: logoFile.type, dataUrl: logoDataUrl }
@@ -1360,22 +1396,33 @@ function DocumentsDialog({
   }
 
   function clearFile() {
-    setForm((f) => ({ ...f, file: null }));
+    setForm((f) => ({ ...f, file: null, file_name: null, file_type: null, file_data_url: null, has_file: false }));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function addOrUpdate() {
+  async function addOrUpdate() {
     if (!form.code || !form.name_ar || !form.name_en) {
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
     const existingFile =
       editingIndex !== null ? documents[editingIndex]?.file ?? null : null;
+    const existingFileName =
+      editingIndex !== null ? documents[editingIndex]?.file_name ?? null : null;
+    const existingFileDataUrl =
+      editingIndex !== null ? documents[editingIndex]?.file_data_url ?? null : null;
+    const keepsExistingFile = form.has_file !== false;
+    const hasExistingFile =
+      editingIndex !== null && keepsExistingFile && (!!existingFile || !!existingFileDataUrl);
     const effectiveFile = form.file ?? existingFile;
-    if (!effectiveFile) {
+    if (!effectiveFile && !hasExistingFile) {
       toast.error(T("لازم ترفع ملف المستند", "You must upload the document file"));
       return;
     }
+
+    const effectiveFileDataUrl = effectiveFile
+      ? form.file_data_url ?? await fileToDataUrl(effectiveFile).catch(() => null)
+      : keepsExistingFile ? form.file_data_url ?? existingFileDataUrl : null;
 
 
     const entry: SetupDocument = {
@@ -1389,6 +1436,10 @@ function DocumentsDialog({
       expiry_date: form.expiry_date || null,
       notes: form.notes?.trim() || null,
       file: effectiveFile,
+      file_name: effectiveFile?.name ?? form.file_name ?? existingFileName ?? null,
+      file_type: effectiveFile?.type ?? form.file_type ?? (editingIndex !== null ? documents[editingIndex]?.file_type ?? null : null),
+      file_data_url: effectiveFileDataUrl,
+      has_file: !!effectiveFile || hasExistingFile,
     };
 
     setDocuments((prev) => {
@@ -1571,7 +1622,7 @@ function DocumentsDialog({
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
-                    setForm((prev) => ({ ...prev, file: f }));
+                    setForm((prev) => ({ ...prev, file: f, file_name: f?.name ?? null, file_type: f?.type ?? null, file_data_url: null, has_file: !!f }));
                   }}
                 />
                 {form.file ? (

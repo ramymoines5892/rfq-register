@@ -108,7 +108,24 @@ export type SetupDocument = {
   expiry_date?: string | null;
   notes?: string | null;
   file?: File | null;           // in-memory; uploaded only on final save
+  file_name?: string | null;     // draft/UI metadata when the File object is already staged
+  file_type?: string | null;
+  file_data_url?: string | null; // persisted draft copy; restored to File on final save
+  has_file?: boolean;            // keeps edit validation stable for staged existing documents
 };
+
+function fileFromDataUrl(dataUrl: string, name: string, fallbackType?: string | null): File | null {
+  try {
+    const [meta, b64] = dataUrl.split(",");
+    const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? fallbackType ?? "application/octet-stream";
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name, { type: mime });
+  } catch {
+    return null;
+  }
+}
 
 export type CreateCompanyPayload = {
   general: CompanyGeneral;
@@ -261,19 +278,23 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
         .single();
       if (dErr) throw dErr;
 
-      if (d.file) {
-        const ext = d.file.name.split(".").pop() || "bin";
+      const fileToUpload = d.file ?? (d.file_data_url && d.file_name
+        ? fileFromDataUrl(d.file_data_url, d.file_name, d.file_type)
+        : null);
+
+      if (fileToUpload) {
+        const ext = fileToUpload.name.split(".").pop() || "bin";
         const path = `${doc.id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("company-documents")
-          .upload(path, d.file, { cacheControl: "3600", upsert: false, contentType: d.file.type });
+          .upload(path, fileToUpload, { cacheControl: "3600", upsert: false, contentType: fileToUpload.type });
         if (upErr) throw upErr;
         const { error: fErr2 } = await supabase.from("company_document_files").insert({
           document_id: doc.id,
           storage_path: path,
-          file_name: d.file.name,
-          mime_type: d.file.type || null,
-          size_bytes: d.file.size,
+          file_name: fileToUpload.name,
+          mime_type: fileToUpload.type || null,
+          size_bytes: fileToUpload.size,
           uploaded_by: userId,
         });
         if (fErr2) throw fErr2;
