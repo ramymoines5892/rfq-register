@@ -503,8 +503,6 @@ function StepGeneral({
   const webV = validateWebsite(general.website ?? "");
   const mobileV = validateRule(general.mobile ?? "", c.mobile);
   const phoneV = validateRule(general.phone ?? "", c.phone);
-  const taxV = validateRule(general.tax_no ?? "", c.tax);
-  const crV = validateRule(general.cr_no ?? "", c.cr);
 
   const err = (v: FieldValidation, forceShow = false) =>
     (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
@@ -514,8 +512,6 @@ function StepGeneral({
   // Auto-format on change for masked fields
   const onMobile = (v: string) => set("mobile")(c.mobile ? applyMask(v, c.mobile) : v);
   const onPhone = (v: string) => set("phone")(c.phone ? applyMask(v, c.phone) : v);
-  const onTax = (v: string) => set("tax_no")(c.tax ? applyMask(v, c.tax) : v);
-  const onCr = (v: string) => set("cr_no")(c.cr ? applyMask(v, c.cr) : v);
 
   return (
     <div className="space-y-6">
