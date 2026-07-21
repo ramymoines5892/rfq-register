@@ -1250,29 +1250,15 @@ function DocumentsDialog({
   }
 
   function addOrUpdate() {
-    // Resolve name/code for custom
-    let name_ar = form.name_ar;
-    let name_en = form.name_en;
-    let code = form.code;
-    if (isCustom) {
-      const raw = (form.customName || "").trim();
-      if (!raw) {
-        toast.error(T("اكتب اسم المستند", "Enter the document name"));
-        return;
-      }
-      name_ar = raw;
-      name_en = raw;
-      code = slugifyCode(raw);
-    }
-    if (!code || !name_ar || !name_en) {
+    if (!form.code || !form.name_ar || !form.name_en) {
       toast.error(T("اختر نوع المستند", "Choose a document type"));
       return;
     }
 
     const entry: SetupDocument = {
-      code,
-      name_ar,
-      name_en,
+      code: form.code,
+      name_ar: form.name_ar,
+      name_en: form.name_en,
       notify_days_before: form.notify_days_before,
       notify_repeat: form.notify_repeat,
       doc_number: form.doc_number?.trim() || null,
@@ -1298,13 +1284,8 @@ function DocumentsDialog({
 
   function edit(i: number) {
     const d = documents[i];
-    const preset = DOC_PRESETS.find((p) => p.code === d.code);
-    setIsCustom(!preset);
     setEditingIndex(i);
-    setForm({
-      ...d,
-      customName: preset ? "" : d.name_ar || d.name_en,
-    });
+    setForm({ ...d });
   }
 
   function remove(i: number) {
