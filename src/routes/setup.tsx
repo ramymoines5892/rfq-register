@@ -19,6 +19,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { COUNTRIES, applyMask, generateCompanyCode, getCountry, validateEmail, validateRule, validateWebsite, type FieldValidation } from "@/lib/countryFormats";
 import { DOC_PRESETS, slugifyCode, type DocPreset } from "@/lib/companyDocPresets";
 import { filterArabic, filterEnglish } from "@/lib/textFilters";
+import { ScriptInput } from "@/components/ScriptInput";
 
 
 const DRAFT_KEY = "eec.setup.draft.v1";
