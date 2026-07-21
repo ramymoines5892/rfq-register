@@ -71,22 +71,59 @@ const DEFAULT_NUMBERING: NumberingRow[] = [
 function SetupPage() {
   const { lang, setLang, dir } = useI18n();
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("welcome");
+  const confirm = useConfirm();
   const createMut = useCreateCompany();
 
-  const [general, setGeneral] = useState<CompanyGeneral>({
+  const draftRef = useRef<Draft | null>(typeof window !== "undefined" ? loadDraft() : null);
+  const d = draftRef.current;
+
+  const [step, setStep] = useState<Step>(d?.step ?? "welcome");
+  const [general, setGeneral] = useState<CompanyGeneral>(d?.general ?? {
     name: "", name_ar: "", short_name: "", code: "",
     tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "",
   });
-  const [advanced, setAdvanced] = useState<CompanyAdvanced>({
+  const [advanced, setAdvanced] = useState<CompanyAdvanced>(d?.advanced ?? {
     country: "Egypt", city: "", state: "", postal_code: "", address: "",
     default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
     base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
     gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
   });
-  const [features, setFeatures] = useState<CompanyFeatures>(DEFAULT_FEATURES);
-  const [numbering, setNumbering] = useState<NumberingRow[]>(DEFAULT_NUMBERING);
+  const [features, setFeatures] = useState<CompanyFeatures>(d?.features ?? DEFAULT_FEATURES);
+  const [numbering, setNumbering] = useState<NumberingRow[]>(d?.numbering ?? DEFAULT_NUMBERING);
   const [logoUploading, setLogoUploading] = useState(false);
+
+  // Persist every change so a refresh/close returns to the exact same place.
+  useEffect(() => {
+    if (step === "done") return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ step, general, advanced, features, numbering }));
+    } catch { /* ignore quota errors */ }
+  }, [step, general, advanced, features, numbering]);
+
+  async function resetAll() {
+    const ok = await confirm({
+      title: lang === "ar" ? "البدء من جديد؟" : "Start over?",
+      description: lang === "ar"
+        ? "هيتم مسح كل البيانات اللى دخلتها فى المعالج."
+        : "All data entered in the wizard will be cleared.",
+      confirmText: lang === "ar" ? "نعم، ابدأ من جديد" : "Yes, start over",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    clearDraft();
+    setStep("welcome");
+    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", website: "", logo_url: "" });
+    setAdvanced({
+      country: "Egypt", city: "", state: "", postal_code: "", address: "",
+      default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
+      base_currency: "EGP", fiscal_year_start: `${new Date().getFullYear()}-01-01`, fiscal_year_end: `${new Date().getFullYear()}-12-31`,
+      gm_name: "", purchasing_manager: "", sales_manager: "", finance_manager: "", notes: "",
+    });
+    setFeatures(DEFAULT_FEATURES);
+    setNumbering(DEFAULT_NUMBERING);
+  }
+
+
 
   const isAr = lang === "ar";
   const T = (ar: string, en: string) => (isAr ? ar : en);
