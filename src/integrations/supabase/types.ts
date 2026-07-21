@@ -1054,6 +1054,7 @@ export type Database = {
           id: string
           is_system: boolean
           location: string | null
+          management_id: string | null
           manager_id: string | null
           metadata: Json
           name: string
@@ -1078,6 +1079,7 @@ export type Database = {
           id?: string
           is_system?: boolean
           location?: string | null
+          management_id?: string | null
           manager_id?: string | null
           metadata?: Json
           name: string
@@ -1102,6 +1104,7 @@ export type Database = {
           id?: string
           is_system?: boolean
           location?: string | null
+          management_id?: string | null
           manager_id?: string | null
           metadata?: Json
           name?: string
@@ -1114,6 +1117,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "departments_management_id_fkey"
+            columns: ["management_id"]
+            isOneToOne: false
+            referencedRelation: "managements"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "departments_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -1125,6 +1135,175 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          employee_id: string
+          id: string
+          role_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          employee_id: string
+          id?: string
+          role_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          employee_id?: string
+          id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_roles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          branch_id: string | null
+          company_id: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          department_id: string | null
+          direct_manager_id: string | null
+          email: string | null
+          employee_code: string | null
+          employment_status: Database["public"]["Enums"]["employment_status"]
+          full_name: string
+          full_name_ar: string | null
+          full_name_en: string | null
+          id: string
+          joining_date: string | null
+          management_id: string | null
+          metadata: Json
+          national_id: string | null
+          notes: string | null
+          passport_no: string | null
+          phone: string | null
+          photo_url: string | null
+          position_id: string | null
+          signature_url: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          department_id?: string | null
+          direct_manager_id?: string | null
+          email?: string | null
+          employee_code?: string | null
+          employment_status?: Database["public"]["Enums"]["employment_status"]
+          full_name: string
+          full_name_ar?: string | null
+          full_name_en?: string | null
+          id?: string
+          joining_date?: string | null
+          management_id?: string | null
+          metadata?: Json
+          national_id?: string | null
+          notes?: string | null
+          passport_no?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          position_id?: string | null
+          signature_url?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          department_id?: string | null
+          direct_manager_id?: string | null
+          email?: string | null
+          employee_code?: string | null
+          employment_status?: Database["public"]["Enums"]["employment_status"]
+          full_name?: string
+          full_name_ar?: string | null
+          full_name_en?: string | null
+          id?: string
+          joining_date?: string | null
+          management_id?: string | null
+          metadata?: Json
+          national_id?: string | null
+          notes?: string | null
+          passport_no?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          position_id?: string | null
+          signature_url?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_direct_manager_id_fkey"
+            columns: ["direct_manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_management_id_fkey"
+            columns: ["management_id"]
+            isOneToOne: false
+            referencedRelation: "managements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "job_titles"
             referencedColumns: ["id"]
           },
         ]
@@ -1193,6 +1372,81 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      managements: {
+        Row: {
+          code: string | null
+          color: string | null
+          company_id: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          director_id: string | null
+          icon: string | null
+          id: string
+          is_system: boolean
+          metadata: Json
+          name: string
+          name_ar: string | null
+          name_en: string | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          color?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          director_id?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          metadata?: Json
+          name: string
+          name_ar?: string | null
+          name_en?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          color?: string | null
+          company_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          director_id?: string | null
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          metadata?: Json
+          name?: string
+          name_ar?: string | null
+          name_en?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "managements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "managements_director_id_fkey"
+            columns: ["director_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1627,6 +1881,82 @@ export type Database = {
             columns: ["workflow_template_id"]
             isOneToOne: false
             referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          color: string | null
+          company_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          name_ar: string | null
+          name_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -2146,6 +2476,12 @@ export type Database = {
         | "multiselect"
         | "bilingual_text"
       doc_notify_repeat: "none" | "daily" | "weekly" | "monthly"
+      employment_status:
+        | "active"
+        | "on_leave"
+        | "suspended"
+        | "terminated"
+        | "probation"
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -2329,6 +2665,13 @@ export const Constants = {
         "bilingual_text",
       ],
       doc_notify_repeat: ["none", "daily", "weekly", "monthly"],
+      employment_status: [
+        "active",
+        "on_leave",
+        "suspended",
+        "terminated",
+        "probation",
+      ],
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
