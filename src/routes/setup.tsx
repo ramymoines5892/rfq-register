@@ -1383,6 +1383,8 @@ function CompanyDocumentsSection({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (confirmDelete !== null) {
+                  const doc = documents[confirmDelete];
+                  if (doc?.storage_path) void deleteCompanyDocumentDraft(doc.storage_path);
                   setDocuments((prev) => prev.filter((_, idx) => idx !== confirmDelete));
                 }
                 setConfirmDelete(null);
