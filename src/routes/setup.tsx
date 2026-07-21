@@ -1234,17 +1234,19 @@ function StepAdvanced({ advanced, setAdvanced, T }: any) {
           </Select>
         </Field>
         <Field label={T("المنطقة الزمنية", "Time Zone")}>
-          <Select value={advanced.timezone ?? "Africa/Cairo"} onValueChange={(v) => set("timezone")(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Africa/Cairo">Africa/Cairo</SelectItem>
-              <SelectItem value="Europe/London">Europe/London</SelectItem>
-              <SelectItem value="Europe/Berlin">Europe/Berlin</SelectItem>
-              <SelectItem value="Asia/Riyadh">Asia/Riyadh</SelectItem>
-              <SelectItem value="Asia/Dubai">Asia/Dubai</SelectItem>
-              <SelectItem value="UTC">UTC</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            value={advanced.timezone ?? "Africa/Cairo"} onValueChange={(v) => set("timezone")(v)}
+            searchPlaceholder={T("ابحث…", "Search…")}
+            emptyText={T("لا توجد نتائج", "No results")}
+            options={[
+              { value: "Africa/Cairo", label: "Africa/Cairo" },
+              { value: "Europe/London", label: "Europe/London" },
+              { value: "Europe/Berlin", label: "Europe/Berlin" },
+              { value: "Asia/Riyadh", label: "Asia/Riyadh" },
+              { value: "Asia/Dubai", label: "Asia/Dubai" },
+              { value: "UTC", label: "UTC" },
+            ]}
+          />
         </Field>
         <Field label={T("صيغة التاريخ", "Date Format")}>
           <Select value={advanced.date_format ?? "DD/MM/YYYY"} onValueChange={(v) => set("date_format")(v)}>
