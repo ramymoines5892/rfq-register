@@ -90,12 +90,14 @@ function SettingsCompanyPage() {
       </div>
 
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="flex flex-wrap gap-1 h-auto p-1">
-          <TabsTrigger value="basic"><Building2 className="h-3.5 w-3.5 me-1" />{ar ? "أساسي" : "Basic"}</TabsTrigger>
+        <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/60">
+          <TabsTrigger value="basic"><Building2 className="h-3.5 w-3.5 me-1" />{ar ? "الأساسي" : "Basic"}</TabsTrigger>
           <TabsTrigger value="contact"><Settings className="h-3.5 w-3.5 me-1" />{ar ? "التواصل" : "Contact"}</TabsTrigger>
           <TabsTrigger value="advanced"><Settings className="h-3.5 w-3.5 me-1" />{ar ? "متقدم" : "Advanced"}</TabsTrigger>
           <TabsTrigger value="managers"><Building2 className="h-3.5 w-3.5 me-1" />{ar ? "المسؤولون" : "Managers"}</TabsTrigger>
+          <TabsTrigger value="documents"><FolderArchive className="h-3.5 w-3.5 me-1" />{ar ? "المستندات" : "Documents"}</TabsTrigger>
         </TabsList>
+
 
         {/* Basic */}
         <TabsContent value="basic" className="space-y-4 mt-4">
