@@ -308,11 +308,21 @@ function SetupPage() {
       }
     }
     if (s === 4) {
-      const seen = new Set<string>();
+      if (numbering.length === 0) return T("أضف نوع مستند واحد على الأقل", "Add at least one document type");
+      const seenType = new Set<string>();
+      const seenPrefix = new Set<string>();
       for (const row of numbering) {
-        if (!row.prefix.trim()) return T("كل مستند لازم يكون له بادئة", "Each doc needs a prefix");
-        if (seen.has(row.doc_type)) return T("نوع مستند مكرر", "Duplicate doc type");
-        seen.add(row.doc_type);
+        const type = row.doc_type.trim().toUpperCase();
+        const prefix = row.prefix.trim().toUpperCase();
+        if (!type) return T("النوع مطلوب", "Type code is required");
+        if (!/^[A-Z0-9_-]+$/.test(type)) return T("النوع لازم يكون إنجليزى", "Type code must be English letters/numbers");
+        if (!prefix) return T("كل مستند لازم يكون له بادئة", "Each doc needs a prefix");
+        if (!/^[A-Z0-9_-]+$/.test(prefix)) return T("البادئة لازم تكون إنجليزى", "Prefix must be English letters/numbers");
+        if (seenType.has(type)) return T(`نوع مستند مكرر: ${type}`, `Duplicate doc type: ${type}`);
+        if (seenPrefix.has(prefix)) return T(`بادئة مكررة: ${prefix}`, `Duplicate prefix: ${prefix}`);
+        if (row.padding < 1 || row.padding > 12) return T("خانات الرقم بين 1 و 12", "Padding must be 1–12");
+        seenType.add(type);
+        seenPrefix.add(prefix);
       }
     }
     return null;
