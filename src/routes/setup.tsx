@@ -365,52 +365,71 @@ function SetupPage() {
     );
   }
 
-  // ----------- WIZARD -----------
+  const stepErr = validateStep(currentIdx);
+  const canProceed = !stepErr;
+  const currentTab = tabs.find((t) => t.id === currentIdx);
   const staticProgress = typeof step === "number" ? (step / 4) * 100 : 0;
-  return (
-    <div className="min-h-screen bg-muted/30 py-6 md:py-10 px-3 sm:px-4" dir={dir}>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground grid place-items-center"><Gem className="h-5 w-5" /></div>
-          <div>
-            <div className="font-display font-bold">EEC ERP</div>
-            <div className="text-xs text-muted-foreground">{T("معالج إعداد الشركة", "Company Setup Wizard")}</div>
-          </div>
-        </div>
 
+  return (
+    <div className="min-h-screen bg-muted/30" dir={dir}>
+      {/* Sticky top bar */}
+      <div className="sticky top-0 z-30 bg-background/85 backdrop-blur-md border-b">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0">
+            <Gem className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-display font-bold text-sm sm:text-base leading-tight">EEC ERP</div>
+            <div className="text-[11px] text-muted-foreground truncate">{T("معالج إعداد الشركة", "Company Setup Wizard")}</div>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setLang(isAr ? "en" : "ar")} className="shrink-0">
+            {isAr ? "EN" : "AR"}
+          </Button>
+        </div>
+        {/* Slim progress line */}
+        <div className="h-1 bg-muted overflow-hidden">
+          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${staticProgress}%` }} />
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-5 md:py-8 space-y-5 md:space-y-6">
         {/* Stepper */}
-        <div className="bg-card border rounded-2xl p-3 sm:p-4 md:p-5">
-          <div className="flex items-center justify-between gap-1 sm:gap-2">
+        <nav aria-label={T("خطوات الإعداد", "Setup steps")} className="bg-card border rounded-2xl p-3 sm:p-4">
+          <ol className="flex items-center gap-1 sm:gap-2">
             {tabs.map((t, i) => {
               const active = t.id === currentIdx;
               const done = t.id < currentIdx;
               const Icon = t.icon;
               return (
-                <div key={t.id} className="flex-1 flex items-center min-w-0">
+                <li key={t.id} className="flex-1 flex items-center min-w-0">
                   <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-full grid place-items-center transition-all ${
-                      done ? "bg-primary text-primary-foreground" :
-                      active ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
+                    <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-full grid place-items-center transition-all shrink-0 ${
+                      done ? "bg-primary text-primary-foreground shadow-sm" :
+                      active ? "bg-primary text-primary-foreground ring-4 ring-primary/15 scale-110" :
                       "bg-muted text-muted-foreground"
                     }`}>
                       {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-4 w-4" />}
                     </div>
-                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[120px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`hidden sm:block text-[11px] md:text-xs font-medium truncate text-center max-w-[130px] ${active ? "text-foreground" : "text-muted-foreground"}`}>
                       {t.label}
                     </div>
                   </div>
-                  {i < tabs.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${done ? "bg-primary" : "bg-muted"}`} />}
-                </div>
+                  {i < tabs.length - 1 && (
+                    <div className={`h-0.5 flex-1 mx-1 rounded-full transition-colors ${done ? "bg-primary" : "bg-muted"}`} />
+                  )}
+                </li>
               );
             })}
+          </ol>
+          {/* Mobile-only current step label */}
+          <div className="sm:hidden mt-3 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{T("الخطوة", "Step")} {currentIdx}/4</span>
+            <span className="font-semibold text-foreground truncate ms-2">{currentTab?.label}</span>
           </div>
-          <div className="mt-4 h-1 bg-muted rounded overflow-hidden">
-            <div className="h-full bg-primary transition-all" style={{ width: `${staticProgress}%` }} />
-          </div>
-        </div>
+        </nav>
 
-        <Card>
-          <CardContent className="p-4 sm:p-6 md:p-8 space-y-6">
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-4 sm:p-6 md:p-8 lg:p-10 space-y-6 md:space-y-8">
             {step === 1 && (
               <StepGeneral
                 general={general} setGeneral={setGeneral}
@@ -433,28 +452,38 @@ function SetupPage() {
         </Card>
 
         {/* Nav */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={back} disabled={createMut.isPending}>
-              {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
-              {T("رجوع", "Back")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetAll} disabled={createMut.isPending} className="text-muted-foreground">
-              <RotateCcw className="h-3.5 w-3.5 me-1.5" />
-              {T("البدء من جديد", "Start over")}
-            </Button>
+        <div className="sticky bottom-0 -mx-3 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8 py-3 bg-background/85 backdrop-blur-md border-t">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={back} disabled={createMut.isPending} className="h-10">
+                {isAr ? <ArrowRight className="me-2 h-4 w-4" /> : <ArrowLeft className="me-2 h-4 w-4" />}
+                {T("رجوع", "Back")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={resetAll} disabled={createMut.isPending} className="text-muted-foreground hidden sm:inline-flex">
+                <RotateCcw className="h-3.5 w-3.5 me-1.5" />
+                {T("البدء من جديد", "Start over")}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {stepErr && showErrors && (
+                <div className="text-[11px] text-destructive flex items-center gap-1 max-w-[220px] truncate">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{stepErr}</span>
+                </div>
+              )}
+              {currentIdx < 4 ? (
+                <Button onClick={next} className="h-10 min-w-[110px]" disabled={createMut.isPending}>
+                  {T("التالي", "Next")}
+                  {isAr ? <ArrowLeft className="ms-2 h-4 w-4" /> : <ArrowRight className="ms-2 h-4 w-4" />}
+                </Button>
+              ) : (
+                <Button onClick={submit} disabled={createMut.isPending || !canProceed} className="h-10 min-w-[140px]">
+                  {createMut.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                  {T("إنشاء الشركة", "Create Company")}
+                </Button>
+              )}
+            </div>
           </div>
-          {currentIdx < 4 ? (
-            <Button onClick={next}>
-              {T("التالي", "Next")}
-              {isAr ? <ArrowLeft className="ms-2 h-4 w-4" /> : <ArrowRight className="ms-2 h-4 w-4" />}
-            </Button>
-          ) : (
-            <Button onClick={submit} disabled={createMut.isPending}>
-              {createMut.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              {T("إنشاء الشركة", "Create Company")}
-            </Button>
-          )}
         </div>
       </div>
     </div>
