@@ -175,22 +175,25 @@ function AuthenticatedLayout() {
   const LeafItem = ({ n, nested = false }: { n: NavLeaf; nested?: boolean }) => {
     const active = n.to && (n.match ? n.match(pathname) : pathname === n.to);
     const Icon = n.icon;
-    const base = `flex items-center gap-3 rounded-lg text-sm transition-all ${
-      collapsed ? "justify-center px-2 py-2" : `${nested ? "ps-9 pe-3" : "px-3"} py-2`
-    }`;
+    const label = ar ? n.labelAr : n.labelEn;
+
+    const collapsedBase = "flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] leading-tight text-center transition-all";
+    const expandedBase = `flex items-center gap-3 rounded-lg text-sm transition-all ${nested ? "ps-9 pe-3" : "px-3"} py-2`;
+    const base = collapsed ? collapsedBase : expandedBase;
+
     const stateClass = n.soon
-      ? "text-sidebar-foreground/40 cursor-pointer hover:text-sidebar-foreground/60"
+      ? "text-sidebar-foreground/40 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
       : active
         ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
         : "text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/50";
 
-    const label = ar ? n.labelAr : n.labelEn;
-
     if (n.soon || !n.to) {
       return (
-        <button type="button" onClick={soonToast} title={collapsed ? label : undefined} className={`${base} ${stateClass} w-full text-start`}>
+        <button type="button" onClick={soonToast} title={label} className={`${base} ${stateClass} w-full text-start`}>
           <Icon className="h-4 w-4 shrink-0" />
-          {!collapsed && (
+          {collapsed ? (
+            <span className="line-clamp-2 w-full break-words">{label}</span>
+          ) : (
             <>
               <span className="truncate flex-1">{label}</span>
               <span className="text-[9px] uppercase tracking-wide bg-sidebar-accent/50 text-sidebar-foreground/50 px-1.5 py-0.5 rounded">
@@ -203,12 +206,15 @@ function AuthenticatedLayout() {
     }
 
     return (
-      <Link to={n.to} title={collapsed ? label : undefined} className={`${base} ${stateClass}`}>
+      <Link to={n.to} title={label} className={`${base} ${stateClass}`}>
         <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span className="truncate">{label}</span>}
+        {collapsed
+          ? <span className="line-clamp-2 w-full break-words">{label}</span>
+          : <span className="truncate">{label}</span>}
       </Link>
     );
   };
+
 
   const GroupItem = ({ g }: { g: NavGroup }) => {
     const open = !!openGroups[g.id];
