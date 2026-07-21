@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Users, Workflow, LogOut, Languages, Gem, UsersRound, Building2, Settings2, Pin, PinOff } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -92,6 +93,7 @@ function AuthenticatedLayout() {
   });
 
   return (
+    <ThemeProvider>
     <div className="min-h-screen flex bg-background" dir={dir}>
       {/* Sidebar — always sticky, width controlled by pin only */}
       <aside
@@ -222,5 +224,6 @@ function AuthenticatedLayout() {
       </main>
       <GlobalSearch />
     </div>
+    </ThemeProvider>
   );
 }
