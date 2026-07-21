@@ -410,6 +410,7 @@ function SetupPage() {
                 onLogoFile={handleLogo} logoUploading={logoUploading}
                 completion={completion} weights={weights}
                 showErrors={showErrors}
+                documents={documents} setDocuments={setDocuments}
               />
             )}
             {step === 2 && <StepAdvanced advanced={advanced} setAdvanced={setAdvanced} T={T} />}
