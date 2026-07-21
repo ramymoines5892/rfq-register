@@ -24,6 +24,7 @@ export type CompanyGeneral = {
   phones?: ContactEntry[];
   mobiles?: ContactEntry[];
   faxes?: ContactEntry[];
+  websites?: ContactEntry[];
 };
 
 export function pickPrimary(list?: ContactEntry[] | null): string | null {
@@ -157,16 +158,19 @@ export async function createCompanyBundle(payload: CreateCompanyPayload) {
   const phones = sanitizeContacts(payload.general.phones);
   const mobiles = sanitizeContacts(payload.general.mobiles);
   const faxes = sanitizeContacts(payload.general.faxes);
+  const websites = sanitizeContacts(payload.general.websites);
   const generalRow = {
     ...payload.general,
     emails,
     phones,
     mobiles,
     faxes,
+    websites,
     email: pickPrimary(emails) ?? payload.general.email ?? null,
     phone: pickPrimary(phones) ?? payload.general.phone ?? null,
     mobile: pickPrimary(mobiles) ?? payload.general.mobile ?? null,
     fax: pickPrimary(faxes) ?? payload.general.fax ?? null,
+    website: pickPrimary(websites) ?? payload.general.website ?? null,
   };
   const { data: company, error: cErr } = await supabase
     .from("companies")

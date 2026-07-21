@@ -87,7 +87,8 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
   const primaryMobile = pickPrimary(g.mobiles) ?? g.mobile ?? "";
   const primaryPhone = pickPrimary(g.phones) ?? g.phone ?? "";
   const emailV = validateEmail(primaryEmail);
-  const webV = validateWebsite(g.website ?? "");
+  const primaryWebsite = pickPrimary(g.websites) ?? g.website ?? "";
+  const webV = validateWebsite(primaryWebsite);
   const mobileV = validateRule(primaryMobile, c.mobile);
   const phoneV = validateRule(primaryPhone, c.phone);
   return [
@@ -99,7 +100,7 @@ function computeGeneralWeights(g: CompanyGeneral, country: string, docsCount: nu
     { key: "email",   weight: 8,  filled: nz(primaryEmail), valid: nz(primaryEmail) && emailV.ok },
     { key: "docs",    weight: 13, filled: docsCount > 0,    valid: docsCount > 0 },
     { key: "phone",   weight: 4,  filled: nz(primaryPhone), valid: nz(primaryPhone) && phoneV.ok },
-    { key: "website", weight: 4,  filled: nz(g.website),    valid: nz(g.website) && webV.ok },
+    { key: "website", weight: 4,  filled: nz(primaryWebsite), valid: nz(primaryWebsite) && webV.ok },
     { key: "short",   weight: 4,  filled: nz(g.short_name), valid: nz(g.short_name) },
   ];
 }
@@ -118,7 +119,7 @@ function SetupPage() {
     name: "", name_ar: "", short_name: "", code: "",
     tax_no: "", cr_no: "", vat_no: "",
     email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "",
-    emails: [], phones: [], mobiles: [], faxes: [],
+    emails: [], phones: [], mobiles: [], faxes: [], websites: [],
   });
   const [advanced, setAdvanced] = useState<CompanyAdvanced>(d?.advanced ?? {
     country: "EG", city: "", state: "", postal_code: "", address: "",
@@ -159,7 +160,7 @@ function SetupPage() {
     clearDraft();
     setStep("welcome");
     setShowErrors(false);
-    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "", emails: [], phones: [], mobiles: [], faxes: [] });
+    setGeneral({ name: "", name_ar: "", short_name: "", code: "", tax_no: "", cr_no: "", vat_no: "", email: "", phone: "", mobile: "", fax: "", website: "", logo_url: "", emails: [], phones: [], mobiles: [], faxes: [], websites: [] });
     setAdvanced({
       country: "EG", city: "", state: "", postal_code: "", address: "",
       default_language: "ar", timezone: "Africa/Cairo", date_format: "DD/MM/YYYY", number_format: "#,##0.00",
@@ -221,8 +222,11 @@ function SetupPage() {
         const r = validateRule(v, c.phone);
         if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
       }
-      const webR = validateWebsite(general.website ?? "");
-      if (!webR.ok) return isAr ? webR.error!.ar : webR.error!.en;
+      const allWebsites = [...(general.websites ?? []).map((e) => e.value), general.website ?? ""].filter(Boolean);
+      for (const v of allWebsites) {
+        const r = validateWebsite(v);
+        if (!r.ok) return isAr ? r.error!.ar : r.error!.en;
+      }
     }
     if (s === 4) {
       const seen = new Set<string>();
@@ -576,6 +580,13 @@ function MultiContactField({
     if (!next.some((e) => e.is_primary)) next[0].is_primary = true;
     onChange(next);
   };
+  // Blocked when any existing entry is empty or fails validation.
+  const anyInvalid = list.some((e) => {
+    const v = (e.value ?? "").trim();
+    if (!v) return true;
+    if (!validate) return false;
+    return !validate(v).ok;
+  });
   const remove = (idx: number) => {
     const next = list.filter((_, i) => i !== idx);
     if (next.length && !next.some((e) => e.is_primary)) next[0].is_primary = true;
@@ -589,8 +600,16 @@ function MultiContactField({
       </Label>
       <div className="space-y-2">
         {list.map((entry, idx) => {
-          const v = validate?.(entry.value);
-          const error = showErrors && entry.value && v && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
+          const trimmed = (entry.value ?? "").trim();
+          const v = trimmed ? validate?.(trimmed) : undefined;
+          // Show empty-error when there's more than one entry — prevents the
+          // cheat: fill first → add another → clear the first.
+          let error: string | undefined;
+          if (!trimmed && list.length > 1) {
+            error = T("لازم تملأ ده أو تحذفه", "Fill this or remove it");
+          } else if (v && !v.ok && (trimmed || showErrors)) {
+            error = isAr ? v.error?.ar : v.error?.en;
+          }
           return (
             <div key={idx} className="space-y-1">
               <div className="flex items-center gap-1.5">
@@ -611,7 +630,7 @@ function MultiContactField({
                   value={entry.value}
                   onChange={(e) => update(idx, { value: format ? format(e.target.value) : e.target.value })}
                   placeholder={placeholder}
-                  className="flex-1"
+                  className={`flex-1 ${error ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
                 />
                 <Input
                   value={entry.label ?? ""}
@@ -641,7 +660,9 @@ function MultiContactField({
         <button
           type="button"
           onClick={add}
-          className="text-xs text-primary hover:underline flex items-center gap-1"
+          disabled={anyInvalid}
+          title={anyInvalid ? T("املأ القيمة السابقة أولاً", "Fill the previous entry first") : undefined}
+          className="text-xs text-primary hover:underline flex items-center gap-1 disabled:text-muted-foreground disabled:hover:no-underline disabled:cursor-not-allowed"
         >
           <Plus className="h-3.5 w-3.5" />
           {T("إضافة", "Add another")}
@@ -677,7 +698,7 @@ function StepGeneral({
   const set = <K extends keyof CompanyGeneral>(k: K) => (v: CompanyGeneral[K]) => setGeneral((g) => ({ ...g, [k]: v }));
 
   // Live validations
-  const webV = validateWebsite(general.website ?? "");
+  
 
   const err = (v: FieldValidation, forceShow = false) =>
     (showErrors || forceShow) && !v.ok ? (isAr ? v.error?.ar : v.error?.en) : undefined;
@@ -819,13 +840,14 @@ function StepGeneral({
             format={(v) => (c.phone ? applyMask(v, c.phone) : v)}
             isAr={isAr} T={T} showErrors={showErrors} inputMode="tel"
           />
-          <SmartField
+          <MultiContactField
             label={T("الموقع الإلكتروني", "Website")} icon={Globe}
-            hint={T("اختيارى — لازم يكون رابط صحيح", "Optional — must be a valid URL")}
-            error={err(webV)}
-          >
-            <Input dir="ltr" className="h-11" value={general.website ?? ""} onChange={(e) => set("website")(e.target.value)} placeholder="https://company.com" />
-          </SmartField>
+            values={general.websites ?? []} onChange={(list) => set("websites")(list)}
+            placeholder="https://company.com"
+            hint={T("ممكن تضيف أكتر من موقع — النجمة للأساسى", "You can add multiple sites — star = primary")}
+            validate={validateWebsite}
+            isAr={isAr} T={T} showErrors={showErrors}
+          />
         </div>
       </section>
 
@@ -1161,8 +1183,14 @@ function DocumentsDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isCustom, setIsCustom] = useState(false);
 
-  // Auto-focus first input when dialog opens
+  // Auto-focus the first field (document type) whenever the dialog opens
+  // or after a document is added/edited so the user can chain entries fast.
   const firstInputRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => firstInputRef.current?.focus(), 80);
+    return () => clearTimeout(t);
+  }, [open, editingIndex]);
 
   function resetForm() {
     setForm(emptyForm);
@@ -1258,7 +1286,7 @@ function DocumentsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto" dir={isAr ? "rtl" : "ltr"}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-5" dir={isAr ? "rtl" : "ltr"}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-primary" />
@@ -1312,116 +1340,106 @@ function DocumentsDialog({
             {editingIndex !== null ? T("تعديل مستند", "Edit document") : T("إضافة مستند جديد", "Add a new document")}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
-              <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
-                <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
-                <SelectContent>
-                  {DOC_PRESETS.map((p) => (
-                    <SelectItem
-                      key={p.code}
-                      value={p.code}
-                      disabled={usedCodes.has(p.code)}
-                    >
-                      {isAr ? p.name_ar : p.name_en}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="text-[11px] text-muted-foreground">
-                {T("تقدر تضيف أنواع أكتر لاحقًا من الإعدادات › أنواع مستندات الشركة.",
-                   "You can add more types later from Settings › Company Document Types.")}
-              </div>
-            </div>
-
-            {isCustom ? (
+          <div className="space-y-4">
+            {/* Group 1 — What is it? */}
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
-                <Input
-                  value={form.customName ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
-                  placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
-                  autoFocus
-                />
+                <Label className="text-sm">{T("نوع المستند", "Document type")} <span className="text-destructive">*</span></Label>
+                <Select value={isCustom ? "__custom__" : form.code} onValueChange={pickPreset}>
+                  <SelectTrigger ref={firstInputRef}><SelectValue placeholder={T("اختر نوع", "Choose type")} /></SelectTrigger>
+                  <SelectContent>
+                    {DOC_PRESETS.map((p) => (
+                      <SelectItem
+                        key={p.code}
+                        value={p.code}
+                        disabled={usedCodes.has(p.code)}
+                      >
+                        {isAr ? p.name_ar : p.name_en}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__custom__">{T("نوع مخصص…", "Custom type…")}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="space-y-1.5">
-                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
-                <Input
-                  dir="ltr"
-                  value={form.doc_number ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
-                  placeholder={T("اختيارى", "Optional")}
-                />
-              </div>
-            )}
 
-            {isCustom && (
-              <div className="space-y-1.5">
-                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
-                <Input
-                  dir="ltr"
-                  value={form.doc_number ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
-                  placeholder={T("اختيارى", "Optional")}
-                />
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
-              <Input
-                type="date"
-                value={form.issue_date ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
-              />
-              <div className="text-[11px] text-muted-foreground">{T("اختيارى", "Optional")}</div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}</Label>
-              <Input
-                type="date"
-                value={form.expiry_date ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
-              />
-              <div className="text-[11px] text-muted-foreground">
-                {T("اختيارى — لو محددته هيوصلك تنبيه قبل الانتهاء.",
-                   "Optional — if set you'll get an alert before expiry.")}
-              </div>
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
-              <Input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  setForm((prev) => ({ ...prev, file: f }));
-                }}
-              />
-              {form.file && (
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                  <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
+              {isCustom && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">{T("اسم المستند", "Document name")} <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={form.customName ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, customName: e.target.value }))}
+                    placeholder={T("مثال: شهادة الجودة ISO", "e.g. ISO Quality Certificate")}
+                    autoFocus
+                  />
                 </div>
               )}
-              <div className="text-[11px] text-muted-foreground">
-                {T("الملف مش هيترفع دلوقتى — هيترفع بس لما تنهى الإعداد وتحفظ الشركة.",
-                   "The file will not upload now — it uploads only when you finalize the setup wizard.")}
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("رقم المستند", "Document number")}</Label>
+                <Input
+                  dir="ltr"
+                  value={form.doc_number ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, doc_number: e.target.value }))}
+                  placeholder={T("اختيارى", "Optional")}
+                />
               </div>
             </div>
 
-            <div className="space-y-1.5 md:col-span-2">
-              <Label className="text-sm">{T("ملاحظات", "Notes")}</Label>
-              <Textarea
-                rows={2}
-                value={form.notes ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder={T("اختيارى", "Optional")}
-              />
+            {/* Group 2 — Validity dates */}
+            <div className="grid grid-cols-2 gap-3 pt-1 border-t">
+              <div className="space-y-1.5 pt-3">
+                <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الإصدار", "Issue date")}</Label>
+                <Input
+                  type="date"
+                  value={form.issue_date ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, issue_date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5 pt-3">
+                <Label className="text-sm flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{T("تاريخ الانتهاء", "Expiry date")}</Label>
+                <Input
+                  type="date"
+                  value={form.expiry_date ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, expiry_date: e.target.value }))}
+                />
+              </div>
+              <div className="col-span-2 text-[11px] text-muted-foreground -mt-1">
+                {T("لو حددت تاريخ انتهاء هيوصلك تنبيه قبله.", "Set an expiry to receive alerts before it.")}
+              </div>
+            </div>
+
+            {/* Group 3 — File + notes */}
+            <div className="space-y-3 pt-3 border-t">
+              <div className="space-y-1.5">
+                <Label className="text-sm flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" />{T("رفع المستند", "Upload file")}</Label>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setForm((prev) => ({ ...prev, file: f }));
+                  }}
+                />
+                {form.file ? (
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" />{form.file.name} · {(form.file.size / 1024).toFixed(1)} KB
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-muted-foreground">
+                    {T("الملف بيترفع بس عند حفظ الإعداد النهائى.", "File uploads only when you finish the setup wizard.")}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm">{T("ملاحظات", "Notes")}</Label>
+                <Textarea
+                  rows={2}
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  placeholder={T("اختيارى", "Optional")}
+                />
+              </div>
             </div>
           </div>
 
