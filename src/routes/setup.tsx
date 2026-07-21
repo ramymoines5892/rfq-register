@@ -33,7 +33,9 @@ type Draft = {
   features: CompanyFeatures;
   numbering: NumberingRow[];
   documents: PersistedDoc[];
+  logo?: { name: string; type: string; dataUrl: string } | null;
 };
+
 
 function loadDraft(): Draft | null {
   if (typeof window === "undefined") return null;
@@ -136,12 +138,28 @@ function SetupPage() {
     (d?.documents ?? []).map((pd) => ({ ...pd, file: null } as SetupDocument)),
   );
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(() => {
+    const lg = d?.logo;
+    if (!lg?.dataUrl) return null;
+    try {
+      const [meta, b64] = lg.dataUrl.split(",");
+      const mime = /data:(.*?);base64/.exec(meta)?.[1] ?? lg.type;
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new File([arr], lg.name, { type: mime });
+    } catch { return null; }
+  });
+  const [logoPreview, setLogoPreview] = useState<string | null>(d?.logo?.dataUrl ?? null);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(d?.logo?.dataUrl ?? null);
   useEffect(() => {
-    if (!logoFile) { setLogoPreview(null); return; }
+    if (!logoFile) { setLogoPreview(null); setLogoDataUrl(null); return; }
     const url = URL.createObjectURL(logoFile);
     setLogoPreview(url);
+    // Also read as data URL so the pick survives reloads / step navigation persistence.
+    const reader = new FileReader();
+    reader.onload = () => { if (typeof reader.result === "string") setLogoDataUrl(reader.result); };
+    reader.readAsDataURL(logoFile);
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
   const [showErrors, setShowErrors] = useState(false);
@@ -153,12 +171,16 @@ function SetupPage() {
         const { file, ...rest } = doc;
         return { ...rest, file_name: file?.name ?? null };
       });
+      const logo = logoFile && logoDataUrl
+        ? { name: logoFile.name, type: logoFile.type, dataUrl: logoDataUrl }
+        : null;
       localStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs }),
+        JSON.stringify({ step, general, advanced, features, numbering, documents: persistedDocs, logo }),
       );
-    } catch { /* ignore */ }
-  }, [step, general, advanced, features, numbering, documents]);
+    } catch { /* ignore — likely quota exceeded */ }
+  }, [step, general, advanced, features, numbering, documents, logoFile, logoDataUrl]);
+
 
   async function resetAll() {
     const ok = await confirm({
@@ -181,6 +203,8 @@ function SetupPage() {
     setFeatures(DEFAULT_FEATURES);
     setNumbering(DEFAULT_NUMBERING);
     setDocuments([]);
+    setLogoFile(null);
+
   }
 
   const isAr = lang === "ar";
