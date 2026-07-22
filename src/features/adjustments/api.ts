@@ -1,6 +1,13 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as _supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/features/_shared/queryKeys";
+
+// Cast to loose type: tables are new; generated types will catch up on next regen.
+const supabase = _supabase as unknown as {
+  from: (table: string) => any;
+  rpc: (fn: string, args?: Record<string, unknown>) => any;
+  auth: typeof _supabase.auth;
+};
 
 export type AdjReason = "count" | "damage" | "loss" | "found" | "correction" | "other";
 export type AdjStatus = "draft" | "pending_approval" | "approved" | "posted" | "rejected" | "cancelled";
