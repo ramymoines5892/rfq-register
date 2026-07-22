@@ -66,5 +66,12 @@ export const qk = {
     history: (typeId: string) => ["companyDocs", "history", typeId] as const,
     files: (docId: string) => ["companyDocs", "files", docId] as const,
   },
+  branches: {
+    all: ["branches"] as const,
+    list: () => ["branches", "list"] as const,
+    detail: (id: string) => ["branches", "detail", id] as const,
+    users: (branchId: string) => ["branches", "users", branchId] as const,
+  },
 
 } as const;
+
