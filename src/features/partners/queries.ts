@@ -8,7 +8,20 @@ const key = {
   contacts: (id: string) => ["partners", id, "contacts"] as const,
   addresses: (id: string) => ["partners", id, "addresses"] as const,
   banks: (id: string) => ["partners", id, "banks"] as const,
+  audit: (id: string) => ["partners", id, "audit"] as const,
+  related: (id: string) => ["partners", id, "related"] as const,
 };
+
+export function usePartnerAudit(id: string | null) {
+  return useQuery({ queryKey: key.audit(id ?? ""), queryFn: () => api.listPartnerAudit(id!), enabled: !!id });
+}
+export function usePartnerRelated(p: api.BusinessPartner | null | undefined) {
+  return useQuery({
+    queryKey: key.related(p?.id ?? ""),
+    queryFn: () => api.listRelatedDocuments(p!),
+    enabled: !!p?.id,
+  });
+}
 
 export function usePartners(role?: PartnerRole, search?: string) {
   return useQuery({ queryKey: key.list(role, search), queryFn: () => api.listPartners(role, search), staleTime: 15_000 });

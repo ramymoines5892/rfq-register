@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, Users, Building2, Factory, Ship, ShieldCheck, Truck, Landmark, Umbrella, Handshake } from "lucide-react";
+import {
+  Plus, Search, Trash2, Users, Building2, Factory, Ship, ShieldCheck, Truck,
+  Landmark, Umbrella, Handshake, Info, Bookmark, BookmarkPlus, X, FileText, History,
+  ChevronDown, ChevronUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScriptInput } from "@/components/ScriptInput";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -19,8 +24,10 @@ import {
   usePartnerContacts, useUpsertContact, useDeleteContact,
   usePartnerAddresses, useUpsertAddress, useDeleteAddress,
   usePartnerBanks, useUpsertBank, useDeleteBank,
+  usePartnerAudit, usePartnerRelated,
 } from "@/features/partners/queries";
 import { PARTNER_ROLES, type PartnerRole, type BusinessPartner } from "@/features/partners/api";
+import { requiredFieldsFor, validatePartner } from "@/features/partners/rules";
 
 export const Route = createFileRoute("/_authenticated/partners")({
   head: () => ({
@@ -41,27 +48,54 @@ const ROLE_ICON: Record<PartnerRole, any> = {
   inspection: ShieldCheck, shipping: Truck, bank: Landmark, insurance: Umbrella, agent: Handshake,
 };
 
+type AdvFilters = { name: string; tax_id: string; industry: string; address: string };
+type SavedFilter = { name: string; role: PartnerRole | "all"; adv: AdvFilters };
+const SAVED_KEY = "partners:savedFilters:v1";
+const EMPTY_ADV: AdvFilters = { name: "", tax_id: "", industry: "", address: "" };
+
 function PartnersPage() {
   const { t, lang } = useI18n();
   const ar = lang === "ar";
   const [role, setRole] = useState<PartnerRole | "all">("all");
   const [search, setSearch] = useState("");
+  const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
+  const [showAdv, setShowAdv] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [saved, setSaved] = useState<SavedFilter[]>(() => {
+    try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch { return []; }
+  });
 
   const { data: rows = [], isLoading } = usePartners(role === "all" ? undefined : role, search);
   const upsert = useUpsertPartner();
   const del = useDeletePartner();
+
+  // Client-side advanced filter overlay
+  const filtered = useMemo(() => {
+    const norm = (v?: string | null) => (v ?? "").toString().toLowerCase();
+    return rows.filter((p) => {
+      if (adv.name && !`${norm(p.name_ar)} ${norm(p.name_en)} ${norm(p.legal_name)}`.includes(adv.name.toLowerCase())) return false;
+      if (adv.tax_id && !norm(p.tax_id).includes(adv.tax_id.toLowerCase())) return false;
+      if (adv.industry && !norm(p.industry).includes(adv.industry.toLowerCase())) return false;
+      if (adv.address && !`${norm(p.address)} ${norm(p.city)} ${norm(p.country)}`.includes(adv.address.toLowerCase())) return false;
+      return true;
+    });
+  }, [rows, adv]);
 
   const roleTabs = useMemo(() => [
     { value: "all" as const, ar: "الكل", en: "All", icon: Building2 },
     ...PARTNER_ROLES.map((r) => ({ value: r.value, ar: r.ar, en: r.en, icon: ROLE_ICON[r.value] })),
   ], []);
 
+  useEffect(() => { try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved)); } catch {} }, [saved]);
+
   async function handleCreate() {
     try {
-      const p = await upsert.mutateAsync({ name_ar: ar ? "شريك جديد" : null, name_en: ar ? null : "New Partner", roles: role === "all" ? ["customer"] : [role] });
-      setOpenId(p.id); setCreating(false);
+      const p = await upsert.mutateAsync({
+        name_ar: ar ? "شريك جديد" : null,
+        name_en: ar ? null : "New Partner",
+        roles: role === "all" ? ["customer"] : [role],
+      });
+      setOpenId(p.id);
       toast.success(ar ? "تم الإنشاء" : "Created");
     } catch (e: any) {
       toast.error(e?.message ?? (ar ? "تعذّر الإنشاء" : "Create failed"));
@@ -74,58 +108,104 @@ function PartnersPage() {
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
 
+  function saveCurrentFilter() {
+    const name = prompt(ar ? "اسم الفلتر:" : "Filter name:");
+    if (!name) return;
+    setSaved((s) => [...s.filter((x) => x.name !== name), { name, role, adv }]);
+    toast.success(ar ? "تم الحفظ" : "Saved");
+  }
+  function applyFilter(f: SavedFilter) { setRole(f.role); setAdv(f.adv); setShowAdv(true); }
+  function removeFilter(name: string) { setSaved((s) => s.filter((x) => x.name !== name)); }
+
+  const hasAdv = Object.values(adv).some(Boolean);
+
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{ar ? "شركاء الأعمال" : "Business Partners"}</h1>
-          <p className="text-sm text-muted-foreground">{ar ? "إدارة موحّدة للعملاء والموردين وباقي الأطراف" : "Unified partners across the enterprise"}</p>
+    <TooltipProvider delayDuration={200}>
+      <div className="p-4 md:p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">{ar ? "شركاء الأعمال" : "Business Partners"}</h1>
+            <p className="text-sm text-muted-foreground">{ar ? "إدارة موحّدة للعملاء والموردين وباقي الأطراف" : "Unified partners across the enterprise"}</p>
+          </div>
+          <Button onClick={handleCreate} disabled={upsert.isPending}>
+            <Plus className="h-4 w-4 me-2" />{ar ? "شريك جديد" : "New Partner"}
+          </Button>
         </div>
-        <Button onClick={handleCreate} disabled={upsert.isPending}>
-          <Plus className="h-4 w-4 me-2" />{ar ? "شريك جديد" : "New Partner"}
-        </Button>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="ps-8" placeholder={ar ? "بحث بالاسم/الكود/الرقم الضريبي…" : "Search by name / code / tax id…"} value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input className="ps-8" placeholder={ar ? "بحث سريع بالاسم/الكود/الرقم الضريبي…" : "Quick search…"} value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Button variant={showAdv || hasAdv ? "default" : "outline"} size="sm" onClick={() => setShowAdv((v) => !v)}>
+            {showAdv ? <ChevronUp className="h-4 w-4 me-1" /> : <ChevronDown className="h-4 w-4 me-1" />}
+            {ar ? "بحث متقدّم" : "Advanced"}
+            {hasAdv && <Badge variant="secondary" className="ms-2">{Object.values(adv).filter(Boolean).length}</Badge>}
+          </Button>
+          <Button variant="outline" size="sm" onClick={saveCurrentFilter} disabled={!hasAdv && role === "all"}>
+            <BookmarkPlus className="h-4 w-4 me-1" />{ar ? "حفظ الفلتر" : "Save filter"}
+          </Button>
         </div>
+
+        {showAdv && (
+          <Card><CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <Input placeholder={ar ? "الاسم" : "Name"} value={adv.name} onChange={(e) => setAdv({ ...adv, name: e.target.value })} />
+            <Input placeholder={ar ? "الرقم الضريبي" : "Tax ID"} value={adv.tax_id} onChange={(e) => setAdv({ ...adv, tax_id: e.target.value })} />
+            <Input placeholder={ar ? "المجال / الصناعة" : "Industry"} value={adv.industry} onChange={(e) => setAdv({ ...adv, industry: e.target.value })} />
+            <Input placeholder={ar ? "العنوان / المدينة / الدولة" : "Address / City / Country"} value={adv.address} onChange={(e) => setAdv({ ...adv, address: e.target.value })} />
+            {hasAdv && (
+              <Button variant="ghost" size="sm" className="justify-start" onClick={() => setAdv(EMPTY_ADV)}>
+                <X className="h-4 w-4 me-1" />{ar ? "مسح الفلاتر" : "Clear filters"}
+              </Button>
+            )}
+          </CardContent></Card>
+        )}
+
+        {saved.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {saved.map((f) => (
+              <Badge key={f.name} variant="outline" className="cursor-pointer gap-1 py-1" onClick={() => applyFilter(f)}>
+                <Bookmark className="h-3 w-3" />{f.name}
+                <button className="ms-1 hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeFilter(f.name); }}>
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        <Tabs value={role} onValueChange={(v) => setRole(v as PartnerRole | "all")}>
+          <TabsList className="flex flex-wrap h-auto">
+            {roleTabs.map((r) => {
+              const Icon = r.icon;
+              return (
+                <TabsTrigger key={r.value} value={r.value} className="gap-1.5">
+                  <Icon className="h-3.5 w-3.5" /> {ar ? r.ar : r.en}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          <TabsContent value={role} className="mt-4">
+            {isLoading ? (
+              <div className="text-center text-muted-foreground py-10">{t("loading") ?? "…"}</div>
+            ) : filtered.length === 0 ? (
+              <Card><CardContent className="py-10 text-center text-muted-foreground">
+                {ar ? "لا توجد نتائج" : "No results"}
+              </CardContent></Card>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.map((p) => (
+                  <PartnerCard key={p.id} p={p} onOpen={() => setOpenId(p.id)} onDelete={() => handleDelete(p.id)} ar={ar} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        <PartnerSheet id={openId} onClose={() => setOpenId(null)} />
       </div>
-
-      <Tabs value={role} onValueChange={(v) => setRole(v as PartnerRole | "all")}>
-        <TabsList className="flex flex-wrap h-auto">
-          {roleTabs.map((r) => {
-            const Icon = r.icon;
-            return (
-              <TabsTrigger key={r.value} value={r.value} className="gap-1.5">
-                <Icon className="h-3.5 w-3.5" /> {ar ? r.ar : r.en}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        <TabsContent value={role} className="mt-4">
-          {isLoading ? (
-            <div className="text-center text-muted-foreground py-10">{t("loading") ?? "…"}</div>
-          ) : rows.length === 0 ? (
-            <Card><CardContent className="py-10 text-center text-muted-foreground">
-              {ar ? "لا يوجد شركاء بعد" : "No partners yet"}
-            </CardContent></Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((p) => (
-                <PartnerCard key={p.id} p={p} onOpen={() => setOpenId(p.id)} onDelete={() => handleDelete(p.id)} ar={ar} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      <PartnerSheet id={openId} onClose={() => setOpenId(null)} />
-      {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
-      {creating}
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -151,6 +231,7 @@ function PartnerCard({ p, onOpen, onDelete, ar }: { p: BusinessPartner; onOpen: 
         </div>
         <div className="text-xs text-muted-foreground space-y-0.5">
           {p.tax_id && <div>#{p.tax_id}</div>}
+          {p.industry && <div className="truncate">{p.industry}</div>}
           {p.email && <div className="truncate">{p.email}</div>}
           {p.phone && <div>{p.phone}</div>}
         </div>
@@ -167,10 +248,18 @@ function PartnerSheet({ id, onClose }: { id: string | null; onClose: () => void 
   const [form, setForm] = useState<Partial<BusinessPartner>>({});
   const merged = { ...partner, ...form } as BusinessPartner;
 
+  const errors = useMemo(() => partner ? validatePartner(merged, ar) : [], [merged, partner, ar]);
+  const errorMap = useMemo(() => Object.fromEntries(errors.map((e) => [e.field, e.message])), [errors]);
+  const requiredSet = useMemo(() => new Set(requiredFieldsFor((merged.roles ?? []) as PartnerRole[]).map((r) => String(r.field))), [merged.roles]);
+
   function set<K extends keyof BusinessPartner>(k: K, v: BusinessPartner[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function save() {
     if (!id) return;
+    if (errors.length > 0) {
+      toast.error(ar ? `يوجد ${errors.length} حقل مطلوب` : `${errors.length} required field(s)`);
+      return;
+    }
     try { await upsert.mutateAsync({ ...form, id }); setForm({}); toast.success(ar ? "تم الحفظ" : "Saved"); }
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
@@ -179,24 +268,31 @@ function PartnerSheet({ id, onClose }: { id: string | null; onClose: () => void 
     <Sheet open={!!id} onOpenChange={(o) => { if (!o) { setForm({}); onClose(); } }}>
       <SheetContent side={ar ? "left" : "right"} className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>{ar ? "تفاصيل الشريك" : "Partner Details"}</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            {ar ? "تفاصيل الشريك" : "Partner Details"}
+            {errors.length > 0 && (
+              <Badge variant="destructive" className="text-[10px]">{errors.length} {ar ? "تنبيه" : "issues"}</Badge>
+            )}
+          </SheetTitle>
         </SheetHeader>
 
         {!partner ? <div className="py-10 text-center text-muted-foreground">…</div> : (
           <Tabs defaultValue="general" className="mt-4">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-6">
               <TabsTrigger value="general">{ar ? "عام" : "General"}</TabsTrigger>
-              <TabsTrigger value="contacts">{ar ? "جهات اتصال" : "Contacts"}</TabsTrigger>
-              <TabsTrigger value="addresses">{ar ? "العناوين" : "Addresses"}</TabsTrigger>
+              <TabsTrigger value="contacts">{ar ? "اتصال" : "Contacts"}</TabsTrigger>
+              <TabsTrigger value="addresses">{ar ? "عناوين" : "Addr."}</TabsTrigger>
               <TabsTrigger value="banks">{ar ? "بنوك" : "Banks"}</TabsTrigger>
+              <TabsTrigger value="docs">{ar ? "مستندات" : "Docs"}</TabsTrigger>
+              <TabsTrigger value="audit">{ar ? "التدقيق" : "Audit"}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-3">
-                <Field label={ar ? "كود" : "Code"}>
+                <RField label={ar ? "كود" : "Code"} name="code" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.code ?? ""} onChange={(e) => set("code", e.target.value)} />
-                </Field>
-                <Field label={ar ? "الحالة" : "Status"}>
+                </RField>
+                <RField label={ar ? "الحالة" : "Status"} name="status" errorMap={errorMap} requiredSet={requiredSet}>
                   <Select value={merged.status ?? "active"} onValueChange={(v) => set("status", v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -205,16 +301,16 @@ function PartnerSheet({ id, onClose }: { id: string | null; onClose: () => void 
                       <SelectItem value="blocked">{ar ? "محظور" : "Blocked"}</SelectItem>
                     </SelectContent>
                   </Select>
-                </Field>
-                <Field label={ar ? "الاسم (عربي)" : "Name (Arabic)"}>
+                </RField>
+                <RField label={ar ? "الاسم (عربي)" : "Name (Arabic)"} name="name_ar" errorMap={errorMap} requiredSet={requiredSet}>
                   <ScriptInput script="ar" value={merged.name_ar ?? ""} onChange={(v) => set("name_ar", v)} />
-                </Field>
-                <Field label={ar ? "الاسم (إنجليزي)" : "Name (English)"}>
+                </RField>
+                <RField label={ar ? "الاسم (إنجليزي)" : "Name (English)"} name="name_en" errorMap={errorMap} requiredSet={requiredSet}>
                   <ScriptInput script="en" value={merged.name_en ?? ""} onChange={(v) => set("name_en", v)} />
-                </Field>
-                <Field label={ar ? "الاسم القانوني" : "Legal Name"} className="col-span-2">
+                </RField>
+                <RField label={ar ? "الاسم القانوني" : "Legal Name"} name="legal_name" className="col-span-2" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value)} />
-                </Field>
+                </RField>
               </div>
 
               <div>
@@ -234,63 +330,70 @@ function PartnerSheet({ id, onClose }: { id: string | null; onClose: () => void 
                     );
                   })}
                 </div>
+                {requiredSet.size > 0 && (
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    {ar ? "حقول إلزامية حسب الأدوار المحددة معروضة بنجمة *" : "Required fields per selected roles are marked with *"}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label={ar ? "الرقم الضريبي" : "Tax ID"}>
+                <RField label={ar ? "الرقم الضريبي" : "Tax ID"} name="tax_id" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.tax_id ?? ""} onChange={(e) => set("tax_id", e.target.value)} />
-                </Field>
-                <Field label={ar ? "السجل التجاري" : "Commercial Reg."}>
+                </RField>
+                <RField label={ar ? "السجل التجاري" : "Commercial Reg."} name="commercial_reg" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.commercial_reg ?? ""} onChange={(e) => set("commercial_reg", e.target.value)} />
-                </Field>
-                <Field label={ar ? "البريد" : "Email"}>
+                </RField>
+                <RField label={ar ? "البريد" : "Email"} name="email" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input type="email" value={merged.email ?? ""} onChange={(e) => set("email", e.target.value)} />
-                </Field>
-                <Field label={ar ? "الموقع" : "Website"}>
+                </RField>
+                <RField label={ar ? "الموقع" : "Website"} name="website" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.website ?? ""} onChange={(e) => set("website", e.target.value)} />
-                </Field>
-                <Field label={ar ? "الموبايل" : "Mobile"}>
+                </RField>
+                <RField label={ar ? "الموبايل" : "Mobile"} name="mobile" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.mobile ?? ""} onChange={(e) => set("mobile", e.target.value)} />
-                </Field>
-                <Field label={ar ? "أرضي" : "Phone"}>
+                </RField>
+                <RField label={ar ? "أرضي" : "Phone"} name="phone" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
-                </Field>
-                <Field label={ar ? "فاكس" : "Fax"}>
+                </RField>
+                <RField label={ar ? "فاكس" : "Fax"} name="fax" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.fax ?? ""} onChange={(e) => set("fax", e.target.value)} />
-                </Field>
-                <Field label={ar ? "الصناعة" : "Industry"}>
+                </RField>
+                <RField label={ar ? "الصناعة" : "Industry"} name="industry" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.industry ?? ""} onChange={(e) => set("industry", e.target.value)} />
-                </Field>
-                <Field label={ar ? "البلد" : "Country"}>
+                </RField>
+                <RField label={ar ? "البلد" : "Country"} name="country" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.country ?? ""} onChange={(e) => set("country", e.target.value)} />
-                </Field>
-                <Field label={ar ? "المدينة" : "City"}>
+                </RField>
+                <RField label={ar ? "المدينة" : "City"} name="city" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.city ?? ""} onChange={(e) => set("city", e.target.value)} />
-                </Field>
-                <Field label={ar ? "العنوان" : "Address"} className="col-span-2">
+                </RField>
+                <RField label={ar ? "العنوان" : "Address"} name="address" className="col-span-2" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.address ?? ""} onChange={(e) => set("address", e.target.value)} />
-                </Field>
-                <Field label={ar ? "العملة" : "Currency"}>
+                </RField>
+                <RField label={ar ? "العملة" : "Currency"} name="currency" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.currency ?? "EGP"} onChange={(e) => set("currency", e.target.value)} />
-                </Field>
-                <Field label={ar ? "شروط الدفع" : "Payment Terms"}>
+                </RField>
+                <RField label={ar ? "شروط الدفع" : "Payment Terms"} name="payment_terms" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.payment_terms ?? ""} onChange={(e) => set("payment_terms", e.target.value)} />
-                </Field>
-                <Field label={ar ? "حد الائتمان" : "Credit Limit"}>
+                </RField>
+                <RField label={ar ? "حد الائتمان" : "Credit Limit"} name="credit_limit" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input type="number" value={merged.credit_limit ?? 0} onChange={(e) => set("credit_limit", Number(e.target.value))} />
-                </Field>
-                <Field label={ar ? "Incoterm" : "Incoterm"}>
+                </RField>
+                <RField label="Incoterm" name="incoterm" errorMap={errorMap} requiredSet={requiredSet}>
                   <Input value={merged.incoterm ?? ""} onChange={(e) => set("incoterm", e.target.value)} />
-                </Field>
-                <Field label={ar ? "ملاحظات" : "Notes"} className="col-span-2">
+                </RField>
+                <RField label={ar ? "ملاحظات" : "Notes"} name="notes" className="col-span-2" errorMap={errorMap} requiredSet={requiredSet}>
                   <Textarea rows={3} value={merged.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
-                </Field>
+                </RField>
               </div>
             </TabsContent>
 
             <TabsContent value="contacts" className="mt-4"><ContactsPanel partnerId={partner.id} ar={ar} /></TabsContent>
             <TabsContent value="addresses" className="mt-4"><AddressesPanel partnerId={partner.id} ar={ar} /></TabsContent>
             <TabsContent value="banks" className="mt-4"><BanksPanel partnerId={partner.id} ar={ar} /></TabsContent>
+            <TabsContent value="docs" className="mt-4"><DocsPanel partner={partner} ar={ar} /></TabsContent>
+            <TabsContent value="audit" className="mt-4"><AuditPanel partnerId={partner.id} ar={ar} /></TabsContent>
           </Tabs>
         )}
 
@@ -303,11 +406,24 @@ function PartnerSheet({ id, onClose }: { id: string | null; onClose: () => void 
   );
 }
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function RField({ label, name, children, className, errorMap, requiredSet }: {
+  label: string; name: string; children: React.ReactNode; className?: string;
+  errorMap: Record<string, string>; requiredSet: Set<string>;
+}) {
+  const err = errorMap[name];
+  const req = requiredSet.has(name);
   return (
     <div className={`space-y-1 ${className ?? ""}`}>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
+      <Label className={`text-xs flex items-center gap-1 ${err ? "text-destructive" : "text-muted-foreground"}`}>
+        {label}{req && <span className="text-destructive">*</span>}
+        {err && (
+          <Tooltip>
+            <TooltipTrigger asChild><Info className="h-3 w-3 text-destructive" /></TooltipTrigger>
+            <TooltipContent side="top">{err}</TooltipContent>
+          </Tooltip>
+        )}
+      </Label>
+      <div className={err ? "[&_input]:border-destructive [&_textarea]:border-destructive" : ""}>{children}</div>
     </div>
   );
 }
@@ -401,6 +517,80 @@ function BanksPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
             </label>
             <Button variant="ghost" size="icon" onClick={() => del.mutate(b.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
           </div>
+        </CardContent></Card>
+      ))}
+    </div>
+  );
+}
+
+function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
+  const { data: rows = [], isLoading } = usePartnerRelated(partner);
+  if (isLoading) return <div className="text-center text-muted-foreground py-6">…</div>;
+  if (rows.length === 0) return (
+    <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
+      {ar ? "لا توجد مستندات مرتبطة (عروض أسعار / فواتير / حركات مخزون) بعد." : "No linked documents (quotes / invoices / stock movements) yet."}
+    </CardContent></Card>
+  );
+  const labelKind = (k: string) => ar
+    ? ({ quote: "عرض سعر", customer: "عميل مرتبط", stock_movement: "حركة مخزون" } as any)[k] ?? k
+    : ({ quote: "Quote", customer: "Linked Customer", stock_movement: "Stock Movement" } as any)[k] ?? k;
+  return (
+    <div className="space-y-2">
+      {rows.map((r) => (
+        <a key={`${r.kind}:${r.id}`} href={r.link ?? undefined} className="block">
+          <Card className="hover:shadow-sm transition"><CardContent className="p-3 flex items-center gap-3">
+            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px]">{labelKind(r.kind)}</Badge>
+                <div className="font-medium truncate">{r.title}</div>
+              </div>
+              {r.subtitle && <div className="text-xs text-muted-foreground truncate">{r.subtitle}</div>}
+            </div>
+            {r.date && <div className="text-xs text-muted-foreground">{new Date(r.date).toLocaleDateString()}</div>}
+          </CardContent></Card>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function AuditPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
+  const { data: rows = [], isLoading, error } = usePartnerAudit(partnerId);
+  if (isLoading) return <div className="text-center text-muted-foreground py-6">…</div>;
+  if (error) return <div className="text-center text-destructive py-6 text-sm">{ar ? "لا صلاحية لعرض التدقيق" : "No permission to view audit"}</div>;
+  if (rows.length === 0) return (
+    <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
+      {ar ? "لا توجد تغييرات مسجّلة." : "No recorded changes."}
+    </CardContent></Card>
+  );
+  const label = (a: string) => ar
+    ? ({ create: "إنشاء", update: "تعديل", delete: "حذف" } as any)[a] ?? a
+    : a;
+  return (
+    <div className="space-y-2">
+      {rows.map((e) => (
+        <Card key={e.id}><CardContent className="p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <Badge variant="outline" className="text-[10px]">{label(e.action)}</Badge>
+              <span className="text-sm">{e.actor_email ?? (ar ? "مستخدم" : "user")}</span>
+            </div>
+            <div className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</div>
+          </div>
+          {e.before && e.action === "update" && (
+            <div className="mt-2 grid gap-1">
+              {Object.entries(e.before as Record<string, { from: any; to: any }>).map(([field, d]) => (
+                <div key={field} className="text-xs flex flex-wrap items-center gap-1.5">
+                  <span className="font-medium">{field}:</span>
+                  <span className="text-muted-foreground line-through">{String(d.from ?? "—")}</span>
+                  <span>→</span>
+                  <span>{String(d.to ?? "—")}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent></Card>
       ))}
     </div>
