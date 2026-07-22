@@ -543,56 +543,32 @@ function BanksPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
 
 function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   const { data: rows = [], isLoading } = usePartnerRelated(partner);
-  const [kind, setKind] = useState<"all" | "quote" | "customer" | "stock_movement">("all");
+  const [kind, setKind] = useState<DocFilters["kind"]>("all");
   const [status, setStatus] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
-  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "title_asc">("date_desc");
+  const [sortBy, setSortBy] = useState<SortBy>("date_desc");
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState<number>(1);
 
-  const statuses = useMemo(() => {
-    const s = new Set<string>();
-    rows.forEach((r) => r.status && s.add(r.status));
-    return Array.from(s).sort();
-  }, [rows]);
+  const statuses = useMemo(() => collectStatuses(rows), [rows]);
+  // If the previously selected status disappears from the dataset, fall back to "all"
+  useEffect(() => {
+    if (status !== "all" && !statuses.includes(status)) setStatus("all");
+  }, [statuses, status]);
 
-  const filtered = useMemo(() => {
-    const list = rows.filter((r) => {
-      if (kind !== "all" && r.kind !== kind) return false;
-      if (status !== "all" && (r.status ?? "") !== status) return false;
-      if (from && (!r.date || new Date(r.date) < new Date(from))) return false;
-      if (to && (!r.date || new Date(r.date) > new Date(to + "T23:59:59"))) return false;
-      return true;
-    });
-    const time = (v?: string | null) => (v ? new Date(v).getTime() : 0);
-    const amt = (v?: number | null) => (v == null ? -Infinity : Number(v));
-    list.sort((a, b) => {
-      switch (sortBy) {
-        case "date_asc":   return time(a.date) - time(b.date);
-        case "amount_desc":return amt(b.amount) - amt(a.amount);
-        case "amount_asc": return amt(a.amount) - amt(b.amount);
-        case "title_asc":  return (a.title ?? "").localeCompare(b.title ?? "");
-        case "date_desc":
-        default:           return time(b.date) - time(a.date);
-      }
-    });
-    return list;
-  }, [rows, kind, status, from, to, sortBy]);
-
-  const totals = useMemo(() => {
-    const map: Record<string, number> = {};
-    filtered.forEach((r) => { if (r.amount != null) { const k = r.currency ?? "—"; map[k] = (map[k] ?? 0) + Number(r.amount); } });
-    return map;
-  }, [filtered]);
+  const filters: DocFilters = { kind, status, from, to };
+  const rangeValid = isValidRange(from, to);
+  const filtered = useMemo(
+    () => sortDocs(filterDocs(rows, filters), sortBy),
+    [rows, kind, status, from, to, sortBy],
+  );
+  const totals = useMemo(() => totalsByCurrency(filtered), [filtered]);
 
   // reset to page 1 whenever filters/sort/page-size change
   useEffect(() => { setPage(1); }, [kind, status, from, to, sortBy, pageSize]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pageStart = (currentPage - 1) * pageSize;
-  const paged = filtered.slice(pageStart, pageStart + pageSize);
+  const { totalPages, currentPage, pageStart, pageEnd, paged } = paginate(filtered, page, pageSize);
 
   const labelKind = (k: string) => ar
     ? ({ quote: "عرض سعر", customer: "عميل مرتبط", stock_movement: "حركة مخزون" } as any)[k] ?? k
@@ -601,7 +577,7 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   if (isLoading) return <div className="text-center text-muted-foreground py-6">…</div>;
 
   const clearAll = () => { setKind("all"); setStatus("all"); setFrom(""); setTo(""); };
-  const hasFilters = kind !== "all" || status !== "all" || from || to;
+  const hasFilters = hasActiveFilters(filters);
 
   return (
     <div className="space-y-3">
