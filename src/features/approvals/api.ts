@@ -1,6 +1,11 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as _supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/features/_shared/queryKeys";
+
+const supabase = _supabase as unknown as {
+  from: (table: string) => any;
+  rpc: (fn: string, args?: Record<string, unknown>) => any;
+};
 
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type ApprovalEntity = "stock_transfer" | "stock_adjustment";
