@@ -195,6 +195,15 @@ function WarehousesPage() {
       {toDelete && (
         <DeleteWarehouseDialog warehouse={toDelete} onClose={() => setToDelete(null)} />
       )}
+
+      {binsFor && (
+        <BinsManager
+          warehouseId={binsFor.id}
+          branchId={binsFor.branch_id ?? ""}
+          warehouseName={(ar ? (binsFor.name_ar || binsFor.name) : binsFor.name) ?? ""}
+          onClose={() => setBinsFor(null)}
+        />
+      )}
     </div>
   );
 }
