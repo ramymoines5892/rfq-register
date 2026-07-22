@@ -44,6 +44,9 @@ function WarehousesPage() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<WarehouseWithBranch | "new" | null>(null);
   const [toDelete, setToDelete] = useState<WarehouseWithBranch | null>(null);
+  const [binsFor, setBinsFor] = useState<WarehouseWithBranch | null>(null);
+  const [importing, setImporting] = useState(false);
+  const qc = useQueryClient();
 
   const { data: warehouses = [], isLoading } = useWarehouses(branchFilter === "all" ? null : branchFilter);
   const { data: branches = [] } = useBranches();
