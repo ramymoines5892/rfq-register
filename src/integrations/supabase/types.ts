@@ -3038,8 +3038,22 @@ export type Database = {
         | "manage_form_fields"
         | "inventory.manage"
         | "inventory.transfer"
+        | "warehouses.view"
+        | "warehouses.manage"
+        | "bins.manage"
+        | "inventory.view"
+        | "inventory.transfer.create"
+        | "inventory.transfer.post"
+        | "inventory.transfer.cancel"
+        | "inventory.adjust.create"
+        | "inventory.adjust.approve"
+        | "approvals.view"
+        | "approvals.decide"
       app_role: "owner" | "admin" | "member"
+      approval_action: "post" | "cancel" | "delete"
       approval_decision: "pending" | "approved" | "rejected"
+      approval_entity: "stock_transfer" | "stock_adjustment"
+      approval_status: "pending" | "approved" | "rejected" | "cancelled"
       customer_attachment_category:
         | "company_profile"
         | "commercial_register"
@@ -3068,6 +3082,20 @@ export type Database = {
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
+      stock_adjustment_reason:
+        | "count"
+        | "damage"
+        | "loss"
+        | "found"
+        | "correction"
+        | "other"
+      stock_adjustment_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "posted"
+        | "rejected"
+        | "cancelled"
       stock_movement_type:
         | "receipt"
         | "issue"
@@ -3234,9 +3262,23 @@ export const Constants = {
         "manage_form_fields",
         "inventory.manage",
         "inventory.transfer",
+        "warehouses.view",
+        "warehouses.manage",
+        "bins.manage",
+        "inventory.view",
+        "inventory.transfer.create",
+        "inventory.transfer.post",
+        "inventory.transfer.cancel",
+        "inventory.adjust.create",
+        "inventory.adjust.approve",
+        "approvals.view",
+        "approvals.decide",
       ],
       app_role: ["owner", "admin", "member"],
+      approval_action: ["post", "cancel", "delete"],
       approval_decision: ["pending", "approved", "rejected"],
+      approval_entity: ["stock_transfer", "stock_adjustment"],
+      approval_status: ["pending", "approved", "rejected", "cancelled"],
       customer_attachment_category: [
         "company_profile",
         "commercial_register",
@@ -3268,6 +3310,22 @@ export const Constants = {
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
+      stock_adjustment_reason: [
+        "count",
+        "damage",
+        "loss",
+        "found",
+        "correction",
+        "other",
+      ],
+      stock_adjustment_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "posted",
+        "rejected",
+        "cancelled",
+      ],
       stock_movement_type: [
         "receipt",
         "issue",
