@@ -9,9 +9,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 
 export type ConfirmOptions = {
@@ -22,67 +31,142 @@ export type ConfirmOptions = {
   variant?: "default" | "destructive";
 };
 
-type Resolver = (v: boolean) => void;
+export type PromptOptions = {
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  defaultValue?: string;
+  confirmText?: string;
+  cancelText?: string;
+  required?: boolean;
+};
 
-const ConfirmCtx = createContext<((opts?: ConfirmOptions) => Promise<boolean>) | null>(null);
+type ConfirmResolver = (v: boolean) => void;
+type PromptResolver = (v: string | null) => void;
+
+type Ctx = {
+  confirm: (opts?: ConfirmOptions) => Promise<boolean>;
+  prompt: (opts?: PromptOptions) => Promise<string | null>;
+};
+
+const Ctx = createContext<Ctx | null>(null);
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
-  const [open, setOpen] = useState(false);
-  const [opts, setOpts] = useState<ConfirmOptions>({});
-  const resolver = useRef<Resolver | null>(null);
+
+  // confirm state
+  const [cOpen, setCOpen] = useState(false);
+  const [cOpts, setCOpts] = useState<ConfirmOptions>({});
+  const cRes = useRef<ConfirmResolver | null>(null);
 
   const confirm = useCallback((o: ConfirmOptions = {}) => {
-    setOpts(o);
-    setOpen(true);
-    return new Promise<boolean>((res) => { resolver.current = res; });
+    setCOpts(o);
+    setCOpen(true);
+    return new Promise<boolean>((res) => { cRes.current = res; });
   }, []);
+  const cFinish = (v: boolean) => {
+    setCOpen(false);
+    cRes.current?.(v);
+    cRes.current = null;
+  };
+  const destructive = cOpts.variant === "destructive";
 
-  const finish = (v: boolean) => {
-    setOpen(false);
-    resolver.current?.(v);
-    resolver.current = null;
+  // prompt state
+  const [pOpen, setPOpen] = useState(false);
+  const [pOpts, setPOpts] = useState<PromptOptions>({});
+  const [pValue, setPValue] = useState("");
+  const pRes = useRef<PromptResolver | null>(null);
+
+  const prompt = useCallback((o: PromptOptions = {}) => {
+    setPOpts(o);
+    setPValue(o.defaultValue ?? "");
+    setPOpen(true);
+    return new Promise<string | null>((res) => { pRes.current = res; });
+  }, []);
+  const pFinish = (v: string | null) => {
+    setPOpen(false);
+    pRes.current?.(v);
+    pRes.current = null;
+  };
+  const pSubmit = () => {
+    const v = pValue.trim();
+    if (pOpts.required && !v) return;
+    pFinish(v);
   };
 
-  const destructive = opts.variant === "destructive";
+  const value = useMemo<Ctx>(() => ({ confirm, prompt }), [confirm, prompt]);
 
-  const value = useMemo(() => confirm, [confirm]);
   return (
-    <ConfirmCtx.Provider value={value}>
+    <Ctx.Provider value={value}>
       {children}
-      <AlertDialog open={open} onOpenChange={(v) => { if (!v) finish(false); }}>
+
+      <AlertDialog open={cOpen} onOpenChange={(v) => { if (!v) cFinish(false); }}>
         <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               {destructive && <AlertTriangle className="h-5 w-5 text-destructive" />}
-              {opts.title ?? (ar ? "تأكيد" : "Confirm")}
+              {cOpts.title ?? (ar ? "تأكيد" : "Confirm")}
             </AlertDialogTitle>
-            {opts.description && (
+            {cOpts.description && (
               <AlertDialogDescription className="whitespace-pre-line">
-                {opts.description}
+                {cOpts.description}
               </AlertDialogDescription>
             )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => finish(false)}>
-              {opts.cancelText ?? (ar ? "إلغاء" : "Cancel")}
+            <AlertDialogCancel onClick={() => cFinish(false)}>
+              {cOpts.cancelText ?? (ar ? "إلغاء" : "Cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => finish(true)}
+              onClick={() => cFinish(true)}
               className={cn(destructive && buttonVariants({ variant: "destructive" }))}
             >
-              {opts.confirmText ?? (ar ? "تأكيد" : "Confirm")}
+              {cOpts.confirmText ?? (ar ? "تأكيد" : "Confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ConfirmCtx.Provider>
+
+      <Dialog open={pOpen} onOpenChange={(v) => { if (!v) pFinish(null); }}>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{pOpts.title ?? (ar ? "إدخال" : "Enter value")}</DialogTitle>
+            {pOpts.description && (
+              <DialogDescription className="whitespace-pre-line">
+                {pOpts.description}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={pValue}
+            placeholder={pOpts.placeholder}
+            onChange={(e) => setPValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); pSubmit(); } }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => pFinish(null)}>
+              {pOpts.cancelText ?? (ar ? "إلغاء" : "Cancel")}
+            </Button>
+            <Button onClick={pSubmit} disabled={pOpts.required ? !pValue.trim() : false}>
+              {pOpts.confirmText ?? (ar ? "موافق" : "OK")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Ctx.Provider>
   );
 }
 
 export function useConfirm() {
-  const ctx = useContext(ConfirmCtx);
+  const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useConfirm must be used within <ConfirmProvider>");
-  return ctx;
+  return ctx.confirm;
+}
+
+export function usePrompt() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("usePrompt must be used within <ConfirmProvider>");
+  return ctx.prompt;
 }

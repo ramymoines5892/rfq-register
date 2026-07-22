@@ -300,19 +300,155 @@ export function GlobalSearch() {
   );
 }
 
+/**
+ * Inline search input that shows results in a popover as the user types.
+ * No dialog/popup on click — typing is enabled directly. Cmd/Ctrl+K focuses it.
+ */
 export function GlobalSearchTrigger({ className = "" }: { className?: string }) {
   const { lang } = useI18n();
   const ar = lang === "ar";
+  const router = useRouter();
+  const access = useAccess();
+  const [q, setQ] = useState("");
+  const [focused, setFocused] = useState(false);
+  const [hits, setHits] = useState<Hit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    const s = q.trim();
+    if (s.length < 2) { setHits([]); return; }
+    setLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc("global_search", { _q: s, _limit: 6 });
+        if (!error && data) setHits(data as Hit[]);
+      } catch { setHits([]); }
+      finally { setLoading(false); }
+    }, 180);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const filteredPages = useMemo(() => {
+    const allowed = access.ready
+      ? PAGES.filter((p) => !p.when || p.when(access))
+      : PAGES.filter((p) => !p.when);
+    const s = q.trim().toLowerCase();
+    if (!s) return [];
+    return allowed.filter((p) =>
+      (ar ? p.labelAr : p.labelEn).toLowerCase().includes(s) ||
+      p.keywords.toLowerCase().includes(s) ||
+      p.to.toLowerCase().includes(s),
+    ).slice(0, 6);
+  }, [q, ar, access]);
+
+  const go = (link: string) => {
+    setQ("");
+    setFocused(false);
+    inputRef.current?.blur();
+    router.history.push(link);
+  };
+
+  const show = focused && q.trim().length >= 2;
+  const hasAnything = hits.length > 0 || filteredPages.length > 0;
+
   return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new Event("open-global-search"))}
-      className={`inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-sidebar-accent/60 hover:bg-sidebar-accent text-xs text-sidebar-foreground/80 ${className}`}
-      title={ar ? "بحث سريع (Ctrl+K)" : "Quick search (Ctrl+K)"}
-    >
-      <Search className="h-3.5 w-3.5" />
-      <span className="hidden lg:inline">{ar ? "بحث سريع…" : "Quick search…"}</span>
-      <kbd className="hidden lg:inline text-[9px] px-1.5 py-0.5 rounded bg-sidebar/60 border border-sidebar-border">⌘K</kbd>
-    </button>
+    <div className={`relative ${className}`}>
+      <div className="relative">
+        <Search className="absolute top-1/2 -translate-y-1/2 start-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder={ar ? "بحث سريع…" : "Quick search…"}
+          className="w-full h-9 ps-8 pe-12 rounded-lg bg-sidebar-accent/60 hover:bg-sidebar-accent focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/60 border border-transparent focus:border-border transition"
+        />
+        <kbd className="hidden lg:inline absolute top-1/2 -translate-y-1/2 end-2 text-[9px] px-1.5 py-0.5 rounded bg-sidebar/60 border border-sidebar-border text-sidebar-foreground/70">⌘K</kbd>
+      </div>
+
+      {show && (
+        <div
+          className="absolute z-50 top-full mt-1 start-0 end-0 min-w-[280px] rounded-lg border bg-popover text-popover-foreground shadow-lg overflow-hidden"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <div className="max-h-[380px] overflow-y-auto scrollbar-slim">
+            {loading && (
+              <div className="px-3 py-2 text-xs text-muted-foreground">{ar ? "جارٍ البحث…" : "Searching…"}</div>
+            )}
+            {!loading && !hasAnything && (
+              <div className="px-3 py-3 text-xs text-muted-foreground text-center">{ar ? "لا نتائج" : "No results"}</div>
+            )}
+
+            {hits.length > 0 && (
+              <div className="py-1">
+                {(["customer", "quote", "workflow", "user"] as const).map((ent) => {
+                  const group = hits.filter((h) => h.entity === ent);
+                  if (!group.length) return null;
+                  const Icon = ICONS[ent];
+                  return (
+                    <div key={ent}>
+                      <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {ar ? LABELS[ent].ar : LABELS[ent].en}
+                      </div>
+                      {group.map((h) => (
+                        <button
+                          key={ent + h.id}
+                          type="button"
+                          onClick={() => go(h.link)}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent text-start"
+                        >
+                          <Icon className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate">{h.title}</div>
+                            {h.subtitle && <div className="text-[10px] text-muted-foreground truncate">{h.subtitle}</div>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {filteredPages.length > 0 && (
+              <div className="py-1 border-t">
+                <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {ar ? "الصفحات والإعدادات" : "Pages & Settings"}
+                </div>
+                {filteredPages.map((p) => {
+                  const Icon = p.icon;
+                  return (
+                    <button
+                      key={p.to}
+                      type="button"
+                      onClick={() => go(p.to)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent text-start"
+                    >
+                      <Icon className="h-3.5 w-3.5 opacity-70 shrink-0" />
+                      <span className="flex-1 truncate">{ar ? p.labelAr : p.labelEn}</span>
+                      <span className="text-[10px] text-muted-foreground">{p.to}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
