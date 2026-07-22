@@ -69,6 +69,7 @@ const permLabelAr: Record<AppPermission, string> = {
   "quotes.approve": "الموافقة على العروض",
   "workflows.view": "عرض القوالب", "workflows.manage": "إدارة القوالب",
   "hr.view": "عرض HR", "hr.manage": "إدارة HR",
+  "inventory.manage": "إدارة المخزون", "inventory.transfer": "نقل بين المخازن",
   "team.view": "عرض الفريق", "team.manage": "إدارة الفريق",
   "users.manage_roles": "إدارة الأدوار",
   "templates.manage": "إدارة قوالب الحقول",
