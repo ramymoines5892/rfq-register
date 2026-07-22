@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, Workflow, LogOut, Languages, UsersRound, Building2,
   Settings2, Pin, PinOff, FolderArchive, ChevronDown, ShoppingCart, Store,
-  Package, Warehouse, FileText, Truck, Receipt, ClipboardList, Boxes, Search, Landmark,
+  Package, Warehouse, FileText, Truck, Receipt, ClipboardList, Boxes, Search, Landmark, Sliders, ShieldCheck,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
@@ -136,6 +136,8 @@ function AuthenticatedLayout() {
             { to: "/warehouses", labelAr: "المخازن", labelEn: "Warehouses", icon: Warehouse, match: (p: string) => p.startsWith("/warehouses") },
             { to: "/inventory", labelAr: "أرصدة المخزون", labelEn: "Stock Balances", icon: Boxes, match: (p: string) => p.startsWith("/inventory") },
             { to: "/transfers", labelAr: "نقل المخزون", labelEn: "Stock Transfers", icon: Boxes, match: (p: string) => p.startsWith("/transfers") },
+            { to: "/adjustments", labelAr: "تسويات المخزون", labelEn: "Stock Adjustments", icon: Sliders, match: (p: string) => p.startsWith("/adjustments") },
+            { to: "/approvals", labelAr: "الاعتمادات", labelEn: "Approvals", icon: ShieldCheck, match: (p: string) => p.startsWith("/approvals") },
           ],
         },
       ],
