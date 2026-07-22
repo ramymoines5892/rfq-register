@@ -58,37 +58,85 @@ export type Database = {
       }
       branches: {
         Row: {
+          address_line: string | null
+          base_currency: string | null
+          city: string | null
           code: string | null
           company_id: string
+          country: string | null
           created_at: string
+          deleted_at: string | null
+          email: string | null
+          fax: string | null
           id: string
           is_active: boolean
           is_head_office: boolean
+          manager_employee_id: string | null
+          mobile: string | null
           name: string
           name_ar: string | null
+          notes: string | null
+          phone: string | null
+          position: number
+          postal_code: string | null
+          state: string | null
+          timezone: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
+          address_line?: string | null
+          base_currency?: string | null
+          city?: string | null
           code?: string | null
           company_id: string
+          country?: string | null
           created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          fax?: string | null
           id?: string
           is_active?: boolean
           is_head_office?: boolean
+          manager_employee_id?: string | null
+          mobile?: string | null
           name: string
           name_ar?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: number
+          postal_code?: string | null
+          state?: string | null
+          timezone?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          address_line?: string | null
+          base_currency?: string | null
+          city?: string | null
           code?: string | null
           company_id?: string
+          country?: string | null
           created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          fax?: string | null
           id?: string
           is_active?: boolean
           is_head_office?: boolean
+          manager_employee_id?: string | null
+          mobile?: string | null
           name?: string
           name_ar?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: number
+          postal_code?: string | null
+          state?: string | null
+          timezone?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {
@@ -96,6 +144,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branches_manager_employee_id_fkey"
+            columns: ["manager_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
@@ -491,6 +546,7 @@ export type Database = {
       }
       company_numbering: {
         Row: {
+          branch_id: string | null
           company_id: string
           created_at: string
           doc_type: string
@@ -502,6 +558,7 @@ export type Database = {
           year_segment: boolean
         }
         Insert: {
+          branch_id?: string | null
           company_id: string
           created_at?: string
           doc_type: string
@@ -513,6 +570,7 @@ export type Database = {
           year_segment?: boolean
         }
         Update: {
+          branch_id?: string | null
           company_id?: string
           created_at?: string
           doc_type?: string
@@ -524,6 +582,13 @@ export type Database = {
           year_segment?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "company_numbering_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "company_numbering_company_id_fkey"
             columns: ["company_id"]
@@ -2030,6 +2095,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_branches: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string
@@ -2318,6 +2418,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      can_access_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_manage_workflow_stage_approvers: {
         Args: { _stage_id: string; _user_id: string }
         Returns: boolean
@@ -2424,6 +2528,11 @@ export type Database = {
           title: string
         }[]
       }
+      user_accessible_branches: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
+      user_default_branch: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       app_permission:
