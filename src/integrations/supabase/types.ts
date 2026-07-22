@@ -268,6 +268,119 @@ export type Database = {
           },
         ]
       }
+      business_partners: {
+        Row: {
+          address: string | null
+          category: string | null
+          city: string | null
+          code: string | null
+          commercial_reg: string | null
+          company_id: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          credit_limit: number | null
+          currency: string
+          deleted_at: string | null
+          email: string | null
+          fax: string | null
+          id: string
+          incoterm: string | null
+          industry: string | null
+          legal_name: string | null
+          mobile: string | null
+          name_ar: string | null
+          name_en: string | null
+          notes: string | null
+          payment_terms: string | null
+          phone: string | null
+          price_list: string | null
+          rating: number | null
+          roles: Database["public"]["Enums"]["partner_role"][]
+          state: string | null
+          status: string
+          tax_id: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          code?: string | null
+          commercial_reg?: string | null
+          company_id?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_limit?: number | null
+          currency?: string
+          deleted_at?: string | null
+          email?: string | null
+          fax?: string | null
+          id?: string
+          incoterm?: string | null
+          industry?: string | null
+          legal_name?: string | null
+          mobile?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          price_list?: string | null
+          rating?: number | null
+          roles?: Database["public"]["Enums"]["partner_role"][]
+          state?: string | null
+          status?: string
+          tax_id?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          city?: string | null
+          code?: string | null
+          commercial_reg?: string | null
+          company_id?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          credit_limit?: number | null
+          currency?: string
+          deleted_at?: string | null
+          email?: string | null
+          fax?: string | null
+          id?: string
+          incoterm?: string | null
+          industry?: string | null
+          legal_name?: string | null
+          mobile?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          notes?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          price_list?: string | null
+          rating?: number | null
+          roles?: Database["public"]["Enums"]["partner_role"][]
+          state?: string | null
+          status?: string
+          tax_id?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_partners_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           address: string | null
@@ -1856,6 +1969,165 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_addresses: {
+        Row: {
+          address: string | null
+          address_type: string
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string | null
+          partner_id: string
+          postal_code: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          address_type?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          partner_id: string
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          address_type?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          partner_id?: string
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_addresses_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "business_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_banks: {
+        Row: {
+          account_name: string | null
+          account_no: string | null
+          bank_name: string
+          branch: string | null
+          created_at: string
+          currency: string
+          iban: string | null
+          id: string
+          is_default: boolean
+          notes: string | null
+          partner_id: string
+          swift: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_no?: string | null
+          bank_name: string
+          branch?: string | null
+          created_at?: string
+          currency?: string
+          iban?: string | null
+          id?: string
+          is_default?: boolean
+          notes?: string | null
+          partner_id: string
+          swift?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string | null
+          account_no?: string | null
+          bank_name?: string
+          branch?: string | null
+          created_at?: string
+          currency?: string
+          iban?: string | null
+          id?: string
+          is_default?: boolean
+          notes?: string | null
+          partner_id?: string
+          swift?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_banks_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "business_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_default: boolean
+          mobile: string | null
+          name: string
+          notes: string | null
+          partner_id: string
+          phone: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_default?: boolean
+          mobile?: string | null
+          name: string
+          notes?: string | null
+          partner_id: string
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_default?: boolean
+          mobile?: string | null
+          name?: string
+          notes?: string | null
+          partner_id?: string
+          phone?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_contacts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "business_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_policies: {
         Row: {
           company_id: string
@@ -3396,6 +3668,16 @@ export type Database = {
         | "terminated"
         | "probation"
       numbering_reset_policy: "never" | "yearly" | "monthly" | "daily"
+      partner_role:
+        | "customer"
+        | "supplier"
+        | "manufacturer"
+        | "freight_forwarder"
+        | "inspection"
+        | "shipping"
+        | "bank"
+        | "insurance"
+        | "agent"
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -3625,6 +3907,17 @@ export const Constants = {
         "probation",
       ],
       numbering_reset_policy: ["never", "yearly", "monthly", "daily"],
+      partner_role: [
+        "customer",
+        "supplier",
+        "manufacturer",
+        "freight_forwarder",
+        "inspection",
+        "shipping",
+        "bank",
+        "insurance",
+        "agent",
+      ],
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
