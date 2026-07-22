@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScriptInput } from "@/components/ScriptInput";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm, usePrompt } from "@/hooks/useConfirm";
 import {
   usePartners, usePartner, useUpsertPartner, useDeletePartner,
   usePartnerContacts, useUpsertContact, useDeleteContact,
