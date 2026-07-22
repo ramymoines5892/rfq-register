@@ -211,8 +211,8 @@ function WarehousesPage() {
 /* ─── Card ────────────────────────────────────────────────────────────── */
 
 function WarehouseCard({
-  warehouse, canManage, onEdit, onDelete,
-}: { warehouse: WarehouseWithBranch; canManage: boolean; onEdit: () => void; onDelete: () => void }) {
+  warehouse, canManage, onEdit, onDelete, onBins,
+}: { warehouse: WarehouseWithBranch; canManage: boolean; onEdit: () => void; onDelete: () => void; onBins: () => void }) {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const display = ar ? (warehouse.name_ar || warehouse.name) : warehouse.name;
