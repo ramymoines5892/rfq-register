@@ -175,6 +175,7 @@ function WarehousesPage() {
               <WarehouseCard
                 key={w.id} warehouse={w} canManage={canManage}
                 onEdit={() => setEditing(w)} onDelete={() => setToDelete(w)}
+                onBins={() => setBinsFor(w)}
               />
             ))}
           </div>
