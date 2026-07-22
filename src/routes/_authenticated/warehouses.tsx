@@ -13,11 +13,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  Warehouse, Plus, Search, Star, Pencil, Trash2, Save, X, Loader2, Building2, Filter,
+  Warehouse, Plus, Search, Star, Pencil, Trash2, Save, X, Loader2, Building2, Filter, MapPin, Download, Upload,
 } from "lucide-react";
 import { useWarehouses, useUpsertWarehouse, useDeleteWarehouse } from "@/features/warehouses/queries";
 import { useBranches } from "@/features/branches/queries";
 import type { WarehouseWithBranch } from "@/features/warehouses/api";
+import { BinsManager } from "@/features/warehouses/BinsManager";
+import { toCSV, downloadCSV, parseCSV } from "@/lib/csv";
+import { upsertWarehouse } from "@/features/warehouses/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { qk } from "@/features/_shared/queryKeys";
 
 export const Route = createFileRoute("/_authenticated/warehouses")({
   component: WarehousesPage,
