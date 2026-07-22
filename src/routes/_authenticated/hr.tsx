@@ -42,6 +42,7 @@ const ALL_PERMISSIONS: AppPermission[] = [
   "quotes.create", "quotes.edit", "quotes.delete", "quotes.assign", "quotes.manage", "quotes.approve",
   "workflows.view", "workflows.manage",
   "hr.view", "hr.manage",
+  "inventory.manage", "inventory.transfer",
   "team.view", "team.manage",
   "users.manage_roles", "templates.manage",
   "notifications.view",
