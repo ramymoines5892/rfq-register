@@ -345,13 +345,46 @@ function BranchEditor({
 
             <div className="border-t pt-3 mt-2 space-y-3">
               <div className="text-xs font-semibold text-muted-foreground">{ar ? "العنوان" : "Address"}</div>
-              <CascadingLocation
-                country={form.country}
-                state={form.state}
-                city={form.city}
-                onChange={(v) => setForm((p) => ({ ...p, country: v.country ?? "", state: v.state ?? "", city: v.city ?? "" }))}
-                lang={lang}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label={ar ? "الدولة" : "Country"}>
+                  <Select value={form.country || undefined} onValueChange={(v) => setForm((p) => ({ ...p, country: v, state: "", city: "" }))}>
+                    <SelectTrigger><SelectValue placeholder={ar ? "اختر…" : "Select…"} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="EG">{ar ? "مصر" : "Egypt"}</SelectItem>
+                      <SelectItem value="SA">{ar ? "السعودية" : "Saudi Arabia"}</SelectItem>
+                      <SelectItem value="AE">{ar ? "الإمارات" : "UAE"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label={ar ? "المحافظة" : "State"}>
+                  {hasGeo(form.country) ? (
+                    <Select value={form.state || undefined} onValueChange={(v) => setForm((p) => ({ ...p, state: v, city: "" }))}>
+                      <SelectTrigger><SelectValue placeholder={ar ? "اختر…" : "Select…"} /></SelectTrigger>
+                      <SelectContent>
+                        {getStates(form.country).map((s) => (
+                          <SelectItem key={s.key} value={s.key}>{ar ? s.ar : s.en}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={form.state ?? ""} onChange={(e) => set("state", e.target.value)} />
+                  )}
+                </Field>
+                <Field label={ar ? "المدينة" : "City"}>
+                  {hasGeo(form.country) && form.state ? (
+                    <Select value={form.city || undefined} onValueChange={(v) => set("city", v)}>
+                      <SelectTrigger><SelectValue placeholder={ar ? "اختر…" : "Select…"} /></SelectTrigger>
+                      <SelectContent>
+                        {getCities(form.country, form.state).map((c) => (
+                          <SelectItem key={c.en} value={ar ? c.ar : c.en}>{ar ? c.ar : c.en}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} />
+                  )}
+                </Field>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={ar ? "الرمز البريدى" : "Postal code"}>
                   <Input value={form.postal_code ?? ""} onChange={(e) => set("postal_code", e.target.value)} />
