@@ -143,6 +143,7 @@ function AuthenticatedLayout() {
       labelAr: "الإدارة", labelEn: "Administration",
       entries: [
         ...(isAdmin ? [
+          { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p.startsWith("/organization") } as NavLeaf,
           { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2, match: (p: string) => p.startsWith("/hr") } as NavLeaf,
           { to: "/team", labelAr: "الفريق", labelEn: "Team", icon: UsersRound, match: (p: string) => p.startsWith("/team") } as NavLeaf,
         ] : []),
