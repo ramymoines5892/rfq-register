@@ -697,8 +697,8 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
             <div className="flex items-center justify-between pt-1">
               <div className="text-xs text-muted-foreground">
                 {ar
-                  ? `عرض ${pageStart + 1}–${Math.min(pageStart + pageSize, filtered.length)} من ${filtered.length}`
-                  : `Showing ${pageStart + 1}–${Math.min(pageStart + pageSize, filtered.length)} of ${filtered.length}`}
+                  ? `عرض ${pageStart + 1}–${pageEnd} من ${filtered.length}`
+                  : `Showing ${pageStart + 1}–${pageEnd} of ${filtered.length}`}
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={currentPage === 1}>«</Button>
