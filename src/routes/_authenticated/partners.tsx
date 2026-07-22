@@ -525,35 +525,126 @@ function BanksPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
 
 function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   const { data: rows = [], isLoading } = usePartnerRelated(partner);
-  if (isLoading) return <div className="text-center text-muted-foreground py-6">…</div>;
-  if (rows.length === 0) return (
-    <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
-      {ar ? "لا توجد مستندات مرتبطة (عروض أسعار / فواتير / حركات مخزون) بعد." : "No linked documents (quotes / invoices / stock movements) yet."}
-    </CardContent></Card>
-  );
+  const [kind, setKind] = useState<"all" | "quote" | "customer" | "stock_movement">("all");
+  const [status, setStatus] = useState<string>("all");
+  const [from, setFrom] = useState<string>("");
+  const [to, setTo] = useState<string>("");
+
+  const statuses = useMemo(() => {
+    const s = new Set<string>();
+    rows.forEach((r) => r.status && s.add(r.status));
+    return Array.from(s).sort();
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (kind !== "all" && r.kind !== kind) return false;
+      if (status !== "all" && (r.status ?? "") !== status) return false;
+      if (from && (!r.date || new Date(r.date) < new Date(from))) return false;
+      if (to && (!r.date || new Date(r.date) > new Date(to + "T23:59:59"))) return false;
+      return true;
+    });
+  }, [rows, kind, status, from, to]);
+
+  const totals = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach((r) => { if (r.amount != null) { const k = r.currency ?? "—"; map[k] = (map[k] ?? 0) + Number(r.amount); } });
+    return map;
+  }, [filtered]);
+
   const labelKind = (k: string) => ar
     ? ({ quote: "عرض سعر", customer: "عميل مرتبط", stock_movement: "حركة مخزون" } as any)[k] ?? k
     : ({ quote: "Quote", customer: "Linked Customer", stock_movement: "Stock Movement" } as any)[k] ?? k;
+
+  if (isLoading) return <div className="text-center text-muted-foreground py-6">…</div>;
+
+  const clearAll = () => { setKind("all"); setStatus("all"); setFrom(""); setTo(""); };
+  const hasFilters = kind !== "all" || status !== "all" || from || to;
+
   return (
-    <div className="space-y-2">
-      {rows.map((r) => (
-        <a key={`${r.kind}:${r.id}`} href={r.link ?? undefined} className="block">
-          <Card className="hover:shadow-sm transition"><CardContent className="p-3 flex items-center gap-3">
-            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px]">{labelKind(r.kind)}</Badge>
-                <div className="font-medium truncate">{r.title}</div>
-              </div>
-              {r.subtitle && <div className="text-xs text-muted-foreground truncate">{r.subtitle}</div>}
-            </div>
-            {r.date && <div className="text-xs text-muted-foreground">{new Date(r.date).toLocaleDateString()}</div>}
-          </CardContent></Card>
-        </a>
-      ))}
+    <div className="space-y-3">
+      <Card><CardContent className="p-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "النوع" : "Type"}</Label>
+          <Select value={kind} onValueChange={(v) => setKind(v as any)}>
+            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{ar ? "الكل" : "All"}</SelectItem>
+              <SelectItem value="quote">{labelKind("quote")}</SelectItem>
+              <SelectItem value="customer">{labelKind("customer")}</SelectItem>
+              <SelectItem value="stock_movement">{labelKind("stock_movement")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "الحالة" : "Status"}</Label>
+          <Select value={status} onValueChange={setStatus} disabled={statuses.length === 0}>
+            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{ar ? "الكل" : "All"}</SelectItem>
+              {statuses.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "من تاريخ" : "From"}</Label>
+          <Input type="date" className="h-8" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "إلى تاريخ" : "To"}</Label>
+          <Input type="date" className="h-8" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        {hasFilters && (
+          <Button variant="ghost" size="sm" className="justify-start col-span-2 md:col-span-4" onClick={clearAll}>
+            <X className="h-4 w-4 me-1" />{ar ? "مسح الفلاتر" : "Clear filters"}
+          </Button>
+        )}
+      </CardContent></Card>
+
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div>{ar ? `${filtered.length} من ${rows.length} مستند` : `${filtered.length} of ${rows.length} documents`}</div>
+        {Object.keys(totals).length > 0 && (
+          <div className="flex gap-2">
+            {Object.entries(totals).map(([cur, tot]) => (
+              <Badge key={cur} variant="secondary">{tot.toLocaleString()} {cur}</Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
+          {rows.length === 0
+            ? (ar ? "لا توجد مستندات مرتبطة بعد." : "No linked documents yet.")
+            : (ar ? "لا توجد نتائج مطابقة." : "No matching results.")}
+        </CardContent></Card>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((r) => (
+            <a key={`${r.kind}:${r.id}`} href={r.link ?? undefined} className="block">
+              <Card className="hover:shadow-sm transition"><CardContent className="p-3 flex items-center gap-3">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px]">{labelKind(r.kind)}</Badge>
+                    {r.status && <Badge variant="secondary" className="text-[10px]">{r.status}</Badge>}
+                    <div className="font-medium truncate">{r.title}</div>
+                  </div>
+                  {r.subtitle && <div className="text-xs text-muted-foreground truncate">{r.subtitle}</div>}
+                </div>
+                <div className="text-xs text-muted-foreground text-end shrink-0">
+                  {r.amount != null && <div>{Number(r.amount).toLocaleString()} {r.currency ?? ""}</div>}
+                  {r.date && <div>{new Date(r.date).toLocaleDateString()}</div>}
+                </div>
+              </CardContent></Card>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
 
 function AuditPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   const { data: rows = [], isLoading, error } = usePartnerAudit(partnerId);

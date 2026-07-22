@@ -142,30 +142,40 @@ export async function listPartnerAudit(id: string): Promise<AuditEntry[]> {
 
 export type RelatedDocument = {
   kind: "quote" | "customer" | "stock_movement";
-  id: string; title: string; subtitle: string | null; date: string | null; link: string | null;
+  id: string;
+  title: string;
+  subtitle: string | null;
+  status: string | null;
+  amount: number | null;
+  currency: string | null;
+  date: string | null;
+  link: string | null;
 };
 export async function listRelatedDocuments(p: BusinessPartner): Promise<RelatedDocument[]> {
   const out: RelatedDocument[] = [];
   const names = [p.name_ar, p.name_en, p.legal_name].filter(Boolean) as string[];
-  // Quotes matched by supplier_name
   if (names.length) {
     const ors = names.map((n) => `supplier_name.ilike.%${n.replace(/[,%]/g, " ")}%`).join(",");
     const { data: qs } = await (supabase as any).from("quotes")
-      .select("id, reference_no, supplier_name, description, created_at")
-      .or(ors).is("deleted_at", null).order("created_at", { ascending: false }).limit(50);
+      .select("id, reference_no, supplier_name, description, status, amount, currency, received_date, created_at")
+      .or(ors).is("deleted_at", null).order("created_at", { ascending: false }).limit(200);
     (qs ?? []).forEach((q: any) => out.push({
       kind: "quote", id: q.id,
       title: q.reference_no || q.supplier_name || "Quote",
       subtitle: q.description ?? q.supplier_name ?? null,
-      date: q.created_at, link: `/workflows?quote=${q.id}`,
+      status: q.status ?? null,
+      amount: q.amount ?? null,
+      currency: q.currency ?? null,
+      date: q.received_date ?? q.created_at,
+      link: `/workflows?quote=${q.id}`,
     }));
   }
-  // Legacy customers by tax_id
   if (p.tax_id) {
     const { data: cs } = await (supabase as any).from("customers")
-      .select("id, name, tax_id, created_at").eq("tax_id", p.tax_id).is("deleted_at", null).limit(20);
+      .select("id, name, tax_id, created_at").eq("tax_id", p.tax_id).is("deleted_at", null).limit(50);
     (cs ?? []).forEach((c: any) => out.push({
-      kind: "customer", id: c.id, title: c.name, subtitle: `Tax ID: ${c.tax_id}`,
+      kind: "customer", id: c.id, title: c.name,
+      subtitle: `Tax ID: ${c.tax_id}`, status: null, amount: null, currency: null,
       date: c.created_at, link: `/customers?open=${c.id}`,
     }));
   }
