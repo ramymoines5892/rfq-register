@@ -77,6 +77,29 @@ export const qk = {
     list: (branchId?: string | null) => ["warehouses", "list", branchId ?? "all"] as const,
     detail: (id: string) => ["warehouses", "detail", id] as const,
   },
+  bins: {
+    all: ["bins"] as const,
+    list: (warehouseId?: string | null) => ["bins", "list", warehouseId ?? "all"] as const,
+  },
+  products: {
+    all: ["products"] as const,
+    list: () => ["products", "list"] as const,
+    detail: (id: string) => ["products", "detail", id] as const,
+  },
+  inventory: {
+    all: ["inventory"] as const,
+    balances: (filters?: Record<string, unknown>) =>
+      filters ? (["inventory", "balances", filters] as const) : (["inventory", "balances"] as const),
+    movements: (productId?: string, warehouseId?: string) =>
+      ["inventory", "movements", productId ?? "all", warehouseId ?? "all"] as const,
+  },
+  transfers: {
+    all: ["transfers"] as const,
+    list: () => ["transfers", "list"] as const,
+    detail: (id: string) => ["transfers", "detail", id] as const,
+    lines: (id: string) => ["transfers", "lines", id] as const,
+  },
 
 } as const;
+
 

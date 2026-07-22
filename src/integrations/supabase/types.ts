@@ -1639,6 +1639,62 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          category: string | null
+          code: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          is_active: boolean
+          name_ar: string | null
+          name_en: string | null
+          notes: string | null
+          uom: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en?: string | null
+          notes?: string | null
+          uom?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en?: string | null
+          notes?: string | null
+          uom?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -2095,6 +2151,284 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_movements: {
+        Row: {
+          batch_no: string | null
+          bin_id: string | null
+          branch_id: string
+          company_id: string
+          coo_ref: string | null
+          created_at: string
+          created_by: string | null
+          heat_no: string | null
+          id: string
+          lot_no: string | null
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          mtc_ref: string | null
+          notes: string | null
+          product_id: string
+          qty: number
+          reference_id: string | null
+          reference_type: string | null
+          serial_no: string | null
+          transfer_id: string | null
+          uom: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          batch_no?: string | null
+          bin_id?: string | null
+          branch_id: string
+          company_id: string
+          coo_ref?: string | null
+          created_at?: string
+          created_by?: string | null
+          heat_no?: string | null
+          id?: string
+          lot_no?: string | null
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          mtc_ref?: string | null
+          notes?: string | null
+          product_id: string
+          qty: number
+          reference_id?: string | null
+          reference_type?: string | null
+          serial_no?: string | null
+          transfer_id?: string | null
+          uom?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          batch_no?: string | null
+          bin_id?: string | null
+          branch_id?: string
+          company_id?: string
+          coo_ref?: string | null
+          created_at?: string
+          created_by?: string | null
+          heat_no?: string | null
+          id?: string
+          lot_no?: string | null
+          movement_type?: Database["public"]["Enums"]["stock_movement_type"]
+          mtc_ref?: string | null
+          notes?: string | null
+          product_id?: string
+          qty?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          serial_no?: string | null
+          transfer_id?: string | null
+          uom?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_bin_id_fkey"
+            columns: ["bin_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_bins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_transfer_lines: {
+        Row: {
+          batch_no: string | null
+          coo_ref: string | null
+          created_at: string
+          from_bin_id: string | null
+          heat_no: string | null
+          id: string
+          lot_no: string | null
+          mtc_ref: string | null
+          notes: string | null
+          product_id: string
+          qty: number
+          serial_no: string | null
+          to_bin_id: string | null
+          transfer_id: string
+          uom: string | null
+        }
+        Insert: {
+          batch_no?: string | null
+          coo_ref?: string | null
+          created_at?: string
+          from_bin_id?: string | null
+          heat_no?: string | null
+          id?: string
+          lot_no?: string | null
+          mtc_ref?: string | null
+          notes?: string | null
+          product_id: string
+          qty: number
+          serial_no?: string | null
+          to_bin_id?: string | null
+          transfer_id: string
+          uom?: string | null
+        }
+        Update: {
+          batch_no?: string | null
+          coo_ref?: string | null
+          created_at?: string
+          from_bin_id?: string | null
+          heat_no?: string | null
+          id?: string
+          lot_no?: string | null
+          mtc_ref?: string | null
+          notes?: string | null
+          product_id?: string
+          qty?: number
+          serial_no?: string | null
+          to_bin_id?: string | null
+          transfer_id?: string
+          uom?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfer_lines_from_bin_id_fkey"
+            columns: ["from_bin_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_bins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_to_bin_id_fkey"
+            columns: ["to_bin_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_bins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "stock_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_transfers: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          from_branch_id: string
+          from_warehouse_id: string
+          id: string
+          notes: string | null
+          received_at: string | null
+          shipped_at: string | null
+          status: Database["public"]["Enums"]["stock_transfer_status"]
+          to_branch_id: string
+          to_warehouse_id: string
+          transfer_no: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          from_branch_id: string
+          from_warehouse_id: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["stock_transfer_status"]
+          to_branch_id: string
+          to_warehouse_id: string
+          transfer_no: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          from_branch_id?: string
+          from_warehouse_id?: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          shipped_at?: string | null
+          status?: Database["public"]["Enums"]["stock_transfer_status"]
+          to_branch_id?: string
+          to_warehouse_id?: string
+          transfer_no?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_branch_id_fkey"
+            columns: ["from_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_warehouse_id_fkey"
+            columns: ["from_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_branch_id_fkey"
+            columns: ["to_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_warehouse_id_fkey"
+            columns: ["to_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_branches: {
         Row: {
           branch_id: string
@@ -2219,6 +2553,79 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      warehouse_bins: {
+        Row: {
+          aisle: string | null
+          branch_id: string
+          code: string
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name_ar: string | null
+          name_en: string | null
+          notes: string | null
+          rack: string | null
+          shelf: string | null
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          aisle?: string | null
+          branch_id: string
+          code: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en?: string | null
+          notes?: string | null
+          rack?: string | null
+          shelf?: string | null
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          aisle?: string | null
+          branch_id?: string
+          code?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en?: string | null
+          notes?: string | null
+          rack?: string | null
+          shelf?: string | null
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_bins_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_bins_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_bins_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       warehouses: {
         Row: {
@@ -2395,7 +2802,47 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      inventory_balances: {
+        Row: {
+          balance: number | null
+          branch_id: string | null
+          company_id: string | null
+          last_movement_at: string | null
+          movement_count: number | null
+          product_id: string | null
+          warehouse_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_workflow_stage: {
@@ -2528,6 +2975,31 @@ export type Database = {
           title: string
         }[]
       }
+      post_stock_transfer: {
+        Args: { _transfer_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          from_branch_id: string
+          from_warehouse_id: string
+          id: string
+          notes: string | null
+          received_at: string | null
+          shipped_at: string | null
+          status: Database["public"]["Enums"]["stock_transfer_status"]
+          to_branch_id: string
+          to_warehouse_id: string
+          transfer_no: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "stock_transfers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       user_accessible_branches: {
         Args: { _user_id: string }
         Returns: string[]
@@ -2564,6 +3036,8 @@ export type Database = {
         | "notifications.view"
         | "manage_customer_fields"
         | "manage_form_fields"
+        | "inventory.manage"
+        | "inventory.transfer"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
       customer_attachment_category:
@@ -2594,6 +3068,14 @@ export type Database = {
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
+      stock_movement_type:
+        | "receipt"
+        | "issue"
+        | "transfer_out"
+        | "transfer_in"
+        | "adjustment"
+        | "opening"
+      stock_transfer_status: "draft" | "in_transit" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2750,6 +3232,8 @@ export const Constants = {
         "notifications.view",
         "manage_customer_fields",
         "manage_form_fields",
+        "inventory.manage",
+        "inventory.transfer",
       ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
@@ -2784,6 +3268,15 @@ export const Constants = {
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
+      stock_movement_type: [
+        "receipt",
+        "issue",
+        "transfer_out",
+        "transfer_in",
+        "adjustment",
+        "opening",
+      ],
+      stock_transfer_status: ["draft", "in_transit", "completed", "cancelled"],
     },
   },
 } as const
