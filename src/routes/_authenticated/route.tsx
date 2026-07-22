@@ -132,9 +132,10 @@ function AuthenticatedLayout() {
           id: "inventory", labelAr: "المخازن", labelEn: "Inventory", icon: Warehouse,
           featureKey: "inventory",
           children: [
-            { labelAr: "الأصناف", labelEn: "Items", icon: Package, soon: true },
+            { to: "/products", labelAr: "الأصناف", labelEn: "Items", icon: Package, match: (p: string) => p.startsWith("/products") },
             { to: "/warehouses", labelAr: "المخازن", labelEn: "Warehouses", icon: Warehouse, match: (p: string) => p.startsWith("/warehouses") },
-            { labelAr: "حركات المخزون", labelEn: "Stock Movements", icon: Boxes, soon: true },
+            { to: "/inventory", labelAr: "أرصدة المخزون", labelEn: "Stock Balances", icon: Boxes, match: (p: string) => p.startsWith("/inventory") },
+            { to: "/transfers", labelAr: "نقل المخزون", labelEn: "Stock Transfers", icon: Boxes, match: (p: string) => p.startsWith("/transfers") },
           ],
         },
       ],
