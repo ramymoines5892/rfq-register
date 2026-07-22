@@ -101,6 +101,51 @@ function WarehousesPage() {
               <Plus className="h-4 w-4" /> {ar ? "مخزن جديد" : "New warehouse"}
             </Button>
           )}
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+            const rows = warehouses.map((w) => ({
+              code: w.code ?? "", name: w.name, name_ar: w.name_ar ?? "",
+              branch_code: w.branch_code ?? "", is_main: w.is_main ? "1" : "0", is_active: w.is_active ? "1" : "0",
+            }));
+            downloadCSV(`warehouses-${new Date().toISOString().slice(0,10)}.csv`,
+              toCSV(rows, ["code","name","name_ar","branch_code","is_main","is_active"]));
+          }}>
+            <Download className="h-4 w-4" /> {ar ? "تصدير" : "Export"}
+          </Button>
+          {canManage && (
+            <label className="cursor-pointer">
+              <input type="file" accept=".csv,text/csv" hidden disabled={importing}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  setImporting(true);
+                  try {
+                    const rows = parseCSV(await f.text());
+                    let ok = 0, fail = 0;
+                    for (const r of rows) {
+                      const name = (r.name || "").trim();
+                      if (!name) { fail++; continue; }
+                      const branch = branches.find((b) => (b as any).code === r.branch_code || b.name === r.branch_code || b.name_ar === r.branch_code);
+                      if (!branch) { fail++; continue; }
+                      try {
+                        await upsertWarehouse(null, {
+                          name, name_ar: r.name_ar || null, code: r.code || null,
+                          branch_id: branch.id,
+                          is_main: r.is_main === "1" || r.is_main?.toLowerCase() === "true",
+                          is_active: r.is_active !== "0" && r.is_active?.toLowerCase() !== "false",
+                        });
+                        ok++;
+                      } catch { fail++; }
+                    }
+                    qc.invalidateQueries({ queryKey: qk.warehouses.all });
+                    toast.success(ar ? `تم استيراد ${ok}${fail ? ` — فشل ${fail}` : ""}` : `Imported ${ok}${fail ? ` — ${fail} failed` : ""}`);
+                  } catch (err: any) { toast.error(err?.message ?? "Import error"); }
+                  finally { setImporting(false); e.target.value = ""; }
+                }} />
+              <span className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm hover:bg-accent">
+                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {ar ? "استيراد CSV" : "Import CSV"}
+              </span>
+            </label>
+          )}
         </div>
 
         {isLoading ? (
