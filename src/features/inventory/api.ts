@@ -80,10 +80,36 @@ export async function fetchInventoryBalances(filters?: { warehouseId?: string; p
   }));
 }
 
-export async function fetchMovements(productId?: string, warehouseId?: string, limit = 100): Promise<StockMovement[]> {
-  let q = supabase.from("stock_movements").select("*").order("created_at", { ascending: false }).limit(limit);
-  if (productId) q = q.eq("product_id", productId);
-  if (warehouseId) q = q.eq("warehouse_id", warehouseId);
+export type MovementFilters = {
+  productId?: string;
+  warehouseId?: string;
+  branchId?: string;
+  movementType?: string;
+  heatNo?: string;
+  lotNo?: string;
+  batchNo?: string;
+  serialNo?: string;
+  from?: string; // ISO date
+  to?: string;   // ISO date
+  limit?: number;
+};
+
+export async function fetchMovements(filters: MovementFilters = {}): Promise<StockMovement[]> {
+  let q = supabase
+    .from("stock_movements")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(filters.limit ?? 200);
+  if (filters.productId) q = q.eq("product_id", filters.productId);
+  if (filters.warehouseId) q = q.eq("warehouse_id", filters.warehouseId);
+  if (filters.branchId) q = q.eq("branch_id", filters.branchId);
+  if (filters.movementType) q = q.eq("movement_type", filters.movementType as never);
+  if (filters.heatNo) q = q.ilike("heat_no", `%${filters.heatNo}%`);
+  if (filters.lotNo) q = q.ilike("lot_no", `%${filters.lotNo}%`);
+  if (filters.batchNo) q = q.ilike("batch_no", `%${filters.batchNo}%`);
+  if (filters.serialNo) q = q.ilike("serial_no", `%${filters.serialNo}%`);
+  if (filters.from) q = q.gte("created_at", filters.from);
+  if (filters.to) q = q.lte("created_at", filters.to);
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as StockMovement[];
@@ -97,10 +123,10 @@ export function useInventoryBalances(filters?: { warehouseId?: string; productId
   });
 }
 
-export function useMovements(productId?: string, warehouseId?: string) {
+export function useMovements(filters: MovementFilters = {}) {
   return useQuery({
-    queryKey: qk.inventory.movements(productId, warehouseId),
-    queryFn: () => fetchMovements(productId, warehouseId),
+    queryKey: qk.inventory.movements(filters.productId, filters.warehouseId).concat([filters as unknown as string]) as unknown as readonly unknown[],
+    queryFn: () => fetchMovements(filters),
     staleTime: 10_000,
   });
 }
