@@ -1,73 +1,121 @@
-## مقارنة سريعة: الموجود vs الاسكريبت
+## نظرة عامة
 
-| العنصر في الاسكريبت | الحالة الحالية في النظام | القرار |
-|---|---|---|
-| Company | ✅ موجود (companies) كامل مع wizard | نبقيه |
-| Branch | ✅ موجود (branches) بس مش مربوط بالموظف | نوسّعه ونربطه |
-| **Management** (إدارة عليا) | ❌ **مفقود تماماً** — عندنا Departments بس مع `parent_id` (تدرج ذاتي) | **نضيفه كطبقة مستقلة** |
-| Department | ✅ موجود لكن بيلعب دور Management + Department | نفصل الأدوار |
-| Position (Job Title) | ✅ موجود (job_titles) | نبقيه ونربطه بـManagement |
-| Employee | ⚠️ متداخل مع profiles (User = Employee) | **نفصل Employee عن User** |
-| User Account | ✅ auth.users + profiles | نخليه linked لـEmployee |
-| Roles | ⚠️ بسيط جداً (user_roles enum: owner/admin/…) بدون Role Definitions | **نبني Roles + Role Permissions** |
-| Permissions | ⚠️ user_permissions مباشرة للـuser (ضد الاسكريبت) | ننقلها لطبقة Role |
-| Approval hierarchy | ⚠️ manager_id فقط على profile | نوسّعها لـDirect/Dept/Management managers |
-
-**الخلاصة:** الاسكريبت أنضف وأصح معمارياً. الموجود عندنا 50% من الطريق، لكن فيه خلط مفاهيمي كبير (Department = Management، User = Employee، Permissions مباشرة). **أوصي باعتماد الاسكريبت** مع migration path يحافظ على البيانات.
+خمس تحسينات مترابطة على وحدة المخزون والصلاحيات: صلاحيات دقيقة، سجل حركات، ضبط يدوى، تقييد إدخال، نظام موافقات (Approvals).
 
 ---
 
-## الخطة (على مراحل — بدون كسر النظام الحالي)
+## 1) صلاحيات دقيقة + RLS للمخازن والنقل
 
-### Phase 1 — Schema (Migration واحد)
-1. **جدول جديد `managements`** (id, company_id, name_ar, name_en, code, director_id, position, is_system).
-2. **`departments`**: نضيف `management_id` (FK). نبقي `parent_id` للتوافق لكن نستخدم `management_id` كمصدر أساسي.
-3. **جدول جديد `employees`** منفصل عن profiles:
-   - employee_code, full_name_ar/en, national_id, passport, phone, email, joining_date
-   - branch_id, management_id, department_id, position_id (job_title)
-   - direct_manager_id, employment_status, photo_url, signature_url
-   - `user_id` (nullable, FK → auth.users) — يتملى بس لو الموظف عنده حساب دخول
-4. **`profiles`**: يبقى مربوط بـauth.users بس، ويشاور على `employee_id` لو موجود.
-5. **`roles`** (id, company_id, name_ar/en, description, is_system).
-6. **`role_permissions`** (role_id, permission app_permission).
-7. **`employee_roles`** (employee_id, role_id) — الـM2M.
-8. تحديث `has_permission()` تستفسر عن الـroles من الـemployee بدل الـuser مباشرة.
-9. Migration data: تحويل `user_permissions` الحالية لـroles تلقائية.
+**Permissions جديدة (تُضاف إلى `app_permission`):**
+- `warehouses.view` / `warehouses.manage`
+- `bins.manage`
+- `inventory.view`
+- `inventory.transfer.create` / `inventory.transfer.post` / `inventory.transfer.cancel`
+- `inventory.adjust.create` / `inventory.adjust.approve`
 
-### Phase 2 — Setup Wizard: توسعة
-Wizard الحالي فيه 4 steps (General/Advanced/Features/Numbering). نضيف بعد الحفظ **Setup Post-Wizard** بالخطوات:
-- Branches → Managements → Departments → Positions → Employees → Users → Roles → Review
+**RLS محدَّثة:**
+- `warehouses`: SELECT عبر `can_access_branch` + `has_permission(uid, 'warehouses.view')`؛ INSERT/UPDATE/DELETE عبر `warehouses.manage`.
+- `warehouse_bins`: نفس المبدأ عبر `bins.manage`.
+- `stock_transfers` + `stock_transfer_lines`: SELECT مقيّد بالفروع المسموحة؛ INSERT/UPDATE بصلاحيات النقل.
+- `stock_movements`: SELECT عبر `inventory.view`؛ لا كتابة مباشرة (تُنشأ من RPC).
 
-كل خطوة اختيارية بعد إنشاء الشركة، مع indicator كامل.
-
-### Phase 3 — شاشات الإدارة
-- `/organization/branches` — CRUD للفروع
-- `/organization/managements` — CRUD للإدارات العليا مع OrgChart
-- `/organization/departments` — CRUD مع filter بالـManagement
-- `/organization/positions` — CRUD (كان job_titles)
-- `/organization/employees` — CRUD كامل للموظفين
-- `/organization/users` — ربط user account بموظف + assign roles
-- `/organization/roles` — CRUD Roles + permission matrix
-- تحديث `settings.organization.tsx` (OrgChart) عشان يعرض التدرج الكامل الجديد
-
-### Phase 4 — تحديث الشاشات الموجودة
-- Team page: تعرض employees مش profiles
-- HR page: تعمل link على employee
-- Sidebar: تظهر modules حسب الـfeature flags (موجود) + حسب صلاحيات الـrole (جديد)
-- Audit log: يسجل employee_id + user_id
+**UI:**
+- إخفاء أزرار «جديد/تعديل/حذف/ترحيل/إلغاء» عند غياب الصلاحية.
+- عرض `toast` عربى/إنجليزى واضح عند رفض RLS بدلاً من رسالة Postgres الخام (رسالة موحّدة في `api.ts`).
 
 ---
 
-## ملاحظات مهمة
+## 2) سجل حركات المخزون داخل صفحة `/inventory`
 
-- **الميزة الكبيرة:** فصل Employee عن User = يقدر يبقى فيه موظفين مش عندهم دخول للنظام (عمال، فنيين)، وده مطلب حقيقي في ERP.
-- **Approval hierarchy** هيبقى مستقل عن Permissions زي ما الاسكريبت طلب.
-- **مايتكسرش:** كل الشاشات القديمة (customers, quotes, workflows) هتفضل شغالة. بس الـpermission check هيبقى عبر الـrole الجديد بدل الـuser_permissions.
+**تبويبان في نفس الصفحة:** *الأرصدة الحالية* / *سجل الحركات*.
+
+**فلاتر السجل:**
+- بحث حرّ (كود/اسم المنتج، Heat/Lot/Batch/Serial، رقم المرجع).
+- Select: المنتج، المخزن، النوع (in/out/transfer/adjustment).
+- فترة تاريخ (من/إلى).
+- ترتيب حسب آخر حركة.
+
+**عمود واحد لكل صف** يوضّح: التاريخ · النوع (Badge ملوَّن) · المنتج · المخزن · الكمية (±) · التتبع · مرجع المصدر (يفتح تفاصيل التحويل/الضبط).
+
+**تصدير CSV** لنفس النتائج المفلترة.
 
 ---
 
-## قرار مطلوب منك
+## 3) ضبط مخزون يدوى (Stock Adjustment)
 
-**هل نبدأ بـPhase 1 (Schema)** الأول ونعرضهولك للموافقة؟ ولا عندك تعديل في التسلسل أو حاجة عايز تضيفها/تشيلها قبل ما نبدأ؟
+**جدول جديد `stock_adjustments`** (رأس) + `stock_adjustment_lines`:
+- سبب الضبط `enum('count', 'damage', 'loss', 'found', 'correction', 'other')` + ملاحظات نصية إلزامية.
+- ربط بالفرع والمخزن، وحقول التتبع الكاملة على كل سطر (Heat/Lot/Batch/Serial/MTC/COO).
+- الحالة: `draft → pending_approval → approved → posted | rejected | cancelled`.
 
-بمجرد ما توافق على Phase 1، هبعتلك migration واحد كامل بالجداول الجديدة والـmigration data من الـuser_permissions القديمة.
+**RPC `post_stock_adjustment`** يُنشئ حركات في `stock_movements` بنوع `adjustment` (+/-) مربوطة بالتتبع.
+
+**صفحة `/adjustments`** بنفس نمط صفحة النقل (List + Sheet تفاصيل + Add Line + Post).
+
+**تفاصيل الحركة**: نافذة موحّدة تعرض المصدر (تحويل أو ضبط) مع كل حقول التتبع.
+
+---
+
+## 4) تقييد إدخال العربى/الإنجليزى فى كل البرنامج
+
+**قاعدة موحّدة عبر `ScriptInput`** (موجود بالفعل):
+- كل حقل عربى: يرفض الحروف اللاتينية فورًا + Tooltip دائم «أدخل نصًا عربيًا فقط».
+- كل حقل إنجليزى: يرفض الحروف العربية + Tooltip «Enter English only».
+- Tooltip يظهر عند التركيز، ورسالة خطأ حمراء عند اللصق غير الصحيح.
+
+**تدقيق شامل:** استبدال كل `<Input>` نصى لاسم عربى/إنجليزى بـ `ScriptInput` عبر الشاشات: Warehouses, Bins, Products, Transfers, Adjustments, Departments, Job Titles, Employees, Company, Branches, Customers, RecordEditor.
+
+**Zod validation** موحَّدة قبل الحفظ فى كل النماذج (طول أدنى/أقصى، نوع النص، تفرّد الأكواد).
+
+---
+
+## 5) نظام موافقات (Approvals) عام قابل للتوسّع
+
+**جدول `approval_requests`:**
+```
+id, company_id, entity_type (transfer|adjustment|...), entity_id,
+action (post|cancel|delete|update),
+requested_by, requested_at, payload_snapshot jsonb,
+status (pending|approved|rejected|cancelled),
+approver_id, decided_at, decision_note,
+required_role (app_role) — أى دور يستطيع الموافقة
+```
+
+**قواعد الاشتراط (Threshold rules):**
+- إعداد فى `company_features`: هل الترحيل يحتاج موافقة؟ من (admin/owner/warehouse_manager)؟
+- عند الترحيل: لو الدور لا يملك `.post` مباشرة → يُنشأ `approval_request` بحالة `pending`.
+- عند الموافقة: تُنفَّذ الحركة الأصلية عبر RPC (`approve_and_execute`).
+
+**UI:**
+- علبة موافقات فى الشريط الجانبى «الموافقات» + Badge بعدد المعلَّقة.
+- صفحة `/approvals`: قائمة معلّقة/محلولة، تفاصيل الكيان الأصلى مع الفروق، زرّا موافقة/رفض مع سبب.
+- تنبيه (`notifications`) لكل مُوافق مؤهَّل عند إنشاء الطلب.
+
+---
+
+## التنفيذ التقنى
+
+**Migrations (SQL):**
+1. توسعة `app_permission` بالقيم الجديدة + تعيينها للأدوار الافتراضية.
+2. تحديث سياسات RLS للجداول أعلاه.
+3. جداول `stock_adjustments`, `stock_adjustment_lines`, `approval_requests` + GRANT + RLS.
+4. RPCs: `post_stock_adjustment`, `approve_and_execute`, `request_approval`.
+5. تعديل `post_stock_transfer` ليمرّ عبر نظام الموافقات عند الحاجة.
+
+**Frontend:**
+- `src/features/adjustments/` (api + queries + UI).
+- `src/features/approvals/` (api + queries + UI + hook `useRequireApproval`).
+- تحديث `src/features/transfers/api.ts` لعرض رسائل RLS واضحة.
+- توسعة `/inventory` بتبويب الحركات + CSV.
+- شامل استبدال `Input` بـ `ScriptInput` فى الشاشات المذكورة.
+- سلسلة hooks: `useCanCreateTransfer()`, `useCanPostTransfer()`, ...إلخ.
+
+**Sidebar:**
+- إضافة «ضبط المخزون» و«الموافقات» تحت مجموعة المخزون/الإدارة، مع Badge للمعلّقات.
+
+---
+
+## تنبيه أمنى
+
+- كل عمليات الترحيل/الموافقة تمرّ عبر `SECURITY DEFINER` RPCs مع تحقّق `has_permission` داخل الدالّة، وليس اعتمادًا على واجهة المستخدم فقط.
+- سجل تدقيق (`audit_logs`) لكل موافقة/رفض/ترحيل.

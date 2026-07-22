@@ -99,7 +99,18 @@ export const qk = {
     detail: (id: string) => ["transfers", "detail", id] as const,
     lines: (id: string) => ["transfers", "lines", id] as const,
   },
-
+  adjustments: {
+    all: ["adjustments"] as const,
+    list: (filters?: Record<string, unknown>) =>
+      filters ? (["adjustments", "list", filters] as const) : (["adjustments", "list"] as const),
+    detail: (id: string) => ["adjustments", "detail", id] as const,
+    lines: (id: string) => ["adjustments", "lines", id] as const,
+  },
+  approvals: {
+    all: ["approvals"] as const,
+    list: (status?: string) => ["approvals", "list", status ?? "all"] as const,
+    detail: (id: string) => ["approvals", "detail", id] as const,
+  },
 } as const;
 
 
