@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAccess } from "@/hooks/useAccess";
 import { Button } from "@/components/ui/button";
@@ -471,15 +471,16 @@ function BranchUsers({ branchId, canManage }: { branchId: string; canManage: boo
   const [draft, setDraft] = useState<Record<string, { assigned: boolean; is_default: boolean }>>({});
   const [query, setQuery] = useState("");
 
-  const initialized = Object.keys(draft).length > 0;
-  if (!initialized && users.length && !aLoading) {
+  useEffect(() => {
+    if (usersLoading || aLoading) return;
     const map: Record<string, { assigned: boolean; is_default: boolean }> = {};
     for (const u of users) {
       const a = assignments.find((x) => x.user_id === u.id);
       map[u.id] = { assigned: !!a, is_default: !!a?.is_default };
     }
     setDraft(map);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usersLoading, aLoading, users.length, assignments.length]);
 
   const filtered = users.filter((u) => {
     const q = query.trim().toLowerCase();
