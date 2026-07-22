@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, redirect } from "@tansta
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders, Trash2, Network, Palette, FolderArchive, ToggleRight, Building2 } from "lucide-react";
+import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders, Trash2, Network, Palette, FolderArchive, ToggleRight, Building2, Layers } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsLayout,
