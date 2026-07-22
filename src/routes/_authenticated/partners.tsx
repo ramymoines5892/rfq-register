@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScriptInput } from "@/components/ScriptInput";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm, usePrompt } from "@/hooks/useConfirm";
 import {
   usePartners, usePartner, useUpsertPartner, useDeletePartner,
   usePartnerContacts, useUpsertContact, useDeleteContact,
@@ -56,6 +57,8 @@ const EMPTY_ADV: AdvFilters = { name: "", tax_id: "", industry: "", address: "" 
 function PartnersPage() {
   const { t, lang } = useI18n();
   const ar = lang === "ar";
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const [role, setRole] = useState<PartnerRole | "all">("all");
   const [search, setSearch] = useState("");
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
@@ -103,13 +106,23 @@ function PartnersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(ar ? "حذف الشريك؟" : "Delete partner?")) return;
+    const ok = await confirm({
+      title: ar ? "حذف الشريك؟" : "Delete partner?",
+      description: ar ? "لن يمكن التراجع عن هذا الإجراء." : "This action cannot be undone.",
+      confirmText: ar ? "حذف" : "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     try { await del.mutateAsync(id); toast.success(ar ? "تم الحذف" : "Deleted"); }
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
 
-  function saveCurrentFilter() {
-    const name = prompt(ar ? "اسم الفلتر:" : "Filter name:");
+  async function saveCurrentFilter() {
+    const name = await prompt({
+      title: ar ? "حفظ الفلتر" : "Save filter",
+      placeholder: ar ? "اسم الفلتر" : "Filter name",
+      required: true,
+    });
     if (!name) return;
     setSaved((s) => [...s.filter((x) => x.name !== name), { name, role, adv }]);
     toast.success(ar ? "تم الحفظ" : "Saved");
@@ -529,6 +542,9 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   const [status, setStatus] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc" | "title_asc">("date_desc");
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [page, setPage] = useState<number>(1);
 
   const statuses = useMemo(() => {
     const s = new Set<string>();
@@ -537,20 +553,41 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   }, [rows]);
 
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
+    const list = rows.filter((r) => {
       if (kind !== "all" && r.kind !== kind) return false;
       if (status !== "all" && (r.status ?? "") !== status) return false;
       if (from && (!r.date || new Date(r.date) < new Date(from))) return false;
       if (to && (!r.date || new Date(r.date) > new Date(to + "T23:59:59"))) return false;
       return true;
     });
-  }, [rows, kind, status, from, to]);
+    const time = (v?: string | null) => (v ? new Date(v).getTime() : 0);
+    const amt = (v?: number | null) => (v == null ? -Infinity : Number(v));
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case "date_asc":   return time(a.date) - time(b.date);
+        case "amount_desc":return amt(b.amount) - amt(a.amount);
+        case "amount_asc": return amt(a.amount) - amt(b.amount);
+        case "title_asc":  return (a.title ?? "").localeCompare(b.title ?? "");
+        case "date_desc":
+        default:           return time(b.date) - time(a.date);
+      }
+    });
+    return list;
+  }, [rows, kind, status, from, to, sortBy]);
 
   const totals = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach((r) => { if (r.amount != null) { const k = r.currency ?? "—"; map[k] = (map[k] ?? 0) + Number(r.amount); } });
     return map;
   }, [filtered]);
+
+  // reset to page 1 whenever filters/sort/page-size change
+  useEffect(() => { setPage(1); }, [kind, status, from, to, sortBy, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const paged = filtered.slice(pageStart, pageStart + pageSize);
 
   const labelKind = (k: string) => ar
     ? ({ quote: "عرض سعر", customer: "عميل مرتبط", stock_movement: "حركة مخزون" } as any)[k] ?? k
@@ -594,6 +631,28 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
           <Label className="text-[11px] text-muted-foreground">{ar ? "إلى تاريخ" : "To"}</Label>
           <Input type="date" className="h-8" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "ترتيب" : "Sort"}</Label>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date_desc">{ar ? "الأحدث أولاً" : "Newest first"}</SelectItem>
+              <SelectItem value="date_asc">{ar ? "الأقدم أولاً" : "Oldest first"}</SelectItem>
+              <SelectItem value="amount_desc">{ar ? "المبلغ (تنازلي)" : "Amount (high → low)"}</SelectItem>
+              <SelectItem value="amount_asc">{ar ? "المبلغ (تصاعدي)" : "Amount (low → high)"}</SelectItem>
+              <SelectItem value="title_asc">{ar ? "الاسم (أ→ي)" : "Title (A→Z)"}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "حجم الصفحة" : "Page size"}</Label>
+          <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+            <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
         {hasFilters && (
           <Button variant="ghost" size="sm" className="justify-start col-span-2 md:col-span-4" onClick={clearAll}>
             <X className="h-4 w-4 me-1" />{ar ? "مسح الفلاتر" : "Clear filters"}
@@ -601,12 +660,18 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
         )}
       </CardContent></Card>
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div>{ar ? `${filtered.length} من ${rows.length} مستند` : `${filtered.length} of ${rows.length} documents`}</div>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{ar ? `${filtered.length} نتيجة` : `${filtered.length} results`}</Badge>
+          <span>{ar ? `من إجمالي ${rows.length}` : `of ${rows.length} total`}</span>
+        </div>
         {Object.keys(totals).length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-[10px]">{ar ? "الإجمالي:" : "Totals:"}</span>
             {Object.entries(totals).map(([cur, tot]) => (
-              <Badge key={cur} variant="secondary">{tot.toLocaleString()} {cur}</Badge>
+              <Badge key={cur} variant="secondary" className="text-[10px]">
+                {tot.toLocaleString(undefined, { maximumFractionDigits: 2 })} {cur}
+              </Badge>
             ))}
           </div>
         )}
@@ -619,27 +684,48 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
             : (ar ? "لا توجد نتائج مطابقة." : "No matching results.")}
         </CardContent></Card>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((r) => (
-            <a key={`${r.kind}:${r.id}`} href={r.link ?? undefined} className="block">
-              <Card className="hover:shadow-sm transition"><CardContent className="p-3 flex items-center gap-3">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px]">{labelKind(r.kind)}</Badge>
-                    {r.status && <Badge variant="secondary" className="text-[10px]">{r.status}</Badge>}
-                    <div className="font-medium truncate">{r.title}</div>
+        <>
+          <div className="space-y-2">
+            {paged.map((r) => (
+              <a key={`${r.kind}:${r.id}`} href={r.link ?? undefined} className="block">
+                <Card className="hover:shadow-sm transition"><CardContent className="p-3 flex items-center gap-3">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="text-[10px]">{labelKind(r.kind)}</Badge>
+                      {r.status && <Badge variant="secondary" className="text-[10px]">{r.status}</Badge>}
+                      <div className="font-medium truncate">{r.title}</div>
+                    </div>
+                    {r.subtitle && <div className="text-xs text-muted-foreground truncate">{r.subtitle}</div>}
                   </div>
-                  {r.subtitle && <div className="text-xs text-muted-foreground truncate">{r.subtitle}</div>}
-                </div>
-                <div className="text-xs text-muted-foreground text-end shrink-0">
-                  {r.amount != null && <div>{Number(r.amount).toLocaleString()} {r.currency ?? ""}</div>}
-                  {r.date && <div>{new Date(r.date).toLocaleDateString()}</div>}
-                </div>
-              </CardContent></Card>
-            </a>
-          ))}
-        </div>
+                  <div className="text-xs text-muted-foreground text-end shrink-0">
+                    {r.amount != null && <div>{Number(r.amount).toLocaleString()} {r.currency ?? ""}</div>}
+                    {r.date && <div>{new Date(r.date).toLocaleDateString()}</div>}
+                  </div>
+                </CardContent></Card>
+              </a>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-1">
+              <div className="text-xs text-muted-foreground">
+                {ar
+                  ? `عرض ${pageStart + 1}–${Math.min(pageStart + pageSize, filtered.length)} من ${filtered.length}`
+                  : `Showing ${pageStart + 1}–${Math.min(pageStart + pageSize, filtered.length)} of ${filtered.length}`}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={() => setPage(1)} disabled={currentPage === 1}>«</Button>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>‹</Button>
+                <span className="text-xs px-2 tabular-nums">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>›</Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(totalPages)} disabled={currentPage === totalPages}>»</Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
