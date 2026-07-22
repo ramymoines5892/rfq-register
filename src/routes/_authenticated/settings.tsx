@@ -28,6 +28,7 @@ type TabDef = {
 const TABS: TabDef[] = [
   { to: "/settings", labelAr: "نظرة عامة", labelEn: "Overview", icon: Sliders },
   { to: "/settings/company", labelAr: "بيانات الشركة", labelEn: "Company Data", icon: Building2 },
+  { to: "/settings/foundation", labelAr: "الأساس (سنوات مالية/ترقيم/اعتمادات)", labelEn: "Foundation", icon: Layers },
   { to: "/settings/appearance", labelAr: "المظهر", labelEn: "Appearance", icon: Palette },
   { to: "/settings/organization", labelAr: "الهيكل التنظيمي", labelEn: "Organization", icon: Network },
   { to: "/settings/document-types", labelAr: "أنواع مستندات الشركة", labelEn: "Company Document Types", icon: FolderArchive },
