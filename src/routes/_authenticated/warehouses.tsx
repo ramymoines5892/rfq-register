@@ -249,6 +249,9 @@ function WarehouseCard({
           <Button size="sm" variant="outline" className="flex-1 h-8 gap-1.5" onClick={onEdit}>
             <Pencil className="h-3 w-3" /> {ar ? "تعديل" : "Edit"}
           </Button>
+          <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={onBins} title={ar ? "المواقع/الرفوف" : "Locations / bins"}>
+            <MapPin className="h-3 w-3" />
+          </Button>
           {canManage && (
             <Button size="sm" variant="ghost" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={onDelete}>
               <Trash2 className="h-3 w-3" />
