@@ -27,7 +27,7 @@ import {
   useUpsertBranch,
 } from "@/features/branches/queries";
 import type { BranchAssignment, BranchWithCounts } from "@/features/branches/api";
-import { CascadingLocation } from "@/lib/geoData";
+import { getCities, getStates, hasGeo } from "@/lib/geoData";
 
 export const Route = createFileRoute("/_authenticated/organization")({
   component: OrganizationHub,
