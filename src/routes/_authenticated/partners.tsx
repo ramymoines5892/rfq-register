@@ -639,6 +639,11 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
             <X className="h-4 w-4 me-1" />{ar ? "مسح الفلاتر" : "Clear filters"}
           </Button>
         )}
+        {!rangeValid && (
+          <div className="col-span-2 md:col-span-4 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-2 py-1.5">
+            {ar ? "نطاق التاريخ غير صالح: «من» بعد «إلى»." : "Invalid date range: “From” is after “To”."}
+          </div>
+        )}
       </CardContent></Card>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
