@@ -26,6 +26,8 @@ import { Route as AuthenticatedInventoryRouteImport } from './routes/_authentica
 import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
 import { Route as AuthenticatedDocumentsRouteImport } from './routes/_authenticated/documents'
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
+import { Route as AuthenticatedApprovalsRouteImport } from './routes/_authenticated/approvals'
+import { Route as AuthenticatedAdjustmentsRouteImport } from './routes/_authenticated/adjustments'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
 import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authenticated/settings.search'
@@ -123,6 +125,17 @@ const AuthenticatedCustomersRoute = AuthenticatedCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedApprovalsRoute = AuthenticatedApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdjustmentsRoute =
+  AuthenticatedAdjustmentsRouteImport.update({
+    id: '/adjustments',
+    path: '/adjustments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsIndexRoute =
   AuthenticatedSettingsIndexRouteImport.update({
     id: '/',
@@ -196,6 +209,8 @@ export interface FileRoutesByFullPath {
   '/pending': typeof PendingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/adjustments': typeof AuthenticatedAdjustmentsRoute
+  '/approvals': typeof AuthenticatedApprovalsRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
@@ -224,6 +239,8 @@ export interface FileRoutesByTo {
   '/pending': typeof PendingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/adjustments': typeof AuthenticatedAdjustmentsRoute
+  '/approvals': typeof AuthenticatedApprovalsRoute
   '/customers': typeof AuthenticatedCustomersRoute
   '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
@@ -254,6 +271,8 @@ export interface FileRoutesById {
   '/pending': typeof PendingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/_authenticated/adjustments': typeof AuthenticatedAdjustmentsRoute
+  '/_authenticated/approvals': typeof AuthenticatedApprovalsRoute
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/hr': typeof AuthenticatedHrRoute
@@ -286,6 +305,8 @@ export interface FileRouteTypes {
     | '/pending'
     | '/reset-password'
     | '/setup'
+    | '/adjustments'
+    | '/approvals'
     | '/customers'
     | '/documents'
     | '/hr'
@@ -314,6 +335,8 @@ export interface FileRouteTypes {
     | '/pending'
     | '/reset-password'
     | '/setup'
+    | '/adjustments'
+    | '/approvals'
     | '/customers'
     | '/documents'
     | '/hr'
@@ -343,6 +366,8 @@ export interface FileRouteTypes {
     | '/pending'
     | '/reset-password'
     | '/setup'
+    | '/_authenticated/adjustments'
+    | '/_authenticated/approvals'
     | '/_authenticated/customers'
     | '/_authenticated/documents'
     | '/_authenticated/hr'
@@ -497,6 +522,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/approvals': {
+      id: '/_authenticated/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof AuthenticatedApprovalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/adjustments': {
+      id: '/_authenticated/adjustments'
+      path: '/adjustments'
+      fullPath: '/adjustments'
+      preLoaderRoute: typeof AuthenticatedAdjustmentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings/': {
       id: '/_authenticated/settings/'
       path: '/'
@@ -612,6 +651,8 @@ const AuthenticatedSettingsRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdjustmentsRoute: typeof AuthenticatedAdjustmentsRoute
+  AuthenticatedApprovalsRoute: typeof AuthenticatedApprovalsRoute
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedHrRoute: typeof AuthenticatedHrRoute
@@ -628,6 +669,8 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdjustmentsRoute: AuthenticatedAdjustmentsRoute,
+  AuthenticatedApprovalsRoute: AuthenticatedApprovalsRoute,
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedHrRoute: AuthenticatedHrRoute,
