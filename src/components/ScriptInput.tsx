@@ -15,16 +15,26 @@ interface Props extends Omit<React.ComponentProps<typeof Input>, "onChange" | "v
 
 export function ScriptInput({ script, value, onChange, isAr = false, ...rest }: Props) {
   const [warn, setWarn] = React.useState(false);
+  const [focused, setFocused] = React.useState(false);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const message =
+  const guide =
     script === "en"
       ? isAr
         ? "الكتابة لازم تكون بالإنجليزى فقط"
-        : "This field accepts English letters only"
+        : "English letters only"
       : isAr
         ? "الكتابة لازم تكون بالعربى فقط"
-        : "This field accepts Arabic letters only";
+        : "Arabic letters only";
+
+  const errorMsg =
+    script === "en"
+      ? isAr
+        ? "مسموح إنجليزى فقط — تم تجاهل الأحرف العربية"
+        : "English only — Arabic characters removed"
+      : isAr
+        ? "مسموح عربى فقط — تم تجاهل الأحرف الإنجليزية"
+        : "Arabic only — Latin characters removed";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
@@ -32,7 +42,7 @@ export function ScriptInput({ script, value, onChange, isAr = false, ...rest }: 
     if (invalid) {
       setWarn(true);
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setWarn(false), 2200);
+      timer.current = setTimeout(() => setWarn(false), 2500);
     }
     const cleaned = script === "en" ? filterEnglish(raw) : filterArabic(raw);
     onChange(cleaned);
@@ -40,26 +50,34 @@ export function ScriptInput({ script, value, onChange, isAr = false, ...rest }: 
 
   React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  const open = warn || focused;
+  const message = warn ? errorMsg : guide;
+
   return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip open={warn}>
+    <TooltipProvider delayDuration={200}>
+      <Tooltip open={open}>
         <TooltipTrigger asChild>
           <div className="relative">
             <Input
               dir={script === "en" ? "ltr" : "rtl"}
+              lang={script}
+              title={guide}
               {...rest}
               value={value}
               onChange={handleChange}
+              onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
+              onBlur={(e) => { setFocused(false); rest.onBlur?.(e); }}
               aria-invalid={warn}
               className={`${rest.className ?? ""} ${warn ? "border-destructive ring-2 ring-destructive/30" : ""}`}
             />
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="bg-destructive text-destructive-foreground flex items-center gap-1.5">
-          <AlertCircle className="h-3.5 w-3.5" />
+        <TooltipContent side="top" className={warn ? "bg-destructive text-destructive-foreground flex items-center gap-1.5" : "flex items-center gap-1.5"}>
+          {warn && <AlertCircle className="h-3.5 w-3.5" />}
           <span className="text-xs font-medium">{message}</span>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 }
+
