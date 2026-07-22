@@ -91,20 +91,85 @@ export async function getPartner(id: string): Promise<BusinessPartner | null> {
   return (data ?? null) as BusinessPartner | null;
 }
 
+async function logAudit(action: string, entityId: string, before: any, after: any) {
+  try {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u?.user) return;
+    await (supabase as any).from("audit_logs").insert({
+      actor_id: u.user.id, actor_email: u.user.email ?? null,
+      action, entity_type: "business_partner", entity_id: entityId,
+      before, after,
+    });
+  } catch { /* audit best-effort */ }
+}
+
 export async function upsertPartner(p: Partial<BusinessPartner>): Promise<BusinessPartner> {
   if (p.id) {
+    const { data: prev } = await bp().select("*").eq("id", p.id).maybeSingle();
     const { data, error } = await bp().update(p).eq("id", p.id).select("*").single();
-    if (error) throw error; return data as BusinessPartner;
+    if (error) throw error;
+    const diff: any = {};
+    for (const k of Object.keys(p)) if ((prev as any)?.[k] !== (data as any)?.[k]) diff[k] = { from: (prev as any)?.[k], to: (data as any)?.[k] };
+    if (Object.keys(diff).length) await logAudit("update", data.id, diff, null);
+    return data as BusinessPartner;
   }
   const { data: company } = await supabase.from("companies").select("id").order("created_at").limit(1).maybeSingle();
   const payload = { ...p, company_id: p.company_id ?? company?.id ?? null, roles: p.roles ?? [] };
   const { data, error } = await bp().insert(payload).select("*").single();
-  if (error) throw error; return data as BusinessPartner;
+  if (error) throw error;
+  await logAudit("create", data.id, null, { name_ar: data.name_ar, name_en: data.name_en, roles: data.roles });
+  return data as BusinessPartner;
 }
 
 export async function softDeletePartner(id: string): Promise<void> {
   const { error } = await bp().update({ deleted_at: new Date().toISOString() }).eq("id", id);
   if (error) throw error;
+  await logAudit("delete", id, null, null);
+}
+
+export type AuditEntry = {
+  id: string; action: string; actor_email: string | null;
+  before: any; after: any; created_at: string;
+};
+export async function listPartnerAudit(id: string): Promise<AuditEntry[]> {
+  const { data, error } = await (supabase as any).from("audit_logs")
+    .select("id, action, actor_email, before, after, created_at")
+    .eq("entity_type", "business_partner").eq("entity_id", id)
+    .order("created_at", { ascending: false }).limit(100);
+  if (error) throw error;
+  return (data ?? []) as AuditEntry[];
+}
+
+export type RelatedDocument = {
+  kind: "quote" | "customer" | "stock_movement";
+  id: string; title: string; subtitle: string | null; date: string | null; link: string | null;
+};
+export async function listRelatedDocuments(p: BusinessPartner): Promise<RelatedDocument[]> {
+  const out: RelatedDocument[] = [];
+  const names = [p.name_ar, p.name_en, p.legal_name].filter(Boolean) as string[];
+  // Quotes matched by supplier_name
+  if (names.length) {
+    const ors = names.map((n) => `supplier_name.ilike.%${n.replace(/[,%]/g, " ")}%`).join(",");
+    const { data: qs } = await (supabase as any).from("quotes")
+      .select("id, reference_no, supplier_name, description, created_at")
+      .or(ors).is("deleted_at", null).order("created_at", { ascending: false }).limit(50);
+    (qs ?? []).forEach((q: any) => out.push({
+      kind: "quote", id: q.id,
+      title: q.reference_no || q.supplier_name || "Quote",
+      subtitle: q.description ?? q.supplier_name ?? null,
+      date: q.created_at, link: `/workflows?quote=${q.id}`,
+    }));
+  }
+  // Legacy customers by tax_id
+  if (p.tax_id) {
+    const { data: cs } = await (supabase as any).from("customers")
+      .select("id, name, tax_id, created_at").eq("tax_id", p.tax_id).is("deleted_at", null).limit(20);
+    (cs ?? []).forEach((c: any) => out.push({
+      kind: "customer", id: c.id, title: c.name, subtitle: `Tax ID: ${c.tax_id}`,
+      date: c.created_at, link: `/customers?open=${c.id}`,
+    }));
+  }
+  return out;
 }
 
 // Contacts
