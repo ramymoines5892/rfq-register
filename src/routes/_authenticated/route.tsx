@@ -133,7 +133,7 @@ function AuthenticatedLayout() {
           featureKey: "inventory",
           children: [
             { labelAr: "الأصناف", labelEn: "Items", icon: Package, soon: true },
-            { labelAr: "المخازن", labelEn: "Warehouses", icon: Warehouse, soon: true },
+            { to: "/warehouses", labelAr: "المخازن", labelEn: "Warehouses", icon: Warehouse, match: (p: string) => p.startsWith("/warehouses") },
             { labelAr: "حركات المخزون", labelEn: "Stock Movements", icon: Boxes, soon: true },
           ],
         },
