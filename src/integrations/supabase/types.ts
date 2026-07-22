@@ -2564,6 +2564,8 @@ export type Database = {
         | "notifications.view"
         | "manage_customer_fields"
         | "manage_form_fields"
+        | "inventory.manage"
+        | "inventory.transfer"
       app_role: "owner" | "admin" | "member"
       approval_decision: "pending" | "approved" | "rejected"
       customer_attachment_category:
@@ -2750,6 +2752,8 @@ export const Constants = {
         "notifications.view",
         "manage_customer_fields",
         "manage_form_fields",
+        "inventory.manage",
+        "inventory.transfer",
       ],
       app_role: ["owner", "admin", "member"],
       approval_decision: ["pending", "approved", "rejected"],
