@@ -57,6 +57,8 @@ const EMPTY_ADV: AdvFilters = { name: "", tax_id: "", industry: "", address: "" 
 function PartnersPage() {
   const { t, lang } = useI18n();
   const ar = lang === "ar";
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const [role, setRole] = useState<PartnerRole | "all">("all");
   const [search, setSearch] = useState("");
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
@@ -104,13 +106,23 @@ function PartnersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(ar ? "حذف الشريك؟" : "Delete partner?")) return;
+    const ok = await confirm({
+      title: ar ? "حذف الشريك؟" : "Delete partner?",
+      description: ar ? "لن يمكن التراجع عن هذا الإجراء." : "This action cannot be undone.",
+      confirmText: ar ? "حذف" : "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     try { await del.mutateAsync(id); toast.success(ar ? "تم الحذف" : "Deleted"); }
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
 
-  function saveCurrentFilter() {
-    const name = prompt(ar ? "اسم الفلتر:" : "Filter name:");
+  async function saveCurrentFilter() {
+    const name = await prompt({
+      title: ar ? "حفظ الفلتر" : "Save filter",
+      placeholder: ar ? "اسم الفلتر" : "Filter name",
+      required: true,
+    });
     if (!name) return;
     setSaved((s) => [...s.filter((x) => x.name !== name), { name, role, adv }]);
     toast.success(ar ? "تم الحفظ" : "Saved");
