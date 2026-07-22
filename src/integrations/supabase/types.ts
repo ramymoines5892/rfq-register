@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_matrix: {
+        Row: {
+          action: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          entity_type: string
+          id: string
+          is_active: boolean
+          max_amount: number | null
+          min_amount: number | null
+          notes: string | null
+          required_app_role: Database["public"]["Enums"]["app_role"] | null
+          required_role_id: string | null
+          requires_all_approvers: boolean
+          stage_no: number
+          updated_at: string
+        }
+        Insert: {
+          action?: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          entity_type: string
+          id?: string
+          is_active?: boolean
+          max_amount?: number | null
+          min_amount?: number | null
+          notes?: string | null
+          required_app_role?: Database["public"]["Enums"]["app_role"] | null
+          required_role_id?: string | null
+          requires_all_approvers?: boolean
+          stage_no?: number
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          entity_type?: string
+          id?: string
+          is_active?: boolean
+          max_amount?: number | null
+          min_amount?: number | null
+          notes?: string | null
+          required_app_role?: Database["public"]["Enums"]["app_role"] | null
+          required_role_id?: string | null
+          requires_all_approvers?: boolean
+          stage_no?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_matrix_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_matrix_required_role_id_fkey"
+            columns: ["required_role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -55,6 +127,47 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: []
+      }
+      backup_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          last_backup_at: string | null
+          notify_email: string | null
+          retention_days: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_backup_at?: string | null
+          notify_email?: string | null
+          retention_days?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_backup_at?: string | null
+          notify_email?: string | null
+          retention_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       branches: {
         Row: {
@@ -550,10 +663,15 @@ export type Database = {
           company_id: string
           created_at: string
           doc_type: string
+          format_template: string
           id: string
+          label_ar: string | null
+          label_en: string | null
+          last_reset_period: string | null
           next_seq: number
           padding: number
           prefix: string
+          reset_policy: Database["public"]["Enums"]["numbering_reset_policy"]
           updated_at: string
           year_segment: boolean
         }
@@ -562,10 +680,15 @@ export type Database = {
           company_id: string
           created_at?: string
           doc_type: string
+          format_template?: string
           id?: string
+          label_ar?: string | null
+          label_en?: string | null
+          last_reset_period?: string | null
           next_seq?: number
           padding?: number
           prefix: string
+          reset_policy?: Database["public"]["Enums"]["numbering_reset_policy"]
           updated_at?: string
           year_segment?: boolean
         }
@@ -574,10 +697,15 @@ export type Database = {
           company_id?: string
           created_at?: string
           doc_type?: string
+          format_template?: string
           id?: string
+          label_ar?: string | null
+          label_en?: string | null
+          last_reset_period?: string | null
           next_seq?: number
           padding?: number
           prefix?: string
+          reset_policy?: Database["public"]["Enums"]["numbering_reset_policy"]
           updated_at?: string
           year_segment?: boolean
         }
@@ -1373,6 +1501,62 @@ export type Database = {
           },
         ]
       }
+      fiscal_years: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          end_date: string
+          id: string
+          is_closed: boolean
+          is_current: boolean
+          name: string
+          notes: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          id?: string
+          is_closed?: boolean
+          is_current?: boolean
+          name: string
+          notes?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          is_closed?: boolean
+          is_current?: boolean
+          name?: string
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_years_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_titles: {
         Row: {
           code: string | null
@@ -1440,6 +1624,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      login_history: {
+        Row: {
+          created_at: string
+          email: string | null
+          failure_reason: string | null
+          id: string
+          ip_address: unknown
+          success: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: unknown
+          success: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: unknown
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       managements: {
         Row: {
@@ -1638,6 +1855,68 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      password_policies: {
+        Row: {
+          company_id: string
+          created_at: string
+          expiry_days: number
+          id: string
+          lockout_attempts: number
+          lockout_minutes: number
+          min_length: number
+          prevent_reuse_last_n: number
+          require_2fa: boolean
+          require_lowercase: boolean
+          require_number: boolean
+          require_symbol: boolean
+          require_uppercase: boolean
+          session_timeout_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          expiry_days?: number
+          id?: string
+          lockout_attempts?: number
+          lockout_minutes?: number
+          min_length?: number
+          prevent_reuse_last_n?: number
+          require_2fa?: boolean
+          require_lowercase?: boolean
+          require_number?: boolean
+          require_symbol?: boolean
+          require_uppercase?: boolean
+          session_timeout_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          expiry_days?: number
+          id?: string
+          lockout_attempts?: number
+          lockout_minutes?: number
+          min_length?: number
+          prevent_reuse_last_n?: number
+          require_2fa?: boolean
+          require_lowercase?: boolean
+          require_number?: boolean
+          require_symbol?: boolean
+          require_uppercase?: boolean
+          session_timeout_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -2975,6 +3254,10 @@ export type Database = {
           title: string
         }[]
       }
+      next_document_number: {
+        Args: { _branch_id?: string; _company_id: string; _doc_type: string }
+        Returns: string
+      }
       post_stock_transfer: {
         Args: { _transfer_id: string }
         Returns: {
@@ -2998,6 +3281,39 @@ export type Database = {
           to: "stock_transfers"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      resolve_approval_stages: {
+        Args: {
+          _action: string
+          _amount: number
+          _company_id: string
+          _currency?: string
+          _entity_type: string
+        }
+        Returns: {
+          action: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          entity_type: string
+          id: string
+          is_active: boolean
+          max_amount: number | null
+          min_amount: number | null
+          notes: string | null
+          required_app_role: Database["public"]["Enums"]["app_role"] | null
+          required_role_id: string | null
+          requires_all_approvers: boolean
+          stage_no: number
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "approval_matrix"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       user_accessible_branches: {
@@ -3079,6 +3395,7 @@ export type Database = {
         | "suspended"
         | "terminated"
         | "probation"
+      numbering_reset_policy: "never" | "yearly" | "monthly" | "daily"
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
@@ -3307,6 +3624,7 @@ export const Constants = {
         "terminated",
         "probation",
       ],
+      numbering_reset_policy: ["never", "yearly", "monthly", "daily"],
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],

@@ -58,12 +58,26 @@ function AuthPage() {
     return msg;
   }
 
+  const logLoginAttempt = async (success: boolean, reason?: string) => {
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      await (supabase as any).from("login_history").insert({
+        user_id: u.user?.id ?? null,
+        email,
+        success,
+        failure_reason: reason ?? null,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      });
+    } catch { /* best-effort */ }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) { await logLoginAttempt(false, error.message); throw error; }
+      await logLoginAttempt(true);
       const { data: hasCompany } = await supabase.rpc("has_any_company");
       navigate({ to: hasCompany ? "/" : "/setup" });
     } catch (err) {

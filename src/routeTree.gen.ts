@@ -33,6 +33,7 @@ import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authen
 import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authenticated/settings.search'
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings.organization'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
+import { Route as AuthenticatedSettingsFoundationRouteImport } from './routes/_authenticated/settings.foundation'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
 import { Route as AuthenticatedSettingsFeaturesRouteImport } from './routes/_authenticated/settings.features'
 import { Route as AuthenticatedSettingsDocumentTypesRouteImport } from './routes/_authenticated/settings.document-types'
@@ -166,6 +167,12 @@ const AuthenticatedSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsFoundationRoute =
+  AuthenticatedSettingsFoundationRouteImport.update({
+    id: '/foundation',
+    path: '/foundation',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsFormBuilderRoute =
   AuthenticatedSettingsFormBuilderRouteImport.update({
     id: '/form-builder',
@@ -228,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
   '/settings/features': typeof AuthenticatedSettingsFeaturesRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
+  '/settings/foundation': typeof AuthenticatedSettingsFoundationRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
@@ -258,6 +266,7 @@ export interface FileRoutesByTo {
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
   '/settings/features': typeof AuthenticatedSettingsFeaturesRoute
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
+  '/settings/foundation': typeof AuthenticatedSettingsFoundationRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
@@ -291,6 +300,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
   '/_authenticated/settings/features': typeof AuthenticatedSettingsFeaturesRoute
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
+  '/_authenticated/settings/foundation': typeof AuthenticatedSettingsFoundationRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/_authenticated/settings/search': typeof AuthenticatedSettingsSearchRoute
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/settings/document-types'
     | '/settings/features'
     | '/settings/form-builder'
+    | '/settings/foundation'
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/search'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/settings/document-types'
     | '/settings/features'
     | '/settings/form-builder'
+    | '/settings/foundation'
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/search'
@@ -386,6 +398,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/document-types'
     | '/_authenticated/settings/features'
     | '/_authenticated/settings/form-builder'
+    | '/_authenticated/settings/foundation'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/organization'
     | '/_authenticated/settings/search'
@@ -571,6 +584,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/foundation': {
+      id: '/_authenticated/settings/foundation'
+      path: '/foundation'
+      fullPath: '/settings/foundation'
+      preLoaderRoute: typeof AuthenticatedSettingsFoundationRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/form-builder': {
       id: '/_authenticated/settings/form-builder'
       path: '/form-builder'
@@ -622,6 +642,7 @@ interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsDocumentTypesRoute: typeof AuthenticatedSettingsDocumentTypesRoute
   AuthenticatedSettingsFeaturesRoute: typeof AuthenticatedSettingsFeaturesRoute
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
+  AuthenticatedSettingsFoundationRoute: typeof AuthenticatedSettingsFoundationRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
   AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
   AuthenticatedSettingsSearchRoute: typeof AuthenticatedSettingsSearchRoute
@@ -636,6 +657,7 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
     AuthenticatedSettingsDocumentTypesRoute,
   AuthenticatedSettingsFeaturesRoute: AuthenticatedSettingsFeaturesRoute,
   AuthenticatedSettingsFormBuilderRoute: AuthenticatedSettingsFormBuilderRoute,
+  AuthenticatedSettingsFoundationRoute: AuthenticatedSettingsFoundationRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
   AuthenticatedSettingsOrganizationRoute:
