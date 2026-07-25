@@ -348,12 +348,8 @@ function AuthenticatedLayout() {
             {sectionLabel}
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-2 pt-3 pb-1" aria-label={sectionLabel}>
-            <span className="h-px flex-1 bg-sidebar-border/50" />
-            <span className="text-[8px] font-bold uppercase tracking-widest text-sidebar-primary/60" title={sectionLabel}>
-              {sectionLabel.slice(0, ar ? 3 : 3)}
-            </span>
-            <span className="h-px flex-1 bg-sidebar-border/50" />
+          <div className="px-3 pt-3 pb-1" aria-label={sectionLabel} title={sectionLabel}>
+            <span className="block h-px bg-sidebar-border/50" />
           </div>
         )}
         <div className={collapsed ? "space-y-1" : ""}>
