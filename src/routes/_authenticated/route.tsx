@@ -147,13 +147,21 @@ function AuthenticatedLayout() {
       labelAr: "الإدارة", labelEn: "Administration",
       entries: [
         ...(isAdmin ? [
-          { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p.startsWith("/organization") } as NavLeaf,
-          { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2, match: (p: string) => p.startsWith("/hr") } as NavLeaf,
+          {
+            id: "hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2,
+            children: [
+              { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p === "/organization" && !pathname.includes("tab=") },
+              { to: "/organization", labelAr: "الوظائف", labelEn: "Job Titles", icon: ClipboardList, match: (p: string) => p.startsWith("/organization") && pathname.includes("tab=positions") },
+              { to: "/organization", labelAr: "الموظفون", labelEn: "Employees", icon: UsersRound, match: (p: string) => p.startsWith("/organization") && pathname.includes("tab=employees") },
+              { to: "/hr", labelAr: "المستخدمون والصلاحيات", labelEn: "Users & Permissions", icon: ShieldCheck, match: (p: string) => p.startsWith("/hr") },
+            ],
+          } as NavGroup,
         ] : []),
         { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
       ],
     },
-  ], [isAdmin]);
+  ], [isAdmin, pathname]);
+
 
   /* Auto-open the group containing the active route */
   useEffect(() => {
