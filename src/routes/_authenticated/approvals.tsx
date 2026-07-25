@@ -10,9 +10,14 @@ import { ShieldCheck, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useApprovals, useDecideApproval, type ApprovalStatus } from "@/modules/approvals/api";
 import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export const Route = createFileRoute("/_authenticated/approvals")({
-  component: ApprovalsPage,
+  component: () => (
+    <PermissionGate permission="approvals.view">
+      <ApprovalsPage />
+    </PermissionGate>
+  ),
   head: () => ({
     meta: [
       { title: "الاعتمادات | Approvals" },
