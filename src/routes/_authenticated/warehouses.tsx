@@ -23,9 +23,14 @@ import { toCSV, downloadCSV, parseCSV } from "@/lib/csv";
 import { upsertWarehouse } from "@/modules/warehouses/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/modules/_shared/queryKeys";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export const Route = createFileRoute("/_authenticated/warehouses")({
-  component: WarehousesPage,
+  component: () => (
+    <PermissionGate permission="warehouses.view">
+      <WarehousesPage />
+    </PermissionGate>
+  ),
   head: () => ({
     meta: [
       { title: "المخازن | Warehouses" },
