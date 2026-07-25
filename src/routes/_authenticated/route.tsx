@@ -67,6 +67,8 @@ function AuthenticatedLayout() {
   const { t, lang, setLang, dir } = useI18n();
   const ar = lang === "ar";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+
   const [email, setEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const brand = useCompanyBrand();
