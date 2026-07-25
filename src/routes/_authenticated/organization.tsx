@@ -32,38 +32,34 @@ import { useOrganizationData } from "@/modules/organization/queries";
 
 import { getCities, getStates, hasGeo } from "@/lib/geoData";
 
+import { ORG_TAB_IDS, ORG_TABS_META, parseOrgTab, type OrgTabId } from "@/modules/organization/tabs";
+
 export const Route = createFileRoute("/_authenticated/organization")({
   component: OrganizationHub,
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization Chart" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
-    tab: (typeof s.tab === "string" ? s.tab : undefined) as TabId | undefined,
+    tab: typeof s.tab === "string" ? (s.tab as OrgTabId) : undefined,
   }),
 });
-
-type TabId = "branches" | "structure" | "employees";
 
 import { OrganizationStructurePanel } from "./settings.organization";
 import { Link } from "@tanstack/react-router";
 
-function OrganizationHub() {
+const TAB_ICONS = { landmark: Landmark, building2: Building2, users2: Users2 } as const;
+
+export function OrganizationHub() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
   const search = Route.useSearch();
-  // Default: Branches → Departments & Jobs → Employees.
-  const initialTab: TabId =
-    search.tab === "structure" ? "structure"
-    : search.tab === "employees" ? "employees"
-    : "branches";
-  const [tab, setTab] = useState<TabId>(initialTab);
-  useEffect(() => { if (search.tab) setTab(initialTab); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [search.tab]);
+  const navigate = useNavigate({ from: Route.fullPath });
 
-
-  const tabs: { id: TabId; ar: string; en: string; icon: typeof Landmark }[] = [
-    { id: "branches",  ar: "الفروع",              en: "Branches",              icon: Landmark  },
-    { id: "structure", ar: "الأقسام والوظائف",   en: "Departments & Jobs",    icon: Building2 },
-    { id: "employees", ar: "الموظفون",            en: "Employees",             icon: Users2    },
-  ];
+  // URL is the source of truth for the active tab so deep links and
+  // back/forward navigation restore the correct section.
+  const tab: OrgTabId = parseOrgTab(search.tab);
+  const setTab = (id: OrgTabId) => {
+    navigate({ search: (prev) => ({ ...prev, tab: id }), replace: false });
+  };
 
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
@@ -75,24 +71,30 @@ function OrganizationHub() {
             {ar ? "الفروع، الأقسام، والموظفون" : "Branches, departments & employees"}
           </span>
         </div>
-        <nav className="max-w-7xl mx-auto px-4 pb-2 flex flex-wrap gap-1">
-          {tabs.map((t) => {
-            const Icon = t.icon;
+        <nav
+          data-testid="org-tabs"
+          className="max-w-7xl mx-auto px-4 pb-2 flex flex-wrap gap-1"
+        >
+          {ORG_TAB_IDS.map((id) => {
+            const meta = ORG_TABS_META[id];
+            const Icon = TAB_ICONS[meta.iconKey];
             return (
               <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
+                key={id}
+                data-testid={`org-tab-${id}`}
+                onClick={() => setTab(id)}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
-                  tab === t.id
+                  tab === id
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background hover:bg-muted border-border"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {ar ? t.ar : t.en}
+                {ar ? meta.ar : meta.en}
               </button>
             );
           })}
+
         </nav>
       </header>
 
