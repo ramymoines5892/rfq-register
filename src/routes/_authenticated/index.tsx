@@ -24,65 +24,23 @@ export const Route = createFileRoute("/_authenticated/")({
   }),
 });
 
-type Counts = {
-  quotesMine: number;
-  quotesPending: number;
-  customers: number;
-  pendingUsers: number;
-  unreadNotifs: number;
-  expiringDocs: number;
-};
-
 function Dashboard() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
   const { data: company } = useCurrentCompany();
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState<string | null>(null);
-  const [counts, setCounts] = useState<Counts>({
+  const { data: currentUser } = useCurrentUser();
+  const email = currentUser?.email ?? "";
+  const fullName = currentUser?.fullName ?? null;
+
+  const { data: counts = {
     quotesMine: 0, quotesPending: 0, customers: 0,
     pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0,
-  });
-
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      setEmail(u.user.email ?? "");
-      const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", u.user.id).maybeSingle();
-      setFullName(prof?.full_name ?? null);
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!access.ready || !access.userId) return;
-    (async () => {
-      const uid = access.userId!;
-      const in7 = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
-      const today = new Date().toISOString().slice(0, 10);
-      const results = await Promise.allSettled([
-        supabase.from("quotes").select("id", { count: "exact", head: true }).eq("user_id", uid).is("deleted_at", null),
-        supabase.from("quotes").select("id", { count: "exact", head: true }).eq("approval_state", "in_progress").is("deleted_at", null),
-        supabase.from("customers").select("id", { count: "exact", head: true }).is("deleted_at", null),
-        access.canManageUsers
-          ? supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "pending")
-          : Promise.resolve({ count: 0 } as any),
-        supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", uid).is("read_at", null),
-        supabase.from("company_documents").select("id", { count: "exact", head: true })
-          .is("superseded_at", null).not("expiry_date", "is", null).gte("expiry_date", today).lte("expiry_date", in7),
-      ]);
-      const val = (r: any) => (r.status === "fulfilled" ? r.value.count ?? 0 : 0);
-      setCounts({
-        quotesMine: val(results[0]),
-        quotesPending: val(results[1]),
-        customers: val(results[2]),
-        pendingUsers: val(results[3]),
-        unreadNotifs: val(results[4]),
-        expiringDocs: val(results[5]),
-      });
-    })();
-  }, [access.ready, access.userId, access.canManageUsers]);
+  } } = useDashboardCounts(
+    access.ready && access.userId
+      ? { userId: access.userId, canManageUsers: !!access.canManageUsers }
+      : null,
+  );
 
   const displayName = useMemo(() => fullName || email.split("@")[0] || "", [fullName, email]);
   const brandName = company?.short_name || company?.name_ar || company?.name || "";
