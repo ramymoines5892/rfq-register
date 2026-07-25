@@ -42,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/organization")({
   }),
 });
 
-import { OrganizationStructurePanel } from "./settings.organization";
+import { OrganizationStructurePanel } from "@/modules/organization/StructurePanel";
 import { Link } from "@tanstack/react-router";
 
 const TAB_ICONS = { landmark: Landmark, building2: Building2, users2: Users2 } as const;
