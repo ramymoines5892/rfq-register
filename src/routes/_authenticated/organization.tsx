@@ -96,27 +96,8 @@ function OrganizationHub() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === "branches" && <BranchesPanel canManage={access.isAdmin} />}
         {tab === "structure" && <OrganizationStructurePanel />}
-        {tab === "employees" && (
-          <Card>
-            <CardContent className="py-10 text-center space-y-3">
-              <Users2 className="h-8 w-8 mx-auto text-muted-foreground/60" />
-              <div className="text-sm font-medium">
-                {ar ? "الموظفون والمستخدمون" : "Employees & users"}
-              </div>
-              <div className="text-xs text-muted-foreground max-w-md mx-auto">
-                {ar
-                  ? "يُدار سجل الموظفين والمستخدمين وصلاحياتهم من شاشة الموارد البشرية."
-                  : "Employees, users and permissions are managed from the HR screen."}
-              </div>
-              <Link to="/hr">
-                <Button size="sm" className="gap-1.5">
-                  <ChevronRight className="h-4 w-4" />
-                  {ar ? "فتح الموارد البشرية" : "Open HR"}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+        {tab === "employees" && <EmployeesPanel />}
+
       </main>
     </div>
   );
