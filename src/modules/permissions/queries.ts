@@ -3,8 +3,23 @@ import {
   fetchDeptPermissions, fetchJobPermissions, fetchEffectivePermissions,
   grantDeptPermission, revokeDeptPermission,
   grantJobPermission, revokeJobPermission,
+  fetchAllDeptPermissionsMap, fetchAllJobPermissionsMap, fetchAllUserPermissionsMap,
+  fetchGlobalPermissionAudit,
   type AppPermission,
 } from "./api";
+
+export function useAllDeptPermissionsMap() {
+  return useQuery({ queryKey: ["perms", "dept-map"] as const, queryFn: fetchAllDeptPermissionsMap, staleTime: 30_000 });
+}
+export function useAllJobPermissionsMap() {
+  return useQuery({ queryKey: ["perms", "job-map"] as const, queryFn: fetchAllJobPermissionsMap, staleTime: 30_000 });
+}
+export function useAllUserPermissionsMap() {
+  return useQuery({ queryKey: ["perms", "user-map"] as const, queryFn: fetchAllUserPermissionsMap, staleTime: 30_000 });
+}
+export function useGlobalPermissionAudit(limit = 100) {
+  return useQuery({ queryKey: ["perm-audit", "global", limit] as const, queryFn: () => fetchGlobalPermissionAudit(limit), staleTime: 15_000 });
+}
 
 export function useDeptPermissions(id: string | null | undefined) {
   return useQuery({

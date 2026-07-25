@@ -4,14 +4,18 @@ import {
   useApproveUser,
   useBulkApproveUsers,
   useBulkSetProfileStatus,
-  useGrantPermission,
   useHrDashboard,
-  useRevokePermission,
   useSetProfileStatus,
   useSetUserRole,
   useUpdateProfile,
-  useUserPermissions,
 } from "@/modules/hr/queries";
+import {
+  useAllDeptPermissionsMap,
+  useAllJobPermissionsMap,
+  useAllUserPermissionsMap,
+  useGlobalPermissionAudit,
+} from "@/modules/permissions/queries";
+import { PERMISSION_GROUPS, groupOf, type AppPermission } from "@/modules/permissions/api";
 import { Button } from "@/components/ui/button";
 import { InputIcon } from "@/components/ui/input-icon";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,86 +24,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Building2, UserCheck, Users, Ban, Play,
-  Search, ArrowUpDown, ChevronUp, ChevronDown, Shield,
+  ArrowLeft, Users, Ban, Play, Search, Shield, MoreHorizontal, KeyRound,
+  Copy, UserCheck, UserX, ChevronRight, PlusCircle, MinusCircle, Building2, Briefcase, User as UserIcon,
+  CheckCircle2, Clock, AlertTriangle, ShieldAlert, History,
 } from "lucide-react";
 import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
 import { useI18n } from "@/lib/i18n";
 import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type Department = Database["public"]["Tables"]["departments"]["Row"];
 type JobTitle = Database["public"]["Tables"]["job_titles"]["Row"];
 type AppRole = Database["public"]["Enums"]["app_role"];
-type AppPermission = Database["public"]["Enums"]["app_permission"];
-
-const ALL_PERMISSIONS: AppPermission[] = [
-  "customers.view", "customers.create", "customers.edit", "customers.delete", "customers.manage", "customers.view_payment_info",
-  "quotes.view_own", "quotes.view_team", "quotes.view_all", "quotes.view",
-  "quotes.create", "quotes.edit", "quotes.delete", "quotes.assign", "quotes.manage", "quotes.approve",
-  "workflows.view", "workflows.manage",
-  "hr.view", "hr.manage",
-  "warehouses.view", "warehouses.manage", "bins.manage",
-  "inventory.view", "inventory.manage", "inventory.transfer",
-  "inventory.transfer.create", "inventory.transfer.post", "inventory.transfer.cancel",
-  "inventory.adjust.create", "inventory.adjust.approve",
-  "approvals.view", "approvals.decide",
-  "team.view", "team.manage",
-  "users.manage_roles", "templates.manage",
-  "notifications.view",
-  "reports.view",
-  "manage_customer_fields", "manage_form_fields",
-];
-
-const permLabelAr: Record<AppPermission, string> = {
-  "customers.view": "عرض العملاء",
-  "customers.create": "إضافة عميل",
-  "customers.edit": "تعديل عميل",
-  "customers.delete": "حذف عميل",
-  "customers.manage": "إدارة العملاء",
-  "customers.view_payment_info": "عرض بيانات الدفع/البنوك",
-  "quotes.view": "عرض العروض",
-  "quotes.view_own": "عرض عروضه فقط",
-  "quotes.view_team": "عرض عروض الفريق",
-  "quotes.view_all": "عرض كل العروض",
-  "quotes.create": "إنشاء عرض",
-  "quotes.edit": "تعديل عرض",
-  "quotes.delete": "حذف عرض",
-  "quotes.assign": "تكليف عرض",
-  "quotes.manage": "إدارة العروض",
-  "quotes.approve": "الموافقة على العروض",
-  "workflows.view": "عرض القوالب", "workflows.manage": "إدارة القوالب",
-  "hr.view": "عرض HR", "hr.manage": "إدارة HR",
-  "warehouses.view": "عرض المخازن", "warehouses.manage": "إدارة المخازن", "bins.manage": "إدارة المواقع (Bins)",
-  "inventory.view": "عرض المخزون",
-  "inventory.transfer.create": "إنشاء تحويل مخزنى", "inventory.transfer.post": "ترحيل التحويلات", "inventory.transfer.cancel": "إلغاء التحويلات",
-  "inventory.adjust.create": "طلب تسوية مخزون", "inventory.adjust.approve": "اعتماد التسويات",
-  "approvals.view": "عرض طلبات الاعتماد", "approvals.decide": "البت فى طلبات الاعتماد",
-  "inventory.manage": "إدارة المخزون", "inventory.transfer": "نقل بين المخازن",
-  "team.view": "عرض الفريق", "team.manage": "إدارة الفريق",
-  "users.manage_roles": "إدارة الأدوار",
-  "templates.manage": "إدارة قوالب الحقول",
-  "notifications.view": "عرض الإشعارات",
-  "reports.view": "عرض التقارير",
-  "manage_customer_fields": "إدارة حقول العميل",
-  "manage_form_fields": "إدارة حقول النظام (كل الشاشات)",
-};
 
 export const Route = createFileRoute("/_authenticated/hr")({
   component: HrPage,
-  head: () => ({ meta: [{ title: "الموارد البشرية" }] }),
+  head: () => ({ meta: [{ title: "المستخدمون والصلاحيات | Users & Permissions" }] }),
 });
 
-type SortKey = "name" | "role" | "department" | "status" | "created";
 type StatusFilter = "all" | "pending" | "active" | "suspended";
 type RoleFilter = "all" | AppRole;
 
 function HrPage() {
   const { t, lang } = useI18n();
+  const ar = lang === "ar";
   const { data, isLoading: loading, refetch } = useHrDashboard();
   const profiles = (data?.profiles ?? []) as Profile[];
   const roles = data?.roles ?? [];
@@ -107,17 +63,24 @@ function HrPage() {
   const jobTitles = (data?.jobTitles ?? []) as JobTitle[];
   const me = data?.me ?? "";
   const [drawerUser, setDrawerUser] = useState<Profile | null>(null);
+  const [matrixUser, setMatrixUser] = useState<Profile | null>(null);
 
-  // table state
+  // Bulk permission maps for effective-badge computation.
+  const deptMapQ = useAllDeptPermissionsMap();
+  const jobMapQ = useAllJobPermissionsMap();
+  const userMapQ = useAllUserPermissionsMap();
+  const deptMap = deptMapQ.data ?? new Map();
+  const jobMap = jobMapQ.data ?? new Map();
+  const userMap = userMapQ.data ?? new Map();
+
+  // Toolbar state
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [deptFilter, setDeptFilter] = useState<string>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("created");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [tab, setTab] = useState<"users" | "requests" | "audit">("users");
 
-  // Backwards-compat helper: existing mutation code calls `load()` after writes.
   const load = () => { void refetch(); setSelected(new Set()); };
 
   const roleOf = (uid: string): AppRole | null =>
@@ -126,15 +89,41 @@ function HrPage() {
     ?? roles.find((r) => r.user_id === uid)?.role
     ?? null;
 
-  const deptName = (id: string | null) => id ? (pickLangValue(departments.find((d) => d.id === id) as any, "name", lang).value || departments.find((d) => d.id === id)?.name || "—") : "—";
-  const jobName = (id: string | null) => id ? (pickLangValue(jobTitles.find((j) => j.id === id) as any, "name", lang).value || jobTitles.find((j) => j.id === id)?.name || "—") : "—";
+  const deptName = (id: string | null | undefined) => {
+    if (!id) return "—";
+    const d = departments.find((x) => x.id === id);
+    return d ? (pickLangValue(d as any, "name", lang).value || d.name) : "—";
+  };
+  const jobName = (id: string | null | undefined) => {
+    if (!id) return "—";
+    const j = jobTitles.find((x) => x.id === id);
+    return j ? (pickLangValue(j as any, "name", lang).value || j.name) : "—";
+  };
 
+  /** Effective permission set for a user (personal ∪ job ∪ dept). */
+  const effectiveOf = (p: Profile): Set<AppPermission> => {
+    const out = new Set<AppPermission>();
+    userMap.get(p.id)?.forEach((x: AppPermission) => out.add(x));
+    if (p.job_title_id) jobMap.get(p.job_title_id)?.forEach((x: AppPermission) => out.add(x));
+    if (p.department_id) deptMap.get(p.department_id)?.forEach((x: AppPermission) => out.add(x));
+    return out;
+  };
 
-  const pendingCount = useMemo(() => profiles.filter((p) => p.status === "pending").length, [profiles]);
+  // ── KPIs ────────────────────────────────────────────────────────
+  const kpis = useMemo(() => {
+    let active = 0, pending = 0, suspended = 0, missingLink = 0;
+    for (const p of profiles) {
+      if (p.status === "active") active++;
+      else if (p.status === "pending") pending++;
+      else if (p.status === "suspended") suspended++;
+      if (p.status !== "pending" && (!p.department_id || !p.job_title_id)) missingLink++;
+    }
+    return { total: profiles.length, active, pending, suspended, missingLink };
+  }, [profiles]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = profiles.slice();
+    let list = profiles.filter((p) => p.status !== "pending");
     if (statusFilter !== "all") list = list.filter((p) => p.status === statusFilter);
     if (roleFilter !== "all") list = list.filter((p) => roleOf(p.id) === roleFilter);
     if (deptFilter !== "all") list = list.filter((p) => (p.department_id ?? "none") === deptFilter);
@@ -142,42 +131,44 @@ function HrPage() {
       (p.full_name ?? "").toLowerCase().includes(q) ||
       (p.email ?? "").toLowerCase().includes(q)
     );
-    list.sort((a, b) => {
-      const dir = sortDir === "asc" ? 1 : -1;
-      switch (sortKey) {
-        case "name": return dir * ((a.full_name || a.email || "").localeCompare(b.full_name || b.email || ""));
-        case "role": return dir * ((roleOf(a.id) ?? "").localeCompare(roleOf(b.id) ?? ""));
-        case "department": return dir * (deptName(a.department_id).localeCompare(deptName(b.department_id)));
-        case "status": return dir * ((a.status ?? "").localeCompare(b.status ?? ""));
-        case "created":
-        default: return dir * ((a.created_at ?? "").localeCompare(b.created_at ?? ""));
-      }
-    });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profiles, roles, departments, query, statusFilter, roleFilter, deptFilter, sortKey, sortDir]);
+  }, [profiles, roles, query, statusFilter, roleFilter, deptFilter]);
 
-  function toggleSort(k: SortKey) {
-    if (sortKey === k) setSortDir((d) => d === "asc" ? "desc" : "asc");
-    else { setSortKey(k); setSortDir("asc"); }
-  }
-  const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey !== k ? <ArrowUpDown className="h-3 w-3 opacity-40" /> :
-    sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+  const pendingList = useMemo(() => profiles.filter((p) => p.status === "pending"), [profiles]);
 
+  // ── Mutations ───────────────────────────────────────────────────
   const approveM = useApproveUser();
   const setStatusM = useSetProfileStatus();
+  const setRoleM = useSetUserRole();
+  const updateProfileM = useUpdateProfile();
   const bulkApproveM = useBulkApproveUsers();
   const bulkStatusM = useBulkSetProfileStatus();
 
   async function approve(userId: string) {
     try { await approveM.mutateAsync(userId); toast.success(t("saved")); }
     catch (e) { toast.error((e as Error).message); }
-    setSelected(new Set());
   }
   async function setStatus(userId: string, status: "active" | "suspended") {
     try { await setStatusM.mutateAsync({ userId, status }); toast.success(t("saved")); }
     catch (e) { toast.error((e as Error).message); }
+  }
+  async function changeRole(userId: string, role: AppRole) {
+    try { await setRoleM.mutateAsync({ userId, role }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+  async function updateField(userId: string, patch: Partial<Profile>) {
+    try { await updateProfileM.mutateAsync({ userId, patch }); toast.success(t("saved")); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+  async function sendReset(email: string) {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success(ar ? "تم إرسال رابط إعادة التعيين" : "Reset link sent");
+    } catch (e) { toast.error((e as Error).message); }
   }
   async function bulk(action: "approve" | "suspend" | "activate") {
     const ids = Array.from(selected);
@@ -186,7 +177,7 @@ function HrPage() {
     try {
       if (action === "approve") {
         const pendingIds = targets.filter((p) => p.status === "pending").map((p) => p.id);
-        if (!pendingIds.length) { toast.error(lang === "ar" ? "لا يوجد طلبات جديدة ضمن المحدد" : "No pending users selected"); return; }
+        if (!pendingIds.length) { toast.error(ar ? "لا توجد طلبات جديدة" : "No pending users"); return; }
         await bulkApproveM.mutateAsync(pendingIds);
       } else {
         const status = action === "suspend" ? "suspended" : "active";
@@ -197,34 +188,57 @@ function HrPage() {
     setSelected(new Set());
   }
 
-
   const allChecked = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
   const someChecked = filtered.some((p) => selected.has(p.id));
 
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="border-b bg-background sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <Link to="/"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 me-1" />{t("backToQuotes")}</Button></Link>
-          <h1 className="text-lg font-bold flex items-center gap-2"><Building2 className="h-5 w-5" /> {t("hr")}</h1>
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Link to="/"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 me-1" />{t("backToQuotes")}</Button></Link>
+          </div>
+          <h1 className="text-lg font-bold flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-primary" />
+            {ar ? "المستخدمون والصلاحيات" : "Users & Permissions"}
+          </h1>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <KpiCard icon={<Users className="h-4 w-4" />} label={ar ? "إجمالي" : "Total"} value={kpis.total} tone="muted" />
+          <KpiCard icon={<CheckCircle2 className="h-4 w-4" />} label={ar ? "نشط" : "Active"} value={kpis.active} tone="emerald" />
+          <KpiCard
+            icon={<Clock className="h-4 w-4" />} label={ar ? "بانتظار الموافقة" : "Pending"} value={kpis.pending} tone="amber"
+            onClick={kpis.pending > 0 ? () => setTab("requests") : undefined}
+          />
+          <KpiCard icon={<Ban className="h-4 w-4" />} label={ar ? "معلّق" : "Suspended"} value={kpis.suspended} tone="rose" />
+          <KpiCard
+            icon={<AlertTriangle className="h-4 w-4" />} label={ar ? "بدون إدارة/وظيفة" : "Missing dept/job"} value={kpis.missingLink} tone="orange"
+          />
+        </div>
+
         {loading ? (
           <div className="text-center py-16 text-muted-foreground">{t("loading")}</div>
         ) : (
-          <Tabs defaultValue="users">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
             <TabsList>
-              <TabsTrigger value="users" className="gap-1">
-                <Users className="h-4 w-4" /> {lang === "ar" ? "المستخدمون" : "Users"}
-                {pendingCount > 0 && <Badge variant="destructive" className="ms-1">{pendingCount}</Badge>}
+              <TabsTrigger value="users" className="gap-1.5">
+                <Users className="h-4 w-4" /> {ar ? "المستخدمون" : "Users"}
+              </TabsTrigger>
+              <TabsTrigger value="requests" className="gap-1.5">
+                <UserCheck className="h-4 w-4" /> {ar ? "طلبات الانضمام" : "Join requests"}
+                {kpis.pending > 0 && <Badge variant="destructive" className="ms-1">{kpis.pending}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="gap-1.5">
+                <History className="h-4 w-4" /> {ar ? "سجل التغييرات" : "Audit log"}
               </TabsTrigger>
             </TabsList>
 
-
+            {/* ── USERS TAB ────────────────────────────────────────── */}
             <TabsContent value="users" className="mt-4 space-y-3">
-              {/* Toolbar */}
               <Card>
                 <CardContent className="p-3 flex flex-wrap items-center gap-2">
                   <div className="flex-1 min-w-[200px]">
@@ -232,25 +246,22 @@ function HrPage() {
                       leftIcon={<Search />}
                       value={query}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-                      placeholder={lang === "ar" ? "بحث بالاسم أو الإيميل..." : "Search by name or email..."}
-                      clearable
-                      onClear={() => setQuery("")}
-                      className="h-9"
+                      placeholder={ar ? "بحث بالاسم أو الإيميل..." : "Search by name or email..."}
+                      clearable onClear={() => setQuery("")} className="h-9"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
                     <SelectTrigger className="h-9 w-36"><SelectValue placeholder={t("status")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{lang === "ar" ? "كل الحالات" : "All statuses"}</SelectItem>
-                      <SelectItem value="pending">{lang === "ar" ? "قيد الموافقة" : "Pending"}</SelectItem>
-                      <SelectItem value="active">{lang === "ar" ? "نشط" : "Active"}</SelectItem>
-                      <SelectItem value="suspended">{lang === "ar" ? "معلّق" : "Suspended"}</SelectItem>
+                      <SelectItem value="all">{ar ? "كل الحالات" : "All statuses"}</SelectItem>
+                      <SelectItem value="active">{ar ? "نشط" : "Active"}</SelectItem>
+                      <SelectItem value="suspended">{ar ? "معلّق" : "Suspended"}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as RoleFilter)}>
                     <SelectTrigger className="h-9 w-32"><SelectValue placeholder={t("role")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{lang === "ar" ? "كل الأدوار" : "All roles"}</SelectItem>
+                      <SelectItem value="all">{ar ? "كل الأدوار" : "All roles"}</SelectItem>
                       <SelectItem value="owner">{t("roleOwner")}</SelectItem>
                       <SelectItem value="admin">{t("roleAdmin")}</SelectItem>
                       <SelectItem value="member">{t("roleMember")}</SelectItem>
@@ -259,7 +270,7 @@ function HrPage() {
                   <Select value={deptFilter} onValueChange={setDeptFilter}>
                     <SelectTrigger className="h-9 w-40"><SelectValue placeholder={t("department")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">{lang === "ar" ? "كل الإدارات" : "All departments"}</SelectItem>
+                      <SelectItem value="all">{ar ? "كل الإدارات" : "All departments"}</SelectItem>
                       <SelectItem value="none">{t("none")}</SelectItem>
                       {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
                         <SelectItem key={d.id} value={d.id}>
@@ -273,15 +284,14 @@ function HrPage() {
                 </CardContent>
               </Card>
 
-              {/* Bulk bar */}
+              {/* Bulk actions */}
               {selected.size > 0 && (
                 <Card className="bg-primary/5 border-primary/30">
                   <CardContent className="p-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="text-sm font-medium">
-                      {lang === "ar" ? `تم تحديد ${selected.size} مستخدم` : `${selected.size} selected`}
+                      {ar ? `تم تحديد ${selected.size} مستخدم` : `${selected.size} selected`}
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => bulk("approve")}><UserCheck className="h-4 w-4 me-1" />{lang === "ar" ? "موافقة" : "Approve"}</Button>
                       <Button size="sm" variant="outline" onClick={() => bulk("activate")}><Play className="h-4 w-4 me-1" />{t("activate")}</Button>
                       <Button size="sm" variant="outline" onClick={() => bulk("suspend")}><Ban className="h-4 w-4 me-1" />{t("suspendUser")}</Button>
                       <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>{t("cancel")}</Button>
@@ -290,7 +300,7 @@ function HrPage() {
                 </Card>
               )}
 
-              {/* Table */}
+              {/* Users table */}
               <Card>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -305,58 +315,110 @@ function HrPage() {
                             }}
                           />
                         </th>
-                        <ThSort onClick={() => toggleSort("name")}>{lang === "ar" ? "الاسم" : "Name"} <SortIcon k="name" /></ThSort>
-                        <ThSort onClick={() => toggleSort("role")}>{t("role")} <SortIcon k="role" /></ThSort>
-                        <ThSort onClick={() => toggleSort("department")}>{t("department")} <SortIcon k="department" /></ThSort>
+                        <th className="p-3 text-start font-medium">{ar ? "المستخدم" : "User"}</th>
+                        <th className="p-3 text-start font-medium">{t("role")}</th>
+                        <th className="p-3 text-start font-medium">{t("department")}</th>
                         <th className="p-3 text-start font-medium">{t("jobTitle")}</th>
-                        <ThSort onClick={() => toggleSort("status")}>{t("status")} <SortIcon k="status" /></ThSort>
-                        <th className="p-3 text-end font-medium">{lang === "ar" ? "إجراءات" : "Actions"}</th>
+                        <th className="p-3 text-start font-medium">{ar ? "الصلاحيات الفعّالة" : "Effective permissions"}</th>
+                        <th className="p-3 text-start font-medium">{t("status")}</th>
+                        <th className="p-3 text-end font-medium w-16"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.length === 0 && (
-                        <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">{lang === "ar" ? "لا يوجد نتائج" : "No results"}</td></tr>
+                        <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">{ar ? "لا يوجد نتائج" : "No results"}</td></tr>
                       )}
                       {filtered.map((p) => {
                         const role = roleOf(p.id);
                         const isSelf = p.id === me;
                         const isOwner = role === "owner";
                         const checked = selected.has(p.id);
+                        const eff = effectiveOf(p);
                         return (
-                          <tr key={p.id}
-                            className="border-t hover:bg-muted/30 cursor-pointer"
-                            onClick={(e) => {
-                              const tag = (e.target as HTMLElement).tagName;
-                              if (tag === "INPUT" || tag === "BUTTON" || (e.target as HTMLElement).closest("button,input,[role=checkbox]")) return;
-                              setDrawerUser(p);
-                            }}>
-                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <tr key={p.id} className="border-t hover:bg-muted/30">
+                            <td className="p-3">
                               <Checkbox checked={checked} onCheckedChange={(c) => {
                                 setSelected((s) => { const n = new Set(s); if (c) n.add(p.id); else n.delete(p.id); return n; });
                               }} />
                             </td>
-                            <td className="p-3 min-w-[180px]">
-                              <div className="font-medium truncate">{p.full_name || p.email}</div>
+                            <td className="p-3 min-w-[200px] cursor-pointer" onClick={() => setDrawerUser(p)}>
+                              <div className="font-medium truncate flex items-center gap-1.5">
+                                {p.full_name || p.email}
+                                {isSelf && <Badge variant="outline" className="text-[9px] px-1 py-0">{ar ? "أنت" : "You"}</Badge>}
+                              </div>
                               <div className="text-xs text-muted-foreground truncate">{p.email}</div>
                             </td>
                             <td className="p-3">
-                              {role ? <Badge variant={isOwner ? "default" : "secondary"}>{lang === "ar" ? (role === "owner" ? "المالك" : role === "admin" ? "مسؤول" : "عضو") : role}</Badge> : <span className="text-muted-foreground">—</span>}
+                              {isOwner || isSelf ? (
+                                <Badge variant={isOwner ? "default" : "secondary"}>
+                                  {ar ? (role === "owner" ? "المالك" : role === "admin" ? "مسؤول" : "عضو") : role}
+                                </Badge>
+                              ) : (
+                                <Select value={role ?? "member"} onValueChange={(v) => changeRole(p.id, v as AppRole)}>
+                                  <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="admin">{t("roleAdmin")}</SelectItem>
+                                    <SelectItem value="member">{t("roleMember")}</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
                             </td>
-                            <td className="p-3">{deptName(p.department_id)}</td>
-                            <td className="p-3">{jobName(p.job_title_id)}</td>
                             <td className="p-3">
-                              {p.status === "pending" && <Badge variant="outline" className="border-amber-400 text-amber-700">{lang === "ar" ? "قيد الموافقة" : "Pending"}</Badge>}
-                              {p.status === "active" && <Badge variant="outline" className="border-emerald-400 text-emerald-700">{lang === "ar" ? "نشط" : "Active"}</Badge>}
-                              {p.status === "suspended" && <Badge variant="destructive">{lang === "ar" ? "معلّق" : "Suspended"}</Badge>}
+                              <Select
+                                value={p.department_id ?? "none"}
+                                onValueChange={(v) => updateField(p.id, { department_id: v === "none" ? null : v })}
+                              >
+                                <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">{t("none")}</SelectItem>
+                                  {flattenDeptsHierarchy(departments).map(({ dept: d, depth }) => (
+                                    <SelectItem key={d.id} value={d.id}>
+                                      <span style={{ paddingInlineStart: depth * 14 }}>
+                                        {depth > 0 ? "└ " : ""}{pickLangValue(d as any, "name", lang).value || d.name}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </td>
-                            <td className="p-3 text-end whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                              {p.status === "pending" ? (
-                                <Button size="sm" onClick={() => approve(p.id)}><UserCheck className="h-4 w-4 me-1" />{lang === "ar" ? "موافقة" : "Approve"}</Button>
-                              ) : (!isSelf && !isOwner) ? (
-                                p.status === "active"
-                                  ? <Button variant="ghost" size="icon" title={t("suspendUser")} onClick={() => setStatus(p.id, "suspended")}><Ban className="h-4 w-4 text-rose-600" /></Button>
-                                  : <Button variant="ghost" size="icon" title={t("activate")} onClick={() => setStatus(p.id, "active")}><Play className="h-4 w-4 text-emerald-600" /></Button>
-                              ) : null}
+                            <td className="p-3">
+                              <Select
+                                value={p.job_title_id ?? "none"}
+                                onValueChange={(v) => updateField(p.id, { job_title_id: v === "none" ? null : v })}
+                              >
+                                <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">{t("none")}</SelectItem>
+                                  {jobTitles.map((j) => (
+                                    <SelectItem key={j.id} value={j.id}>
+                                      {pickLangValue(j as any, "name", lang).value || j.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="p-3">
+                              <EffectiveBadges
+                                eff={eff}
+                                onOpen={() => setMatrixUser(p)}
+                                isOwner={isOwner}
+                              />
+                            </td>
+                            <td className="p-3">
+                              {p.status === "active" && <Badge variant="outline" className="border-emerald-400 text-emerald-700">{ar ? "نشط" : "Active"}</Badge>}
+                              {p.status === "suspended" && <Badge variant="destructive">{ar ? "معلّق" : "Suspended"}</Badge>}
+                              {p.status === "pending" && <Badge variant="outline" className="border-amber-400 text-amber-700">{ar ? "بانتظار" : "Pending"}</Badge>}
+                            </td>
+                            <td className="p-3 text-end">
+                              <RowMenu
+                                isSelf={isSelf} isOwner={isOwner} status={p.status}
+                                onManagePerms={() => setMatrixUser(p)}
+                                onOpenDrawer={() => setDrawerUser(p)}
+                                onReset={() => sendReset(p.email)}
+                                onCopyEmail={() => { navigator.clipboard.writeText(p.email); toast.success(ar ? "تم النسخ" : "Copied"); }}
+                                onSuspend={() => setStatus(p.id, "suspended")}
+                                onActivate={() => setStatus(p.id, "active")}
+                              />
                             </td>
                           </tr>
                         );
@@ -367,8 +429,43 @@ function HrPage() {
               </Card>
             </TabsContent>
 
-            {/* Departments and Job Titles moved to /settings/organization */}
+            {/* ── REQUESTS TAB ─────────────────────────────────────── */}
+            <TabsContent value="requests" className="mt-4">
+              {pendingList.length === 0 ? (
+                <Card><CardContent className="p-10 text-center text-muted-foreground">
+                  <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-emerald-500" />
+                  {ar ? "لا توجد طلبات معلّقة." : "No pending requests."}
+                </CardContent></Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {pendingList.map((p) => (
+                    <Card key={p.id}>
+                      <CardContent className="p-4 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{p.full_name || p.email}</div>
+                          <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            {ar ? "طُلب في" : "Requested"}{" "}
+                            {new Intl.DateTimeFormat(ar ? "ar-EG" : "en-US", { dateStyle: "medium" }).format(new Date(p.created_at))}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button size="sm" onClick={() => approve(p.id)}><UserCheck className="h-4 w-4 me-1" />{ar ? "موافقة" : "Approve"}</Button>
+                          <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "suspended")}>
+                            <UserX className="h-4 w-4 me-1" />{ar ? "رفض" : "Reject"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
+            {/* ── AUDIT TAB ────────────────────────────────────────── */}
+            <TabsContent value="audit" className="mt-4">
+              <GlobalAuditPanel />
+            </TabsContent>
           </Tabs>
         )}
       </main>
@@ -380,37 +477,221 @@ function HrPage() {
         departments={departments}
         jobTitles={jobTitles}
         activeProfiles={profiles.filter((p) => p.status !== "pending")}
+        deptName={deptName(drawerUser?.department_id)}
+        jobName={jobName(drawerUser?.job_title_id)}
+        effective={drawerUser ? effectiveOf(drawerUser) : new Set()}
+        onOpenMatrix={() => { if (drawerUser) setMatrixUser(drawerUser); }}
         onClose={() => { setDrawerUser(null); load(); }}
+      />
+
+      <PermissionMatrix
+        open={!!matrixUser}
+        onOpenChange={(o) => { if (!o) { setMatrixUser(null); load(); } }}
+        scope={matrixUser ? { kind: "user", id: matrixUser.id, name: matrixUser.full_name || matrixUser.email } : null}
       />
     </div>
   );
 }
 
-function ThSort({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+/* ─── KPI card ─────────────────────────────────────────────────── */
+const TONE: Record<string, string> = {
+  muted: "bg-muted/50 text-muted-foreground",
+  emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  amber: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  rose: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+  orange: "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
+};
+function KpiCard({ icon, label, value, tone, onClick }: {
+  icon: React.ReactNode; label: string; value: number; tone: keyof typeof TONE; onClick?: () => void;
+}) {
+  const clickable = !!onClick;
   return (
-    <th className="p-3 text-start font-medium">
-      <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={onClick}>{children}</button>
-    </th>
+    <Card
+      className={`${clickable ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+      onClick={onClick}
+    >
+      <CardContent className="p-3 flex items-center gap-3">
+        <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${TONE[tone]}`}>{icon}</div>
+        <div className="min-w-0">
+          <div className="text-xs text-muted-foreground truncate">{label}</div>
+          <div className="text-lg font-bold leading-tight">{value}</div>
+        </div>
+        {clickable && <ChevronRight className="h-4 w-4 text-muted-foreground ms-auto" />}
+      </CardContent>
+    </Card>
   );
 }
 
-function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, onClose }: {
+/* ─── Effective badges (grouped) ───────────────────────────────── */
+function EffectiveBadges({ eff, onOpen, isOwner }: {
+  eff: Set<AppPermission>; onOpen: () => void; isOwner: boolean;
+}) {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+
+  if (isOwner) {
+    return (
+      <button onClick={onOpen} className="inline-flex items-center gap-1.5 text-xs hover:underline">
+        <Badge className="gap-1"><Shield className="h-3 w-3" />{ar ? "كل الصلاحيات" : "All permissions"}</Badge>
+      </button>
+    );
+  }
+  if (eff.size === 0) {
+    return (
+      <button onClick={onOpen} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:underline">
+        <Shield className="h-3.5 w-3.5" /> {ar ? "لا توجد" : "None"}
+      </button>
+    );
+  }
+  // Group by module
+  const counts = new Map<string, number>();
+  eff.forEach((p) => {
+    const g = groupOf(p);
+    counts.set(g, (counts.get(g) ?? 0) + 1);
+  });
+  const groupsShown = PERMISSION_GROUPS.filter((g) => counts.has(g.key)).slice(0, 3);
+  const extra = Math.max(0, counts.size - groupsShown.length);
+  return (
+    <button onClick={onOpen} className="flex flex-wrap items-center gap-1 hover:opacity-80" title={ar ? "إدارة الصلاحيات" : "Manage"}>
+      <Badge variant="secondary" className="gap-1 text-[10px]">
+        <Shield className="h-3 w-3" />{eff.size}
+      </Badge>
+      {groupsShown.map((g) => (
+        <Badge key={g.key} variant="outline" className="text-[10px]">
+          {ar ? g.ar : g.en} · {counts.get(g.key)}
+        </Badge>
+      ))}
+      {extra > 0 && <Badge variant="outline" className="text-[10px]">+{extra}</Badge>}
+    </button>
+  );
+}
+
+/* ─── Row action menu ──────────────────────────────────────────── */
+function RowMenu({
+  isSelf, isOwner, status,
+  onManagePerms, onOpenDrawer, onReset, onCopyEmail, onSuspend, onActivate,
+}: {
+  isSelf: boolean; isOwner: boolean; status: Profile["status"];
+  onManagePerms: () => void; onOpenDrawer: () => void; onReset: () => void; onCopyEmail: () => void;
+  onSuspend: () => void; onActivate: () => void;
+}) {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={onOpenDrawer}>
+          <UserIcon className="h-4 w-4 me-2" />{ar ? "عرض التفاصيل" : "View details"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onManagePerms}>
+          <Shield className="h-4 w-4 me-2" />{ar ? "إدارة الصلاحيات" : "Manage permissions"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onCopyEmail}>
+          <Copy className="h-4 w-4 me-2" />{ar ? "نسخ الإيميل" : "Copy email"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onReset}>
+          <KeyRound className="h-4 w-4 me-2" />{ar ? "إرسال إعادة تعيين كلمة السر" : "Send password reset"}
+        </DropdownMenuItem>
+        {!isSelf && !isOwner && (
+          <>
+            <DropdownMenuSeparator />
+            {status === "active" ? (
+              <DropdownMenuItem onClick={onSuspend} className="text-rose-600">
+                <Ban className="h-4 w-4 me-2" />{ar ? "تعليق الحساب" : "Suspend"}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={onActivate} className="text-emerald-600">
+                <Play className="h-4 w-4 me-2" />{ar ? "تفعيل الحساب" : "Activate"}
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/* ─── Global audit panel ───────────────────────────────────────── */
+function GlobalAuditPanel() {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+  const q = useGlobalPermissionAudit(150);
+  const fmt = new Intl.DateTimeFormat(ar ? "ar-EG" : "en-US", { dateStyle: "medium", timeStyle: "short" });
+
+  if (q.isLoading) return <div className="py-8 text-center text-muted-foreground">{ar ? "جاري التحميل..." : "Loading..."}</div>;
+  if (q.error) return (
+    <Card><CardContent className="py-8 text-center text-sm text-destructive">
+      {ar ? "تعذر تحميل السجل (تحتاج صلاحية مسؤول)." : "Cannot load audit log (admin permission required)."}
+    </CardContent></Card>
+  );
+  const entries = q.data ?? [];
+  if (!entries.length) return (
+    <Card><CardContent className="py-10 text-center text-muted-foreground">
+      {ar ? "لا توجد تغييرات مسجلة." : "No changes recorded."}
+    </CardContent></Card>
+  );
+
+  const scopeIcon = { department: Building2, job_title: Briefcase, user: UserIcon } as const;
+  const scopeLabel = (s: "department" | "job_title" | "user") =>
+    ar ? { department: "إدارة", job_title: "وظيفة", user: "مستخدم" }[s]
+       : { department: "Department", job_title: "Job title", user: "User" }[s];
+
+  return (
+    <Card>
+      <ul className="divide-y">
+        {entries.map((e) => {
+          const Icon = scopeIcon[e.scope];
+          return (
+            <li key={e.id} className="p-3 flex items-start gap-3">
+              {e.action === "grant"
+                ? <PlusCircle className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                : <MinusCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm flex flex-wrap items-center gap-1.5">
+                  <Badge variant="outline" className="gap-1 text-[10px]">
+                    <Icon className="h-3 w-3" />{scopeLabel(e.scope)}
+                  </Badge>
+                  <span className="font-medium truncate">{e.target_name || e.target_id.slice(0, 8)}</span>
+                  <span className="text-muted-foreground">
+                    {e.action === "grant" ? (ar ? "منح" : "granted") : (ar ? "ألغى" : "revoked")}
+                  </span>
+                  <span className="font-mono text-[11px] rounded bg-muted px-1.5 py-0.5">{e.permission}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {ar ? "بواسطة" : "by"}{" "}
+                  <span className="font-medium">{e.actor_name || e.actor_email || (ar ? "نظام" : "system")}</span>
+                  {" · "}{fmt.format(new Date(e.created_at))}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
+/* ─── User drawer ──────────────────────────────────────────────── */
+function UserDrawer({
+  user, role, me, departments, jobTitles, activeProfiles,
+  deptName, jobName, effective,
+  onOpenMatrix, onClose,
+}: {
   user: Profile | null; role: AppRole | null; me: string;
   departments: Department[]; jobTitles: JobTitle[]; activeProfiles: Profile[];
-  onClose: () => void;
+  deptName: string; jobName: string; effective: Set<AppPermission>;
+  onOpenMatrix: () => void; onClose: () => void;
 }) {
   const { t, lang } = useI18n();
-  const permsQ = useUserPermissions(user?.id);
-  const granted = useMemo(() => new Set(permsQ.data ?? []), [permsQ.data]);
-  const permLoading = permsQ.isLoading || permsQ.isFetching;
-  const [permsOpen, setPermsOpen] = useState(false);
+  const ar = lang === "ar";
   const isSelf = user?.id === me;
   const isOwner = role === "owner";
-
   const updateProfile = useUpdateProfile();
   const setRoleM = useSetUserRole();
-  const grantM = useGrantPermission();
-  const revokeM = useRevokePermission();
 
   async function updateField(patch: Partial<Profile>) {
     if (!user) return;
@@ -422,27 +703,35 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
     try { await setRoleM.mutateAsync({ userId: user.id, role: newRole }); toast.success(t("saved")); }
     catch (e) { toast.error((e as Error).message); }
   }
-  async function togglePerm(p: AppPermission, checked: boolean) {
-    if (!user) return;
-    try {
-      if (checked) await grantM.mutateAsync({ userId: user.id, permission: p });
-      else await revokeM.mutateAsync({ userId: user.id, permission: p });
-    } catch (e) { toast.error((e as Error).message); }
-  }
 
+  const groupCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    effective.forEach((p) => {
+      const g = groupOf(p);
+      m.set(g, (m.get(g) ?? 0) + 1);
+    });
+    return m;
+  }, [effective]);
 
   return (
     <Sheet open={!!user} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side={lang === "ar" ? "left" : "right"} className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent side={ar ? "left" : "right"} className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="truncate">{user?.full_name || user?.email}</SheetTitle>
+          <SheetTitle className="truncate flex items-center gap-2">
+            <UserIcon className="h-4 w-4" />{user?.full_name || user?.email}
+          </SheetTitle>
           <div className="text-sm text-muted-foreground truncate">{user?.email}</div>
+          <div className="flex flex-wrap gap-1 pt-1">
+            {role && <Badge variant={isOwner ? "default" : "secondary"}>{ar ? (role === "owner" ? "المالك" : role === "admin" ? "مسؤول" : "عضو") : role}</Badge>}
+            <Badge variant="outline" className="gap-1"><Building2 className="h-3 w-3" />{deptName}</Badge>
+            <Badge variant="outline" className="gap-1"><Briefcase className="h-3 w-3" />{jobName}</Badge>
+          </div>
         </SheetHeader>
 
         {user && (
           <div className="space-y-5 py-4">
             <section className="space-y-2">
-              <div className="text-xs font-semibold uppercase text-muted-foreground">{lang === "ar" ? "الوظيفة" : "Job"}</div>
+              <div className="text-xs font-semibold uppercase text-muted-foreground">{ar ? "الوظيفة" : "Job"}</div>
               <FieldRow label={t("department")}>
                 <Select value={user.department_id ?? "none"} onValueChange={(v) => updateField({ department_id: v === "none" ? null : v })}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -493,44 +782,41 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
 
             <section className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold uppercase text-muted-foreground">{t("permissions")}</div>
-                <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setPermsOpen(true)}>
+                <div className="text-xs font-semibold uppercase text-muted-foreground">
+                  {ar ? "الصلاحيات الفعّالة" : "Effective permissions"}
+                </div>
+                <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={onOpenMatrix}>
                   <Shield className="h-3.5 w-3.5" />
-                  {lang === "ar" ? "إدارة الصلاحيات" : "Manage"}
+                  {ar ? "إدارة الصلاحيات" : "Manage"}
                 </Button>
               </div>
               <div className="text-xs text-muted-foreground">
-                {lang === "ar"
+                {ar
                   ? "الصلاحيات النهائية = الإدارة + المسمى الوظيفي + الصلاحيات الشخصية."
                   : "Effective = Department + Job Title + Personal overrides."}
               </div>
-              {permLoading ? (
-                <div className="py-3 text-sm text-muted-foreground">{t("loading")}</div>
+              {isOwner ? (
+                <Badge className="gap-1"><Shield className="h-3 w-3" />{ar ? "المالك يمتلك كل الصلاحيات" : "Owner has full access"}</Badge>
+              ) : effective.size === 0 ? (
+                <div className="text-sm text-muted-foreground">{ar ? "لا توجد صلاحيات." : "No permissions."}</div>
               ) : (
-                <div className="flex flex-wrap gap-1">
-                  {granted.size === 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {lang === "ar" ? "لا توجد صلاحيات شخصية." : "No personal overrides."}
-                    </span>
-                  )}
-                  {[...granted].map((p) => (
-                    <Badge key={p} variant="secondary" className="text-[10px]">
-                      {lang === "ar" ? (permLabelAr[p] || p) : p}
-                    </Badge>
-                  ))}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">{ar ? "الإجمالي:" : "Total:"} {effective.size}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {PERMISSION_GROUPS.filter((g) => groupCounts.has(g.key)).map((g) => (
+                      <Badge key={g.key} variant="outline" className="gap-1 text-xs">
+                        {ar ? g.ar : g.en} · {groupCounts.get(g.key)}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>
-            <PermissionMatrix
-              open={permsOpen}
-              onOpenChange={setPermsOpen}
-              scope={{ kind: "user", id: user.id, name: user.full_name || user.email }}
-            />
           </div>
         )}
 
         <SheetFooter>
-          <Button onClick={onClose}>{lang === "ar" ? "تم" : "Done"}</Button>
+          <Button onClick={onClose}>{ar ? "تم" : "Done"}</Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
@@ -545,4 +831,3 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
     </div>
   );
 }
-
