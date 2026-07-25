@@ -34,6 +34,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, ShieldAlert, History,
 } from "lucide-react";
 import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
+import { KpiCard, EffectiveBadges, RowMenu, GlobalAuditPanel, UserDrawer } from "@/modules/hr/components/parts";
 import { useI18n } from "@/lib/i18n";
 import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
