@@ -247,7 +247,7 @@ export function PermissionMatrix({
                             <Checkbox
                               checked={own}
                               disabled={saving === p}
-                              onCheckedChange={(v) => toggle(p, Boolean(v))}
+                              onCheckedChange={(v) => requestToggle(p, Boolean(v))}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="text-sm">{ar ? (LABELS_AR[p] || p) : p}</div>
