@@ -46,7 +46,7 @@ export const Route = createFileRoute("/_authenticated/settings/organization")({
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization" }] }),
 });
 
-function OrganizationPage() {
+export function OrganizationStructurePanel() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const confirm = useConfirm();
