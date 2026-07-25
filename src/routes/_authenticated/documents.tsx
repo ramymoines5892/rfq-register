@@ -88,6 +88,33 @@ function DocumentsPage() {
     return ar ? (d.name_ar || d.name) : (d.name_en || d.name);
   };
 
+  const isExpiringOrExpired = (doc: CompanyDocument | undefined, t: DocumentType) => {
+    if (!doc) return true; // missing counts as needing attention
+    const days = daysBetween(doc.expiry_date);
+    if (days === null) return false;
+    const threshold = doc.notify_days_before ?? t.notify_days_before;
+    return days < 0 || days <= threshold;
+  };
+
+  const visibleTypes = useMemo(
+    () => filter === "expiring" ? types.filter((t) => isExpiringOrExpired(currentByType.get(t.id), t)) : types,
+    [types, filter, currentByType],
+  );
+
+  // Scroll to & highlight focused card (deep-link from dashboard / notification)
+  useEffect(() => {
+    if (!focus) return;
+    const el = cardRefs.current[focus];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary");
+      const t = setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2400);
+      return () => clearTimeout(t);
+    }
+  }, [focus, visibleTypes.length]);
+
+
+
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
       <header className="border-b bg-background sticky top-0 z-10">
