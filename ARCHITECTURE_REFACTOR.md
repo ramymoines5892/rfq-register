@@ -41,15 +41,54 @@ has a single home for cross-cutting primitives.
 
 ---
 
+## Phase 2 — Service layer completeness (IN PROGRESS)
+
+Extracted reusable services and migrated the smallest, highest-leverage routes off direct `supabase` calls.
+
+### New modules
+
+| Path                                | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| `src/modules/auth/api.ts`           | `getCurrentUser`, `getCurrentUserRoles`, `getCurrentUserPermissions`, `sendPasswordReset`. |
+| `src/modules/auth/queries.ts`       | `useCurrentUser`, `useCurrentUserRoles`, `useCurrentUserPermissions` with proper stale times. |
+| `src/modules/lookups/api.ts`        | Reference-data lookups: `listDepartments/JobTitles/Branches/Users` + batched `getXxxByIds`. |
+| `src/modules/lookups/queries.ts`    | `useDepartmentsLookup`, `useJobTitlesLookup`, `useBranchesLookup`, `useUsersLookup`. |
+| `src/modules/dashboard/api.ts`      | `getDashboardCounts` — parallel KPI counts, extracted from the route. |
+| `src/modules/dashboard/queries.ts`  | `useDashboardCounts` with input-scoped keys. |
+
+### Routes migrated
+
+| Route                                        | Change |
+| -------------------------------------------- | ------ |
+| `_authenticated/index.tsx` (Dashboard)       | Dropped 2× `useEffect` + 6 raw Supabase calls → `useCurrentUser` + `useDashboardCounts`. Cache-shared across the app. |
+| `_authenticated/documents.tsx`               | Departments lookup now via `useDepartmentsLookup` (shared cache). |
+| `_authenticated/settings.tsx`                | Roles + permissions loading now via `useCurrentUserRoles` / `useCurrentUserPermissions`. Removed manual `useState`/`useEffect`. |
+| `_authenticated/settings.features.tsx`       | Admin role check via `useCurrentUserRoles`. Toasts switched to `notify.*`. |
+| `_authenticated/roles.tsx`                   | 8 inline Supabase queries collapsed to `modules/lookups` calls. |
+| `_authenticated/hr.tsx`                      | `resetPasswordForEmail` moved into `modules/auth/api.ts#sendPasswordReset`. |
+
+Typecheck: **clean** (`tsgo --noEmit` → 0 errors).
+
+### Still to migrate in Phase 2
+
+| Route                                            | Remaining direct supabase calls |
+| ------------------------------------------------ | -------------------------------- |
+| `_authenticated/adjustments.tsx`                 | 1 (companies lookup) — trivial, kept for follow-up |
+| `_authenticated/settings.document-types.tsx`     | 0 direct calls, but toast migration pending |
+| `routes/setup.tsx`, `routes/auth.tsx`, `routes/pending.tsx`, `routes/reset-password.tsx` | Public auth surfaces — auth calls are appropriate here; will use `modules/auth` for anything shared. |
+| Various files still importing `sonner` directly   | Migrate to `notify.*` as touched. |
+
+---
+
 ## Current folder layout
 
 ```text
 src/
   routes/                          # TanStack Start file routes (unchanged)
-  modules/                         # business domains — already in place
-    branches/  inventory/  partners/  warehouses/ ...
+  modules/                         # business domains
+    auth/  branches/  dashboard/  inventory/  lookups/  partners/  warehouses/ ...
     <each>/  api.ts   queries.ts   (some: components/, logic/, rules.ts)
-  shared/                          # NEW — cross-domain primitives
+  shared/                          # cross-domain primitives
     errors/  notifications/  loading/  validation/  types/  constants/
   components/                      # UI (shadcn) + shared widgets
   hooks/                           # cross-domain hooks (useAccess, ...)
@@ -60,17 +99,18 @@ src/
 
 ---
 
-## Remaining technical debt (unchanged — not yet addressed)
+## Remaining technical debt
 
 | Area | Debt | Recommended phase |
 |------|------|-------------------|
-| Service layer | 13 route files still `import { supabase } from "@/integrations/supabase/client"` directly instead of going through `modules/<d>/api.ts`. | Phase 2 |
-| Route size | `customers.tsx` (1846 LOC), `settings.form-builder.tsx` (1305), `settings.company.tsx` (923), `hr.tsx` (833), `partners.tsx` (761), `organization.tsx` (750) mix rendering, business logic, and API calls. | Phase 3 |
-| Type safety | `as any` present in ~15 files including `customers.tsx`, `partners.tsx`, `organization.tsx`, `products.tsx`, `warehouses.tsx`, `inventory.tsx`, `hr.tsx`. | Phase 4 |
+| Service layer | ~5 route files still call `supabase` directly for isolated one-liners (`adjustments`, auth surfaces). | Phase 2 (tail) |
+| Route size | `customers.tsx` (1846 LOC), `settings.form-builder.tsx` (1305), `settings.company.tsx` (923), `hr.tsx` (833), `partners.tsx` (761), `organization.tsx` (750). | Phase 3 |
+| Type safety | `as any` present in ~15 files. | Phase 4 |
 | Validation | Inline ad-hoc validators in `partners`, `customers`, `company`, `setup` should move to `modules/<d>/schema.ts` using shared primitives. | Phase 5 |
-| Toasts | Direct `sonner` imports scattered across 20+ files. Migrate to `notify.*`. | Phase 2 (piggyback) |
+| Toasts | ~15 files still import `sonner` directly. Migrate to `notify.*`. | Phase 2 (piggyback) |
 | Performance | `PermissionMatrix`, partners docs, inventory tables re-render on unrelated cache updates. | Phase 6 |
-| Dead code | Some `lib/` helpers duplicate what now lives in `shared/`. Legacy `admin.customer-fields.tsx` removed previously; audit for more. | Phase 7 |
+| Dead code | Some `lib/` helpers duplicate what now lives in `shared/`. Audit for more. | Phase 7 |
+
 
 ---
 
