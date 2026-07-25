@@ -155,8 +155,9 @@ function DocumentsPage() {
         ) : (
 
           <div className="grid gap-3 md:grid-cols-2">
-            {types.map((t) => {
+            {visibleTypes.map((t) => {
               const cur = currentByType.get(t.id);
+
               const s = statusMeta(cur, t, ar);
               const Icon = s.icon;
               const depts = cur?.department_ids?.length ? cur.department_ids : t.default_department_ids;
