@@ -32,6 +32,9 @@ import { getCities, getStates, hasGeo } from "@/lib/geoData";
 export const Route = createFileRoute("/_authenticated/organization")({
   component: OrganizationHub,
   head: () => ({ meta: [{ title: "المؤسسة | Organization" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: (typeof s.tab === "string" ? s.tab : undefined) as TabId | undefined,
+  }),
 });
 
 type TabId = "branches" | "managements" | "departments" | "positions" | "employees" | "users";
@@ -40,16 +43,20 @@ function OrganizationHub() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
-  const [tab, setTab] = useState<TabId>("branches");
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<TabId>(search.tab ?? "branches");
+  useEffect(() => { if (search.tab) setTab(search.tab); }, [search.tab]);
 
   const tabs: { id: TabId; ar: string; en: string; enabled: boolean }[] = [
     { id: "branches",    ar: "الفروع",           en: "Branches",    enabled: true  },
     { id: "managements", ar: "الإدارات",         en: "Managements", enabled: false },
     { id: "departments", ar: "الأقسام",          en: "Departments", enabled: false },
-    { id: "positions",   ar: "الوظائف",          en: "Positions",   enabled: false },
-    { id: "employees",   ar: "الموظفون",         en: "Employees",   enabled: false },
+    { id: "positions",   ar: "الوظائف",          en: "Positions",   enabled: true  },
+    { id: "employees",   ar: "الموظفون",         en: "Employees",   enabled: true  },
     { id: "users",       ar: "المستخدمون",       en: "Users",       enabled: false },
   ];
+
+
 
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
@@ -84,10 +91,27 @@ function OrganizationHub() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === "branches" && <BranchesPanel canManage={access.isAdmin} />}
+        {tab === "positions" && <ComingSoonPanel titleAr="الوظائف" titleEn="Job Titles" descAr="إدارة الوظائف/المسميات الوظيفية داخل الشركة." descEn="Manage job titles and positions across the company." />}
+        {tab === "employees" && <ComingSoonPanel titleAr="الموظفون" titleEn="Employees" descAr="سجل الموظفين، ربطهم بالإدارات والوظائف." descEn="Employee registry, linked to managements and job titles." />}
       </main>
     </div>
   );
 }
+
+function ComingSoonPanel({ titleAr, titleEn, descAr, descEn }: { titleAr: string; titleEn: string; descAr: string; descEn: string }) {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+  return (
+    <Card>
+      <CardContent className="py-16 text-center space-y-2">
+        <div className="text-lg font-semibold">{ar ? titleAr : titleEn}</div>
+        <div className="text-sm text-muted-foreground max-w-md mx-auto">{ar ? descAr : descEn}</div>
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mt-3">{ar ? "قريبًا" : "Coming soon"}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 /* ─────────────────────────────────────────────────────────────────────── */
 /* Branches                                                                */

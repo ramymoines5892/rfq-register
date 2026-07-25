@@ -35,12 +35,14 @@ type LucideIcon = typeof LayoutDashboard;
 
 type NavLeaf = {
   to?: string;                 // undefined = "coming soon"
+  search?: Record<string, string>;
   labelAr: string;
   labelEn: string;
   icon: LucideIcon;
   soon?: boolean;
   match?: (p: string) => boolean;
 };
+
 
 type NavGroup = {
   id: string;
@@ -65,6 +67,8 @@ function AuthenticatedLayout() {
   const { t, lang, setLang, dir } = useI18n();
   const ar = lang === "ar";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+
   const [email, setEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const brand = useCompanyBrand();
@@ -147,13 +151,22 @@ function AuthenticatedLayout() {
       labelAr: "الإدارة", labelEn: "Administration",
       entries: [
         ...(isAdmin ? [
-          { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p.startsWith("/organization") } as NavLeaf,
-          { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2, match: (p: string) => p.startsWith("/hr") } as NavLeaf,
+          {
+            id: "hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2,
+            children: [
+              { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p === "/organization" && !searchStr.includes("tab=") },
+              { to: "/organization", search: { tab: "positions" }, labelAr: "الوظائف", labelEn: "Job Titles", icon: ClipboardList, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=positions") },
+              { to: "/organization", search: { tab: "employees" }, labelAr: "الموظفون", labelEn: "Employees", icon: UsersRound, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=employees") },
+              { to: "/hr", labelAr: "المستخدمون والصلاحيات", labelEn: "Users & Permissions", icon: ShieldCheck, match: (p: string) => p.startsWith("/hr") },
+            ],
+          } as NavGroup,
         ] : []),
         { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
       ],
     },
-  ], [isAdmin]);
+  ], [isAdmin, searchStr]);
+
+
 
   /* Auto-open the group containing the active route */
   useEffect(() => {
@@ -210,13 +223,14 @@ function AuthenticatedLayout() {
     }
 
     return (
-      <Link to={n.to} title={label} className={`${base} ${stateClass}`}>
+      <Link to={n.to} search={n.search as never} title={label} className={`${base} ${stateClass}`}>
         <Icon className="h-4 w-4 shrink-0" />
         {collapsed
           ? <span className="line-clamp-2 w-full break-words">{label}</span>
           : <span className="truncate">{label}</span>}
       </Link>
     );
+
   };
 
 
