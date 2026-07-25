@@ -32,7 +32,6 @@ import { Route as AuthenticatedAdjustmentsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
 import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authenticated/settings.search'
-import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings.organization'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
 import { Route as AuthenticatedSettingsFoundationRouteImport } from './routes/_authenticated/settings.foundation'
 import { Route as AuthenticatedSettingsFormBuilderRouteImport } from './routes/_authenticated/settings.form-builder'
@@ -40,7 +39,6 @@ import { Route as AuthenticatedSettingsFeaturesRouteImport } from './routes/_aut
 import { Route as AuthenticatedSettingsDocumentTypesRouteImport } from './routes/_authenticated/settings.document-types'
 import { Route as AuthenticatedSettingsCompanyRouteImport } from './routes/_authenticated/settings.company'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings.appearance'
-import { Route as AuthenticatedAdminCustomerFieldsRouteImport } from './routes/_authenticated/admin.customer-fields'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -161,12 +159,6 @@ const AuthenticatedSettingsSearchRoute =
     path: '/search',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
-const AuthenticatedSettingsOrganizationRoute =
-  AuthenticatedSettingsOrganizationRouteImport.update({
-    id: '/organization',
-    path: '/organization',
-    getParentRoute: () => AuthenticatedSettingsRoute,
-  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -209,12 +201,6 @@ const AuthenticatedSettingsAppearanceRoute =
     path: '/appearance',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
-const AuthenticatedAdminCustomerFieldsRoute =
-  AuthenticatedAdminCustomerFieldsRouteImport.update({
-    id: '/admin/customer-fields',
-    path: '/admin/customer-fields',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -236,7 +222,6 @@ export interface FileRoutesByFullPath {
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
-  '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/company': typeof AuthenticatedSettingsCompanyRoute
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
@@ -244,7 +229,6 @@ export interface FileRoutesByFullPath {
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/foundation': typeof AuthenticatedSettingsFoundationRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
@@ -268,7 +252,6 @@ export interface FileRoutesByTo {
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/': typeof AuthenticatedIndexRoute
-  '/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/company': typeof AuthenticatedSettingsCompanyRoute
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
@@ -276,7 +259,6 @@ export interface FileRoutesByTo {
   '/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/settings/foundation': typeof AuthenticatedSettingsFoundationRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
@@ -303,7 +285,6 @@ export interface FileRoutesById {
   '/_authenticated/warehouses': typeof AuthenticatedWarehousesRoute
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/admin/customer-fields': typeof AuthenticatedAdminCustomerFieldsRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/company': typeof AuthenticatedSettingsCompanyRoute
   '/_authenticated/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
@@ -311,7 +292,6 @@ export interface FileRoutesById {
   '/_authenticated/settings/form-builder': typeof AuthenticatedSettingsFormBuilderRoute
   '/_authenticated/settings/foundation': typeof AuthenticatedSettingsFoundationRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/_authenticated/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/_authenticated/settings/trash': typeof AuthenticatedSettingsTrashRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
@@ -338,7 +318,6 @@ export interface FileRouteTypes {
     | '/transfers'
     | '/warehouses'
     | '/workflows'
-    | '/admin/customer-fields'
     | '/settings/appearance'
     | '/settings/company'
     | '/settings/document-types'
@@ -346,7 +325,6 @@ export interface FileRouteTypes {
     | '/settings/form-builder'
     | '/settings/foundation'
     | '/settings/notifications'
-    | '/settings/organization'
     | '/settings/search'
     | '/settings/trash'
     | '/settings/'
@@ -370,7 +348,6 @@ export interface FileRouteTypes {
     | '/warehouses'
     | '/workflows'
     | '/'
-    | '/admin/customer-fields'
     | '/settings/appearance'
     | '/settings/company'
     | '/settings/document-types'
@@ -378,7 +355,6 @@ export interface FileRouteTypes {
     | '/settings/form-builder'
     | '/settings/foundation'
     | '/settings/notifications'
-    | '/settings/organization'
     | '/settings/search'
     | '/settings/trash'
     | '/settings'
@@ -404,7 +380,6 @@ export interface FileRouteTypes {
     | '/_authenticated/warehouses'
     | '/_authenticated/workflows'
     | '/_authenticated/'
-    | '/_authenticated/admin/customer-fields'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/company'
     | '/_authenticated/settings/document-types'
@@ -412,7 +387,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/form-builder'
     | '/_authenticated/settings/foundation'
     | '/_authenticated/settings/notifications'
-    | '/_authenticated/settings/organization'
     | '/_authenticated/settings/search'
     | '/_authenticated/settings/trash'
     | '/_authenticated/settings/'
@@ -589,13 +563,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsSearchRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
-    '/_authenticated/settings/organization': {
-      id: '/_authenticated/settings/organization'
-      path: '/organization'
-      fullPath: '/settings/organization'
-      preLoaderRoute: typeof AuthenticatedSettingsOrganizationRouteImport
-      parentRoute: typeof AuthenticatedSettingsRoute
-    }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
       path: '/notifications'
@@ -645,13 +612,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
-    '/_authenticated/admin/customer-fields': {
-      id: '/_authenticated/admin/customer-fields'
-      path: '/admin/customer-fields'
-      fullPath: '/admin/customer-fields'
-      preLoaderRoute: typeof AuthenticatedAdminCustomerFieldsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
   }
 }
 
@@ -663,7 +623,6 @@ interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsFormBuilderRoute: typeof AuthenticatedSettingsFormBuilderRoute
   AuthenticatedSettingsFoundationRoute: typeof AuthenticatedSettingsFoundationRoute
   AuthenticatedSettingsNotificationsRoute: typeof AuthenticatedSettingsNotificationsRoute
-  AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
   AuthenticatedSettingsSearchRoute: typeof AuthenticatedSettingsSearchRoute
   AuthenticatedSettingsTrashRoute: typeof AuthenticatedSettingsTrashRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -679,8 +638,6 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsFoundationRoute: AuthenticatedSettingsFoundationRoute,
   AuthenticatedSettingsNotificationsRoute:
     AuthenticatedSettingsNotificationsRoute,
-  AuthenticatedSettingsOrganizationRoute:
-    AuthenticatedSettingsOrganizationRoute,
   AuthenticatedSettingsSearchRoute: AuthenticatedSettingsSearchRoute,
   AuthenticatedSettingsTrashRoute: AuthenticatedSettingsTrashRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
@@ -707,7 +664,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWarehousesRoute: typeof AuthenticatedWarehousesRoute
   AuthenticatedWorkflowsRoute: typeof AuthenticatedWorkflowsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedAdminCustomerFieldsRoute: typeof AuthenticatedAdminCustomerFieldsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -726,7 +682,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWarehousesRoute: AuthenticatedWarehousesRoute,
   AuthenticatedWorkflowsRoute: AuthenticatedWorkflowsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedAdminCustomerFieldsRoute: AuthenticatedAdminCustomerFieldsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
