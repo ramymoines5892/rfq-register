@@ -60,6 +60,7 @@ export function PermissionMatrix({
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState<AppPermission | null>(null);
+  const [preview, setPreview] = useState<DiffPreview | null>(null);
 
   const isDept = scope?.kind === "department";
   const isJob = scope?.kind === "job_title";
@@ -97,8 +98,50 @@ export function PermissionMatrix({
     return PERMISSION_GROUPS.filter((g) => map.has(g.key)).map((g) => ({ ...g, perms: map.get(g.key)! }));
   }, [filtered]);
 
-  async function toggle(perm: AppPermission, next: boolean) {
+  function requestToggle(perm: AppPermission, next: boolean) {
     if (!scope) return;
+    // Build before/after effective inputs based on scope kind.
+    const personalBefore = isUser ? [...(effQ.data?.own ?? [])] : [];
+    const jobBefore = isUser ? [...(effQ.data?.fromJob ?? [])] : [];
+    const deptBefore = isUser ? [...(effQ.data?.fromDept ?? [])] : [];
+
+    let before, after;
+    if (scope.kind === "user") {
+      const pNext = next
+        ? Array.from(new Set([...personalBefore, perm]))
+        : personalBefore.filter((p) => p !== perm);
+      before = { personal: personalBefore, job: jobBefore, department: deptBefore };
+      after  = { personal: pNext,          job: jobBefore, department: deptBefore };
+    } else if (scope.kind === "department") {
+      const dBefore = [...(deptQ.data ?? [])];
+      const dAfter = next
+        ? Array.from(new Set([...dBefore, perm]))
+        : dBefore.filter((p) => p !== perm);
+      before = { department: dBefore };
+      after  = { department: dAfter };
+    } else {
+      const jBefore = [...(jobQ.data ?? [])];
+      const jAfter = next
+        ? Array.from(new Set([...jBefore, perm]))
+        : jBefore.filter((p) => p !== perm);
+      before = { job: jBefore };
+      after  = { job: jAfter };
+    }
+
+    setPreview({
+      perm,
+      label: (ar ? (LABELS_AR[perm] || perm) : perm) as string,
+      next,
+      scope: scope.kind,
+      before,
+      after,
+    });
+  }
+
+  async function confirmToggle() {
+    if (!scope || !preview) return;
+    const perm = preview.perm;
+    const next = preview.next;
     setSaving(perm);
     try {
       if (scope.kind === "department") {
@@ -115,6 +158,8 @@ export function PermissionMatrix({
         qc.invalidateQueries({ queryKey: ["perms", "effective", scope.id] });
         qc.invalidateQueries({ queryKey: ["hr"] });
       }
+      qc.invalidateQueries({ queryKey: ["perm-audit", scope.kind, scope.id] });
+      setPreview(null);
     } catch (e: any) {
       toast.error(ar ? "تعذر الحفظ" : "Failed", { description: e?.message });
     } finally {
