@@ -35,12 +35,14 @@ type LucideIcon = typeof LayoutDashboard;
 
 type NavLeaf = {
   to?: string;                 // undefined = "coming soon"
+  search?: Record<string, string>;
   labelAr: string;
   labelEn: string;
   icon: LucideIcon;
   soon?: boolean;
   match?: (p: string) => boolean;
 };
+
 
 type NavGroup = {
   id: string;
