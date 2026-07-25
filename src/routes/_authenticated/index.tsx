@@ -198,7 +198,7 @@ function Dashboard() {
                 </CardContent>
               </Card>
             );
-            return k.to ? <Link key={k.key} to={k.to}>{body}</Link> : <div key={k.key}>{body}</div>;
+            return k.to ? <Link key={k.key} to={k.to} search={k.search as any}>{body}</Link> : <div key={k.key}>{body}</div>;
           })}
         </section>
 
