@@ -10,37 +10,23 @@ import {
 } from "@/modules/formBuilder/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Plus, Trash2, Pencil, GripVertical, Lock, Eye, EyeOff, ShieldAlert,
-  LayoutGrid, Save, Info, Check, X, Undo2, Sparkles,
+  ArrowLeft, Plus, ShieldAlert, LayoutGrid, Save, Info, Undo2, Sparkles,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
-import type { Database } from "@/integrations/supabase/types";
+import { type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
-  DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
-  type DragEndEvent, type CollisionDetection, closestCenter, pointerWithin, useDroppable,
-} from "@dnd-kit/core";
-import {
-  SortableContext, arrayMove, useSortable, rectSortingStrategy, sortableKeyboardCoordinates, verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
-type FieldDef = Database["public"]["Tables"]["customer_field_definitions"]["Row"];
-type FieldOption = Database["public"]["Tables"]["customer_field_options"]["Row"];
-type FieldType = Database["public"]["Enums"]["customer_field_type"];
+  BuilderCanvas, LivePreview, FieldEditor,
+  type FieldDef, type FieldOption,
+} from "@/modules/formBuilder/components/parts";
 
 export const Route = createFileRoute("/_authenticated/settings/form-builder")({
   component: FormBuilderPage,
@@ -50,37 +36,12 @@ export const Route = createFileRoute("/_authenticated/settings/form-builder")({
   }),
 });
 
-const FIELD_TYPES: { value: FieldType; ar: string; en: string }[] = [
-  { value: "text", ar: "نص", en: "Text" },
-  { value: "bilingual_text", ar: "نص عربي/إنجليزي", en: "Bilingual Text" },
-  { value: "textarea", ar: "نص طويل", en: "Long Text" },
-  { value: "number", ar: "رقم", en: "Number" },
-  { value: "email", ar: "بريد", en: "Email" },
-  { value: "phone", ar: "تليفون", en: "Phone" },
-  { value: "date", ar: "تاريخ", en: "Date" },
-  { value: "checkbox", ar: "نعم/لا", en: "Checkbox" },
-  { value: "dropdown", ar: "قائمة", en: "Dropdown" },
-  { value: "multiselect", ar: "اختيار متعدد", en: "Multi-select" },
-  { value: "file", ar: "ملف", en: "File" },
-];
-
-const COL_OPTIONS = [3, 4, 6, 8, 12] as const;
-const needsOptions = (t: FieldType) => t === "dropdown" || t === "multiselect";
-
-// System fields that reference another table — displayed as a locked DB-linked dropdown.
-const REFERENCE_FIELDS: Record<string, { ar: string; en: string }> = {
-  parent_id: { ar: "الإدارة الأب (من قاعدة البيانات)", en: "Parent Department (from database)" },
-  department_id: { ar: "الإدارة (من قاعدة البيانات)", en: "Department (from database)" },
-  manager_id: { ar: "المدير (من قاعدة البيانات)", en: "Manager (from database)" },
-};
-const isReferenceField = (f: { key: string; is_system: boolean | null } | null | undefined) =>
-  !!f && !!f.is_system && f.key in REFERENCE_FIELDS;
-
 const ENTITIES = [
   { key: "customers", ar: "شاشة العميل", en: "Customer" },
   { key: "department", ar: "شاشة الإدارات", en: "Departments" },
   { key: "job_title", ar: "شاشة المسميات الوظيفية", en: "Job Titles" },
 ] as const;
+
 
 function FormBuilderPage() {
   const { lang, dir } = useI18n();
