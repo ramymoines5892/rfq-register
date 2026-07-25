@@ -32,6 +32,9 @@ import { getCities, getStates, hasGeo } from "@/lib/geoData";
 export const Route = createFileRoute("/_authenticated/organization")({
   component: OrganizationHub,
   head: () => ({ meta: [{ title: "المؤسسة | Organization" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: (typeof s.tab === "string" ? s.tab : undefined) as TabId | undefined,
+  }),
 });
 
 type TabId = "branches" | "managements" | "departments" | "positions" | "employees" | "users";
@@ -40,7 +43,9 @@ function OrganizationHub() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
-  const [tab, setTab] = useState<TabId>("branches");
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<TabId>(search.tab ?? "branches");
+  useEffect(() => { if (search.tab) setTab(search.tab); }, [search.tab]);
 
   const tabs: { id: TabId; ar: string; en: string; enabled: boolean }[] = [
     { id: "branches",    ar: "الفروع",           en: "Branches",    enabled: true  },
@@ -50,6 +55,7 @@ function OrganizationHub() {
     { id: "employees",   ar: "الموظفون",         en: "Employees",   enabled: false },
     { id: "users",       ar: "المستخدمون",       en: "Users",       enabled: false },
   ];
+
 
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
