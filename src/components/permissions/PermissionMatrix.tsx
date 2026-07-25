@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Building2, Briefcase, User, Shield, Search, History, PlusCircle, MinusCircle } from "lucide-react";
+import { Building2, Briefcase, User, Shield, Search, History, PlusCircle, MinusCircle, Loader2, Check, RefreshCw } from "lucide-react";
+
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { usePermissionAudit } from "@/modules/permissions/audit";
@@ -59,8 +60,12 @@ export function PermissionMatrix({
   const ar = lang === "ar";
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "granted" | "personal" | "inherited" | "none">("all");
   const [saving, setSaving] = useState<AppPermission | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [preview, setPreview] = useState<DiffPreview | null>(null);
+
 
   const isDept = scope?.kind === "department";
   const isJob = scope?.kind === "job_title";
@@ -83,10 +88,22 @@ export function PermissionMatrix({
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return ALL_PERMISSIONS.filter((p) => {
-      if (!needle) return true;
-      return p.toLowerCase().includes(needle) || (LABELS_AR[p] ?? "").toLowerCase().includes(needle);
+      if (groupFilter !== "all" && groupOf(p) !== groupFilter) return false;
+      if (needle && !p.toLowerCase().includes(needle) && !(LABELS_AR[p] ?? "").toLowerCase().includes(needle)) return false;
+      if (sourceFilter !== "all") {
+        const own = ownSet.has(p);
+        const fromDept = inheritedDept.has(p);
+        const fromJob = inheritedJob.has(p);
+        const effective = own || fromDept || fromJob;
+        if (sourceFilter === "granted" && !effective) return false;
+        if (sourceFilter === "personal" && !own) return false;
+        if (sourceFilter === "inherited" && !(fromDept || fromJob)) return false;
+        if (sourceFilter === "none" && effective) return false;
+      }
+      return true;
     });
-  }, [q]);
+  }, [q, groupFilter, sourceFilter, ownSet, inheritedDept, inheritedJob]);
+
 
   const groups = useMemo(() => {
     const map = new Map<string, AppPermission[]>();
@@ -148,17 +165,25 @@ export function PermissionMatrix({
         if (next) await grantDeptPermission(scope.id, perm);
         else await revokeDeptPermission(scope.id, perm);
         qc.invalidateQueries({ queryKey: ["perms", "dept", scope.id] });
+        qc.invalidateQueries({ queryKey: ["perms", "dept-map"] });
       } else if (scope.kind === "job_title") {
         if (next) await grantJobPermission(scope.id, perm);
         else await revokeJobPermission(scope.id, perm);
         qc.invalidateQueries({ queryKey: ["perms", "job", scope.id] });
+        qc.invalidateQueries({ queryKey: ["perms", "job-map"] });
       } else {
         if (next) await _u1(scope.id, perm);
         else await _u2(scope.id, perm);
         qc.invalidateQueries({ queryKey: ["perms", "effective", scope.id] });
+        qc.invalidateQueries({ queryKey: ["perms", "user-map"] });
         qc.invalidateQueries({ queryKey: ["hr"] });
       }
-      qc.invalidateQueries({ queryKey: ["perm-audit", scope.kind, scope.id] });
+      // Broad cross-cutting invalidations so every dependent view refreshes.
+      qc.invalidateQueries({ queryKey: ["perms", "effective"] });
+      qc.invalidateQueries({ queryKey: ["has_permission"] });
+      qc.invalidateQueries({ queryKey: ["perm-check"] });
+      qc.invalidateQueries({ queryKey: ["perm-audit"] });
+      setLastSavedAt(Date.now());
       setPreview(null);
     } catch (e: any) {
       toast.error(ar ? "تعذر الحفظ" : "Failed", { description: e?.message });
@@ -166,6 +191,16 @@ export function PermissionMatrix({
       setSaving(null);
     }
   }
+
+  // Auto-clear the "saved" pulse after a moment.
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const t = setTimeout(() => setLastSavedAt(null), 2500);
+    return () => clearTimeout(t);
+  }, [lastSavedAt]);
+
+  const anyLoading = deptQ.isFetching || jobQ.isFetching || effQ.isFetching;
+
 
   if (!scope) return null;
   const ScopeIcon = scope.kind === "department" ? Building2 : scope.kind === "job_title" ? Briefcase : User;
@@ -176,8 +211,24 @@ export function PermissionMatrix({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScopeIcon className="h-5 w-5 text-primary" />
-            {ar ? "الصلاحيات" : "Permissions"} — {scope.name}
+            <span className="flex-1">{ar ? "الصلاحيات" : "Permissions"} — {scope.name}</span>
+            {saving && (
+              <Badge variant="secondary" className="gap-1 text-[10px] font-normal">
+                <Loader2 className="h-3 w-3 animate-spin" />{ar ? "جاري الحفظ..." : "Saving..."}
+              </Badge>
+            )}
+            {!saving && lastSavedAt && (
+              <Badge className="gap-1 text-[10px] font-normal bg-emerald-600 hover:bg-emerald-600">
+                <Check className="h-3 w-3" />{ar ? "تم الحفظ" : "Saved"}
+              </Badge>
+            )}
+            {!saving && !lastSavedAt && anyLoading && (
+              <Badge variant="outline" className="gap-1 text-[10px] font-normal">
+                <RefreshCw className="h-3 w-3 animate-spin" />{ar ? "تحديث" : "Refreshing"}
+              </Badge>
+            )}
           </DialogTitle>
+
           <DialogDescription className="text-xs">
             {isUser
               ? (ar
@@ -224,6 +275,28 @@ export function PermissionMatrix({
                 className="ps-8 h-9"
               />
             </div>
+            <div className="flex flex-wrap gap-1.5">
+              <FilterChip active={groupFilter === "all"} onClick={() => setGroupFilter("all")}>
+                {ar ? "كل الفئات" : "All groups"}
+              </FilterChip>
+              {PERMISSION_GROUPS.map((g) => (
+                <FilterChip key={g.key} active={groupFilter === g.key} onClick={() => setGroupFilter(g.key)}>
+                  {ar ? g.ar : g.en}
+                </FilterChip>
+              ))}
+            </div>
+            {isUser && (
+              <div className="flex flex-wrap gap-1.5">
+                {(["all", "granted", "personal", "inherited", "none"] as const).map((k) => (
+                  <FilterChip key={k} active={sourceFilter === k} onClick={() => setSourceFilter(k)}>
+                    {ar
+                      ? { all: "الكل", granted: "الممنوحة", personal: "شخصية", inherited: "موروثة", none: "غير ممنوحة" }[k]
+                      : { all: "All", granted: "Granted", personal: "Personal", inherited: "Inherited", none: "Not granted" }[k]}
+                  </FilterChip>
+                ))}
+              </div>
+            )}
+
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-4 py-2">
                 {groups.map((g) => (
@@ -371,3 +444,20 @@ function AuditPanel({
     </ScrollArea>
   );
 }
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-background text-muted-foreground border-border hover:bg-muted"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
