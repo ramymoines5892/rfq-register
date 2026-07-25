@@ -17,8 +17,9 @@ import { toPng } from "html-to-image";
 import { OrgChartImage } from "@/components/organization/OrgChartImage";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye,
+  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye, Shield,
 } from "lucide-react";
+import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
 
 
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
