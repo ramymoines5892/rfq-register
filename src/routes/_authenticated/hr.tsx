@@ -11,7 +11,7 @@ import {
   useSetUserRole,
   useUpdateProfile,
   useUserPermissions,
-} from "@/features/hr/queries";
+} from "@/modules/hr/queries";
 import { Button } from "@/components/ui/button";
 import { InputIcon } from "@/components/ui/input-icon";
 import { Card, CardContent } from "@/components/ui/card";

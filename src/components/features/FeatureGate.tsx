@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { useFeature } from "@/features/features/queries";
+import { useFeature } from "@/modules/features/queries";
 import { FEATURE_MAP, type FeatureKey } from "@/lib/features/registry";
 
 type Props = {

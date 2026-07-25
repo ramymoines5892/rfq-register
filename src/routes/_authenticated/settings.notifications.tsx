@@ -9,8 +9,8 @@ import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { Bell, Loader2, ShieldAlert } from "lucide-react";
 import { useAccess, type NotifCategory } from "@/hooks/useAccess";
-import { useNotificationPrefs, useSaveNotificationPrefs } from "@/features/notifications/queries";
-import { DEFAULT_PREFS, type NotifPrefs } from "@/features/notifications/api";
+import { useNotificationPrefs, useSaveNotificationPrefs } from "@/modules/notifications/queries";
+import { DEFAULT_PREFS, type NotifPrefs } from "@/modules/notifications/api";
 
 export const Route = createFileRoute("/_authenticated/settings/notifications")({
   component: NotificationSettings,

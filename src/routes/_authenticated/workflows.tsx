@@ -19,8 +19,8 @@ import {
   useDeleteTemplate,
   useRenameTemplate,
   useTemplateMutations,
-} from "@/features/workflows/queries";
-import type { Template } from "@/features/workflows/api";
+} from "@/modules/workflows/queries";
+import type { Template } from "@/modules/workflows/api";
 
 export const Route = createFileRoute("/_authenticated/workflows")({
   component: WorkflowsPage,

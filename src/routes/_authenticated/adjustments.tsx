@@ -13,10 +13,10 @@ import { toast } from "sonner";
 import {
   useAdjustments, useAdjustmentLines, useCreateAdjustment, usePostAdjustment, useRequestAdjApproval,
   type AdjReason, type AdjStatus, type LineUpsert, type StockAdjustment,
-} from "@/features/adjustments/api";
-import { useWarehouses } from "@/features/warehouses/queries";
-import { useBranches } from "@/features/branches/queries";
-import { useProducts } from "@/features/products/queries";
+} from "@/modules/adjustments/api";
+import { useWarehouses } from "@/modules/warehouses/queries";
+import { useBranches } from "@/modules/branches/queries";
+import { useProducts } from "@/modules/products/queries";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";

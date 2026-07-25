@@ -11,7 +11,7 @@ import {
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import { useFeatures, isFeatureEnabled } from "@/features/features/queries";
+import { useFeatures, isFeatureEnabled } from "@/modules/features/queries";
 import { useCompanyBrand } from "@/hooks/useCompanyBrand";
 import { toast } from "sonner";
 

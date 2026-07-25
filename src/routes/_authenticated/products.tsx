@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScriptInput } from "@/components/ScriptInput";
 import { toast } from "sonner";
 import { Package, Plus, Search, Pencil, Trash2, Save, X, Loader2 } from "lucide-react";
-import { useProducts, useUpsertProduct, useDeleteProduct } from "@/features/products/queries";
-import type { Product } from "@/features/products/api";
+import { useProducts, useUpsertProduct, useDeleteProduct } from "@/modules/products/queries";
+import type { Product } from "@/modules/products/api";
 
 export const Route = createFileRoute("/_authenticated/products")({
   component: ProductsPage,

@@ -5,8 +5,8 @@ import {
   hasAnyCompany, pickPrimary, uploadCompanyLogo, deleteCompanyLogo,
   uploadCompanyDocumentDraft, deleteCompanyDocumentDraft, getCompanyDocumentSignedUrl,
   type CompanyAdvanced, type CompanyFeatures, type CompanyGeneral, type ContactEntry, type NumberingRow, type SetupDocument,
-} from "@/features/company/api";
-import { useCreateCompany } from "@/features/company/queries";
+} from "@/modules/company/api";
+import { useCreateCompany } from "@/modules/company/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

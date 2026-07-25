@@ -17,8 +17,8 @@ import {
   useOwnerCheck,
   usePurgeRow,
   useRestoreRow,
-} from "@/features/trash/queries";
-import type { DeletedRow } from "@/features/trash/api";
+} from "@/modules/trash/queries";
+import type { DeletedRow } from "@/modules/trash/api";
 
 export const Route = createFileRoute("/_authenticated/settings/trash")({
   component: TrashPage,

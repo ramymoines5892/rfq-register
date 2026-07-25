@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMyUIPrefs, useUpdateMyUIPrefs } from "@/features/appearance/queries";
+import { useMyUIPrefs, useUpdateMyUIPrefs } from "@/modules/appearance/queries";
 import type {
   ThemeFont,
   ThemeMode,
   ThemePreset,
   ThemeRadius,
   ThemeDensity,
-} from "@/features/appearance/api";
+} from "@/modules/appearance/api";
 import { useI18n } from "@/lib/i18n";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";

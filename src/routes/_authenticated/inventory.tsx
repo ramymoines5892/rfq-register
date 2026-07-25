@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Boxes, Search, Filter, Loader2, Package, Warehouse, Download, History } from "lucide-react";
-import { useInventoryBalances, useMovements, type MovementFilters } from "@/features/inventory/api";
-import { useWarehouses } from "@/features/warehouses/queries";
-import { useProducts } from "@/features/products/queries";
+import { useInventoryBalances, useMovements, type MovementFilters } from "@/modules/inventory/api";
+import { useWarehouses } from "@/modules/warehouses/queries";
+import { useProducts } from "@/modules/products/queries";
 import { toCSV, downloadCSV } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/inventory")({

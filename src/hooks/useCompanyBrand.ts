@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useCurrentCompany } from "@/features/company/queries";
+import { useCurrentCompany } from "@/modules/company/queries";
 import { useI18n } from "@/lib/i18n";
 
 /**

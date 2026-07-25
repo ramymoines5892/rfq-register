@@ -7,7 +7,7 @@ import {
   useSaveFieldDefinition,
   useSoftDeleteField,
   useSoftDeleteFieldsBulk,
-} from "@/features/formBuilder/queries";
+} from "@/modules/formBuilder/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

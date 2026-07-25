@@ -11,8 +11,8 @@ import {
   useNotificationPrefs,
   useNotifications,
   useNotificationsRealtime,
-} from "@/features/notifications/queries";
-import type { Notif, NotifPrefs } from "@/features/notifications/api";
+} from "@/modules/notifications/queries";
+import type { Notif, NotifPrefs } from "@/modules/notifications/api";
 
 function playPing() {
   try {

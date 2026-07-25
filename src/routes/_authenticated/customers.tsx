@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAccess } from "@/hooks/useAccess";
-import { useCustomers, useCustomerRelations, useSoftDeleteCustomer } from "@/features/customers/queries";
+import { useCustomers, useCustomerRelations, useSoftDeleteCustomer } from "@/modules/customers/queries";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -22,7 +22,7 @@ import {
   softDeleteAttachment,
   uploadAttachmentFile,
   createAttachmentSignedUrl,
-} from "@/features/customers/api";
+} from "@/modules/customers/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputIcon } from "@/components/ui/input-icon";

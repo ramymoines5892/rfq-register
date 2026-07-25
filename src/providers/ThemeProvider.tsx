@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
-import { useMyUIPrefs } from "@/features/appearance/queries";
-import type { UIPreferences } from "@/features/appearance/api";
-import { DEFAULT_UI_PREFS } from "@/features/appearance/api";
+import { useMyUIPrefs } from "@/modules/appearance/queries";
+import type { UIPreferences } from "@/modules/appearance/api";
+import { DEFAULT_UI_PREFS } from "@/modules/appearance/api";
 
 const LS_KEY = "cs.ui.prefs";
 

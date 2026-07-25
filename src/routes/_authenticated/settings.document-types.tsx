@@ -6,8 +6,8 @@ import {
   useDocumentTypes,
   useUpsertDocumentType,
   useDeleteDocumentType,
-} from "@/features/companyDocs/queries";
-import type { DocumentType, NotifyRepeat } from "@/features/companyDocs/api";
+} from "@/modules/companyDocs/queries";
+import type { DocumentType, NotifyRepeat } from "@/modules/companyDocs/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
