@@ -275,6 +275,28 @@ export function PermissionMatrix({
                 className="ps-8 h-9"
               />
             </div>
+            <div className="flex flex-wrap gap-1.5">
+              <FilterChip active={groupFilter === "all"} onClick={() => setGroupFilter("all")}>
+                {ar ? "كل الفئات" : "All groups"}
+              </FilterChip>
+              {PERMISSION_GROUPS.map((g) => (
+                <FilterChip key={g.key} active={groupFilter === g.key} onClick={() => setGroupFilter(g.key)}>
+                  {ar ? g.ar : g.en}
+                </FilterChip>
+              ))}
+            </div>
+            {isUser && (
+              <div className="flex flex-wrap gap-1.5">
+                {(["all", "granted", "personal", "inherited", "none"] as const).map((k) => (
+                  <FilterChip key={k} active={sourceFilter === k} onClick={() => setSourceFilter(k)}>
+                    {ar
+                      ? { all: "الكل", granted: "الممنوحة", personal: "شخصية", inherited: "موروثة", none: "غير ممنوحة" }[k]
+                      : { all: "All", granted: "Granted", personal: "Personal", inherited: "Inherited", none: "Not granted" }[k]}
+                  </FilterChip>
+                ))}
+              </div>
+            )}
+
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-4 py-2">
                 {groups.map((g) => (
