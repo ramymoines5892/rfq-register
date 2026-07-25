@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, Workflow, LogOut, Languages, UsersRound, Building2,
   Settings2, Pin, PinOff, FolderArchive, ChevronDown, ShoppingCart, Store,
-  Package, Warehouse, FileText, Truck, Receipt, ClipboardList, Boxes, Search, Landmark, Sliders, ShieldCheck,
+  Package, Warehouse, FileText, Truck, Receipt, ClipboardList, Boxes, Search, Landmark, Sliders, ShieldCheck, Menu,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
@@ -16,6 +16,7 @@ import { useCompanyBrand } from "@/hooks/useCompanyBrand";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
