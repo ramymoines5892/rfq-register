@@ -2205,6 +2205,39 @@ export type Database = {
           },
         ]
       }
+      permission_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          scope: string
+          target_id: string
+          target_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          scope: string
+          target_id: string
+          target_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          scope?: string
+          target_id?: string
+          target_name?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
@@ -3493,6 +3526,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      require_permission: {
+        Args: { _perm: Database["public"]["Enums"]["app_permission"] }
+        Returns: undefined
       }
       resolve_approval_stages: {
         Args: {

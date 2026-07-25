@@ -12,9 +12,14 @@ import { useInventoryBalances, useMovements, type MovementFilters } from "@/modu
 import { useWarehouses } from "@/modules/warehouses/queries";
 import { useProducts } from "@/modules/products/queries";
 import { toCSV, downloadCSV } from "@/lib/csv";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export const Route = createFileRoute("/_authenticated/inventory")({
-  component: InventoryPage,
+  component: () => (
+    <PermissionGate permission="inventory.view">
+      <InventoryPage />
+    </PermissionGate>
+  ),
   head: () => ({
     meta: [
       { title: "المخزون | Inventory" },
