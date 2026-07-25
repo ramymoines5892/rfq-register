@@ -154,8 +154,9 @@ function AuthenticatedLayout() {
           {
             id: "hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2,
             children: [
-              { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p === "/organization" && !searchStr.includes("tab=") },
-              { to: "/organization", search: { tab: "positions" }, labelAr: "الوظائف", labelEn: "Job Titles", icon: ClipboardList, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=positions") },
+              { to: "/organization", labelAr: "الهيكل التنظيمي", labelEn: "Organization Chart", icon: Landmark, match: (p: string) => p === "/organization" && !searchStr.includes("tab=") },
+              { to: "/organization", search: { tab: "departments" }, labelAr: "الأقسام", labelEn: "Departments", icon: Building2, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=departments") },
+              { to: "/organization", search: { tab: "positions" }, labelAr: "الوظائف", labelEn: "Jobs", icon: ClipboardList, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=positions") },
               { to: "/organization", search: { tab: "employees" }, labelAr: "الموظفون", labelEn: "Employees", icon: UsersRound, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=employees") },
               { to: "/hr", labelAr: "المستخدمون والصلاحيات", labelEn: "Users & Permissions", icon: ShieldCheck, match: (p: string) => p.startsWith("/hr") },
             ],

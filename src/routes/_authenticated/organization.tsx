@@ -31,29 +31,27 @@ import { getCities, getStates, hasGeo } from "@/lib/geoData";
 
 export const Route = createFileRoute("/_authenticated/organization")({
   component: OrganizationHub,
-  head: () => ({ meta: [{ title: "المؤسسة | Organization" }] }),
+  head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization Chart" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     tab: (typeof s.tab === "string" ? s.tab : undefined) as TabId | undefined,
   }),
 });
 
-type TabId = "branches" | "managements" | "departments" | "positions" | "employees" | "users";
+type TabId = "departments" | "positions" | "employees" | "branches";
 
 function OrganizationHub() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<TabId>(search.tab ?? "branches");
+  const [tab, setTab] = useState<TabId>(search.tab ?? "departments");
   useEffect(() => { if (search.tab) setTab(search.tab); }, [search.tab]);
 
   const tabs: { id: TabId; ar: string; en: string; enabled: boolean }[] = [
-    { id: "branches",    ar: "الفروع",           en: "Branches",    enabled: true  },
-    { id: "managements", ar: "الإدارات",         en: "Managements", enabled: false },
-    { id: "departments", ar: "الأقسام",          en: "Departments", enabled: false },
-    { id: "positions",   ar: "الوظائف",          en: "Positions",   enabled: true  },
-    { id: "employees",   ar: "الموظفون",         en: "Employees",   enabled: true  },
-    { id: "users",       ar: "المستخدمون",       en: "Users",       enabled: false },
+    { id: "departments", ar: "الأقسام",    en: "Departments", enabled: true  },
+    { id: "positions",   ar: "الوظائف",    en: "Jobs",        enabled: true  },
+    { id: "employees",   ar: "الموظفون",   en: "Employees",   enabled: true  },
+    { id: "branches",    ar: "الفروع",     en: "Branches",    enabled: true  },
   ];
 
 
@@ -63,9 +61,9 @@ function OrganizationHub() {
       <header className="sticky top-0 z-10 border-b bg-background">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <Landmark className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold">{ar ? "المؤسسة" : "Organization"}</h1>
+          <h1 className="text-lg font-bold">{ar ? "الهيكل التنظيمي" : "Organization Chart"}</h1>
           <span className="text-xs text-muted-foreground">
-            {ar ? "الفروع، الإدارات، الأقسام، الوظائف، الموظفون، والمستخدمون" : "Branches, managements, departments, positions, employees & users"}
+            {ar ? "الأقسام، الوظائف، والموظفون" : "Departments, jobs & employees"}
           </span>
         </div>
         <nav className="max-w-7xl mx-auto px-4 pb-2 flex flex-wrap gap-1">
@@ -91,8 +89,9 @@ function OrganizationHub() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === "branches" && <BranchesPanel canManage={access.isAdmin} />}
-        {tab === "positions" && <ComingSoonPanel titleAr="الوظائف" titleEn="Job Titles" descAr="إدارة الوظائف/المسميات الوظيفية داخل الشركة." descEn="Manage job titles and positions across the company." />}
-        {tab === "employees" && <ComingSoonPanel titleAr="الموظفون" titleEn="Employees" descAr="سجل الموظفين، ربطهم بالإدارات والوظائف." descEn="Employee registry, linked to managements and job titles." />}
+        {tab === "departments" && <ComingSoonPanel titleAr="الأقسام" titleEn="Departments" descAr="شجرة الأقسام والإدارات داخل الشركة." descEn="Departments and management tree inside the company." />}
+        {tab === "positions" && <ComingSoonPanel titleAr="الوظائف" titleEn="Jobs" descAr="إدارة الوظائف/المسميات الوظيفية داخل الشركة." descEn="Manage job titles and positions across the company." />}
+        {tab === "employees" && <ComingSoonPanel titleAr="الموظفون" titleEn="Employees" descAr="سجل الموظفين، ربطهم بالأقسام والوظائف." descEn="Employee registry, linked to departments and jobs." />}
       </main>
     </div>
   );
