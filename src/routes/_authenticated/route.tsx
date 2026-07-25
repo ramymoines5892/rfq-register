@@ -27,7 +27,27 @@ export const Route = createFileRoute("/_authenticated")({
     return { user: data.user };
   },
   component: AuthenticatedLayout,
+  errorComponent: AuthenticatedErrorBoundary,
 });
+
+function AuthenticatedErrorBoundary({ error, reset }: { error: Error; reset: () => void }) {
+  const message = error?.message || "Something went wrong";
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="max-w-md w-full rounded-xl border bg-card p-6 shadow-sm text-center space-y-4">
+        <div className="mx-auto h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center text-2xl">!</div>
+        <div>
+          <div className="text-lg font-semibold">حدث خطأ | Something went wrong</div>
+          <div className="text-sm text-muted-foreground mt-1 break-words">{message}</div>
+        </div>
+        <div className="flex gap-2 justify-center">
+          <Button variant="outline" onClick={() => reset()}>إعادة المحاولة | Retry</Button>
+          <Button onClick={() => { window.location.href = "/"; }}>العودة للرئيسية | Home</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Navigation model ─────────────────────────────────────────────────── */
 
