@@ -134,8 +134,7 @@ function Dashboard() {
     ];
     if (access.isAdmin) {
       list.push(
-        { label: ar ? "الموارد البشرية" : "HR", desc: ar ? "الموظفون والإدارات" : "Employees & departments", to: "/hr", icon: Building2 },
-        { label: ar ? "الفريق" : "Team", desc: ar ? "المستخدمون والصلاحيات" : "Users & permissions", to: "/team", icon: UsersRound },
+        { label: ar ? "الموارد البشرية" : "HR", desc: ar ? "الموظفون والأدوار والصلاحيات" : "Employees, roles & permissions", to: "/hr", icon: Building2 },
         { label: ar ? "بيانات الشركة" : "Company Data", desc: ar ? "الإعدادات والمستندات" : "Settings & documents", to: "/settings/company", icon: Settings2 },
       );
     } else {
