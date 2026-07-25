@@ -12,7 +12,7 @@ import {
   ALL_PERMISSIONS, PERMISSION_GROUPS, groupOf,
   grantDeptPermission, revokeDeptPermission,
   grantJobPermission, revokeJobPermission,
-  grantUserPermission, type AppPermission,
+  type AppPermission,
 } from "@/modules/permissions/api";
 import { useQueryClient } from "@tanstack/react-query";
 import {
