@@ -16,10 +16,10 @@ import {
   useTransfers, useTransferDetail, useCreateTransfer, useAddLine,
   useDeleteLine, usePostTransfer, useCancelTransfer,
   type StockTransfer, type TransferStatus,
-} from "@/features/transfers/api";
-import { useWarehouses } from "@/features/warehouses/queries";
-import { useBranches } from "@/features/branches/queries";
-import { useProducts } from "@/features/products/queries";
+} from "@/modules/transfers/api";
+import { useWarehouses } from "@/modules/warehouses/queries";
+import { useBranches } from "@/modules/branches/queries";
+import { useProducts } from "@/modules/products/queries";
 
 export const Route = createFileRoute("/_authenticated/transfers")({
   component: TransfersPage,

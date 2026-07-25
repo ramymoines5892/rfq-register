@@ -30,8 +30,8 @@ import {
   useSoftDeleteOrgRow,
   useUpsertDepartment,
   useUpsertJobTitle,
-} from "@/features/organization/queries";
-import type { Department, JobTitle, FieldDef, ProfileLite } from "@/features/organization/api";
+} from "@/modules/organization/queries";
+import type { Department, JobTitle, FieldDef, ProfileLite } from "@/modules/organization/api";
 
 type Profile = ProfileLite;
 

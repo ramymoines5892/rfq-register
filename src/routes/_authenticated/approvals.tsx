@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useApprovals, useDecideApproval, type ApprovalStatus } from "@/features/approvals/api";
+import { useApprovals, useDecideApproval, type ApprovalStatus } from "@/modules/approvals/api";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export const Route = createFileRoute("/_authenticated/approvals")({

@@ -15,8 +15,8 @@ import {
   useCurrentUserId,
   useSetUserRole,
   useRemoveFromTeam,
-} from "@/features/hr/queries";
-import type { AppRole } from "@/features/hr/api";
+} from "@/modules/hr/queries";
+import type { AppRole } from "@/modules/hr/api";
 
 export const Route = createFileRoute("/_authenticated/team")({
   component: TeamPage,

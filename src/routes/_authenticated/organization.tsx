@@ -25,8 +25,8 @@ import {
   useDeleteBranchWithTransfer,
   useSetBranchAssignments,
   useUpsertBranch,
-} from "@/features/branches/queries";
-import type { BranchAssignment, BranchWithCounts } from "@/features/branches/api";
+} from "@/modules/branches/queries";
+import type { BranchAssignment, BranchWithCounts } from "@/modules/branches/api";
 import { getCities, getStates, hasGeo } from "@/lib/geoData";
 
 export const Route = createFileRoute("/_authenticated/organization")({

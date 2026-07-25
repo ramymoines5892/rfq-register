@@ -26,14 +26,14 @@ import {
   usePartnerAddresses, useUpsertAddress, useDeleteAddress,
   usePartnerBanks, useUpsertBank, useDeleteBank,
   usePartnerAudit, usePartnerRelated,
-} from "@/features/partners/queries";
-import { PARTNER_ROLES, type PartnerRole, type BusinessPartner } from "@/features/partners/api";
-import { requiredFieldsFor, validatePartner } from "@/features/partners/rules";
+} from "@/modules/partners/queries";
+import { PARTNER_ROLES, type PartnerRole, type BusinessPartner } from "@/modules/partners/api";
+import { requiredFieldsFor, validatePartner } from "@/modules/partners/rules";
 import {
   filterDocs, sortDocs, totalsByCurrency, paginate,
   isValidRange, hasActiveFilters, collectStatuses,
   type SortBy, type DocFilters,
-} from "@/features/partners/docs-utils";
+} from "@/modules/partners/docs-utils";
 
 export const Route = createFileRoute("/_authenticated/partners")({
   head: () => ({

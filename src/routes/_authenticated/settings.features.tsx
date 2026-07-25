@@ -13,7 +13,7 @@ import {
   type FeatureCategory,
   type FeatureDef,
 } from "@/lib/features/registry";
-import { useFeatures, useUpdateFeatures } from "@/features/features/queries";
+import { useFeatures, useUpdateFeatures } from "@/modules/features/queries";
 
 export const Route = createFileRoute("/_authenticated/settings/features")({
   component: FeaturesPage,

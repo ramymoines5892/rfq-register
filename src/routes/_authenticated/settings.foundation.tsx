@@ -20,8 +20,8 @@ import {
   usePasswordPolicy, useUpsertPasswordPolicy,
   useBackupSettings, useUpsertBackupSettings,
   useLoginHistory,
-} from "@/features/foundation/queries";
-import { previewNumbering } from "@/features/foundation/api";
+} from "@/modules/foundation/queries";
+import { previewNumbering } from "@/modules/foundation/api";
 
 export const Route = createFileRoute("/_authenticated/settings/foundation")({
   component: FoundationPage,

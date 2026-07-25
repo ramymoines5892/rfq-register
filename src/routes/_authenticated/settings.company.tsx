@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useCurrentCompany, useUpdateCompany } from "@/features/company/queries";
-import { uploadCompanyLogo, type ContactEntry } from "@/features/company/api";
-import { useDocumentTypes } from "@/features/companyDocs/queries";
-import { useNumberingSeries } from "@/features/foundation/queries";
+import { useCurrentCompany, useUpdateCompany } from "@/modules/company/queries";
+import { uploadCompanyLogo, type ContactEntry } from "@/modules/company/api";
+import { useDocumentTypes } from "@/modules/companyDocs/queries";
+import { useNumberingSeries } from "@/modules/foundation/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

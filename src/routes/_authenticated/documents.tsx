@@ -8,9 +8,9 @@ import {
   useDocumentHistory,
   useDocumentFiles,
   useCreateDocument,
-} from "@/features/companyDocs/queries";
-import type { CompanyDocument, DocumentType, NotifyRepeat } from "@/features/companyDocs/api";
-import { getSignedFileUrl } from "@/features/companyDocs/api";
+} from "@/modules/companyDocs/queries";
+import type { CompanyDocument, DocumentType, NotifyRepeat } from "@/modules/companyDocs/api";
+import { getSignedFileUrl } from "@/modules/companyDocs/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
