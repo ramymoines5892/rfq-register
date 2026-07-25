@@ -829,6 +829,120 @@ export type Database = {
           },
         ]
       }
+      custom_role_assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role_id: string
+          scope: Database["public"]["Enums"]["role_scope"]
+          target_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role_id: string
+          scope: Database["public"]["Enums"]["role_scope"]
+          target_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role_id?: string
+          scope?: Database["public"]["Enums"]["role_scope"]
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_role_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_roles: {
+        Row: {
+          code: string | null
+          color: string | null
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system: boolean
+          name_ar: string
+          name_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          color?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name_ar: string
+          name_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          color?: string | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name_ar?: string
+          name_en?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_attachments: {
         Row: {
           category: Database["public"]["Enums"]["customer_attachment_category"]
@@ -3656,6 +3770,7 @@ export type Database = {
       profile_status: "pending" | "active" | "suspended"
       quote_approval_state: "none" | "in_progress" | "approved" | "rejected"
       quote_status: "new" | "reviewing" | "accepted" | "rejected" | "expired"
+      role_scope: "department" | "job_title" | "branch" | "user"
       stock_adjustment_reason:
         | "count"
         | "damage"
@@ -3896,6 +4011,7 @@ export const Constants = {
       profile_status: ["pending", "active", "suspended"],
       quote_approval_state: ["none", "in_progress", "approved", "rejected"],
       quote_status: ["new", "reviewing", "accepted", "rejected", "expired"],
+      role_scope: ["department", "job_title", "branch", "user"],
       stock_adjustment_reason: [
         "count",
         "damage",
