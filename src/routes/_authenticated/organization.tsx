@@ -37,77 +37,87 @@ export const Route = createFileRoute("/_authenticated/organization")({
   }),
 });
 
-type TabId = "departments" | "positions" | "employees" | "branches";
+type TabId = "branches" | "structure" | "employees";
+
+import { OrganizationStructurePanel } from "./settings.organization";
+import { Link } from "@tanstack/react-router";
 
 function OrganizationHub() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const access = useAccess();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<TabId>(search.tab ?? "departments");
-  useEffect(() => { if (search.tab) setTab(search.tab); }, [search.tab]);
+  // Map legacy tab values to new ones.
+  const initialTab: TabId =
+    search.tab === "branches" ? "branches"
+    : search.tab === "employees" ? "employees"
+    : "structure";
+  const [tab, setTab] = useState<TabId>(initialTab);
+  useEffect(() => { if (search.tab) setTab(initialTab); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [search.tab]);
 
-  const tabs: { id: TabId; ar: string; en: string; enabled: boolean }[] = [
-    { id: "departments", ar: "الأقسام",    en: "Departments", enabled: true  },
-    { id: "positions",   ar: "الوظائف",    en: "Jobs",        enabled: true  },
-    { id: "employees",   ar: "الموظفون",   en: "Employees",   enabled: true  },
-    { id: "branches",    ar: "الفروع",     en: "Branches",    enabled: true  },
+  const tabs: { id: TabId; ar: string; en: string; icon: typeof Landmark }[] = [
+    { id: "branches",  ar: "الفروع",              en: "Branches",              icon: Landmark  },
+    { id: "structure", ar: "الأقسام والوظائف",   en: "Departments & Jobs",    icon: Building2 },
+    { id: "employees", ar: "الموظفون",            en: "Employees",             icon: Users2    },
   ];
-
-
 
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
       <header className="sticky top-0 z-10 border-b bg-background">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <Landmark className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold">{ar ? "الهيكل التنظيمي" : "Organization Chart"}</h1>
+          <h1 className="text-lg font-bold">{ar ? "الهيكل التنظيمي" : "Organization"}</h1>
           <span className="text-xs text-muted-foreground">
-            {ar ? "الأقسام، الوظائف، والموظفون" : "Departments, jobs & employees"}
+            {ar ? "الفروع، الأقسام، والموظفون" : "Branches, departments & employees"}
           </span>
         </div>
         <nav className="max-w-7xl mx-auto px-4 pb-2 flex flex-wrap gap-1">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => t.enabled && setTab(t.id)}
-              disabled={!t.enabled}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
-                tab === t.id && t.enabled
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : t.enabled
-                    ? "bg-background hover:bg-muted border-border"
-                    : "bg-muted/40 text-muted-foreground/50 border-border cursor-not-allowed"
-              }`}
-            >
-              {ar ? t.ar : t.en}
-              {!t.enabled && <span className="text-[9px] uppercase opacity-70">{ar ? "قريبًا" : "Soon"}</span>}
-            </button>
-          ))}
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
+                  tab === t.id
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background hover:bg-muted border-border"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {ar ? t.ar : t.en}
+              </button>
+            );
+          })}
         </nav>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === "branches" && <BranchesPanel canManage={access.isAdmin} />}
-        {tab === "departments" && <ComingSoonPanel titleAr="الأقسام" titleEn="Departments" descAr="شجرة الأقسام والإدارات داخل الشركة." descEn="Departments and management tree inside the company." />}
-        {tab === "positions" && <ComingSoonPanel titleAr="الوظائف" titleEn="Jobs" descAr="إدارة الوظائف/المسميات الوظيفية داخل الشركة." descEn="Manage job titles and positions across the company." />}
-        {tab === "employees" && <ComingSoonPanel titleAr="الموظفون" titleEn="Employees" descAr="سجل الموظفين، ربطهم بالأقسام والوظائف." descEn="Employee registry, linked to departments and jobs." />}
+        {tab === "structure" && <OrganizationStructurePanel />}
+        {tab === "employees" && (
+          <Card>
+            <CardContent className="py-10 text-center space-y-3">
+              <Users2 className="h-8 w-8 mx-auto text-muted-foreground/60" />
+              <div className="text-sm font-medium">
+                {ar ? "الموظفون والمستخدمون" : "Employees & users"}
+              </div>
+              <div className="text-xs text-muted-foreground max-w-md mx-auto">
+                {ar
+                  ? "يُدار سجل الموظفين والمستخدمين وصلاحياتهم من شاشة الموارد البشرية."
+                  : "Employees, users and permissions are managed from the HR screen."}
+              </div>
+              <Link to="/hr">
+                <Button size="sm" className="gap-1.5">
+                  <ChevronRight className="h-4 w-4" />
+                  {ar ? "فتح الموارد البشرية" : "Open HR"}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
-  );
-}
-
-function ComingSoonPanel({ titleAr, titleEn, descAr, descEn }: { titleAr: string; titleEn: string; descAr: string; descEn: string }) {
-  const { lang } = useI18n();
-  const ar = lang === "ar";
-  return (
-    <Card>
-      <CardContent className="py-16 text-center space-y-2">
-        <div className="text-lg font-semibold">{ar ? titleAr : titleEn}</div>
-        <div className="text-sm text-muted-foreground max-w-md mx-auto">{ar ? descAr : descEn}</div>
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mt-3">{ar ? "قريبًا" : "Coming soon"}</div>
-      </CardContent>
-    </Card>
   );
 }
 
