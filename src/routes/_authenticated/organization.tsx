@@ -51,10 +51,11 @@ function OrganizationHub() {
     { id: "branches",    ar: "الفروع",           en: "Branches",    enabled: true  },
     { id: "managements", ar: "الإدارات",         en: "Managements", enabled: false },
     { id: "departments", ar: "الأقسام",          en: "Departments", enabled: false },
-    { id: "positions",   ar: "الوظائف",          en: "Positions",   enabled: false },
-    { id: "employees",   ar: "الموظفون",         en: "Employees",   enabled: false },
+    { id: "positions",   ar: "الوظائف",          en: "Positions",   enabled: true  },
+    { id: "employees",   ar: "الموظفون",         en: "Employees",   enabled: true  },
     { id: "users",       ar: "المستخدمون",       en: "Users",       enabled: false },
   ];
+
 
 
   return (
