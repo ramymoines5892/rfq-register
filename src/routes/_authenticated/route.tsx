@@ -154,9 +154,9 @@ function AuthenticatedLayout() {
           {
             id: "hr", labelAr: "الموارد البشرية", labelEn: "HR", icon: Building2,
             children: [
-              { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p === "/organization" && !pathname.includes("tab=") },
-              { to: "/organization", labelAr: "الوظائف", labelEn: "Job Titles", icon: ClipboardList, match: (p: string) => p.startsWith("/organization") && pathname.includes("tab=positions") },
-              { to: "/organization", labelAr: "الموظفون", labelEn: "Employees", icon: UsersRound, match: (p: string) => p.startsWith("/organization") && pathname.includes("tab=employees") },
+              { to: "/organization", labelAr: "المؤسسة", labelEn: "Organization", icon: Landmark, match: (p: string) => p === "/organization" && !searchStr.includes("tab=") },
+              { to: "/organization", search: { tab: "positions" }, labelAr: "الوظائف", labelEn: "Job Titles", icon: ClipboardList, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=positions") },
+              { to: "/organization", search: { tab: "employees" }, labelAr: "الموظفون", labelEn: "Employees", icon: UsersRound, match: (p: string) => p.startsWith("/organization") && searchStr.includes("tab=employees") },
               { to: "/hr", labelAr: "المستخدمون والصلاحيات", labelEn: "Users & Permissions", icon: ShieldCheck, match: (p: string) => p.startsWith("/hr") },
             ],
           } as NavGroup,
@@ -164,7 +164,8 @@ function AuthenticatedLayout() {
         { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
       ],
     },
-  ], [isAdmin, pathname]);
+  ], [isAdmin, searchStr]);
+
 
 
   /* Auto-open the group containing the active route */
