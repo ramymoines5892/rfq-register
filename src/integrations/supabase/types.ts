@@ -28,7 +28,6 @@ export type Database = {
           min_amount: number | null
           notes: string | null
           required_app_role: Database["public"]["Enums"]["app_role"] | null
-          required_role_id: string | null
           requires_all_approvers: boolean
           stage_no: number
           updated_at: string
@@ -46,7 +45,6 @@ export type Database = {
           min_amount?: number | null
           notes?: string | null
           required_app_role?: Database["public"]["Enums"]["app_role"] | null
-          required_role_id?: string | null
           requires_all_approvers?: boolean
           stage_no?: number
           updated_at?: string
@@ -64,7 +62,6 @@ export type Database = {
           min_amount?: number | null
           notes?: string | null
           required_app_role?: Database["public"]["Enums"]["app_role"] | null
-          required_role_id?: string | null
           requires_all_approvers?: boolean
           stage_no?: number
           updated_at?: string
@@ -75,13 +72,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "approval_matrix_required_role_id_fkey"
-            columns: ["required_role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
             referencedColumns: ["id"]
           },
         ]
@@ -1345,6 +1335,38 @@ export type Database = {
         }
         Relationships: []
       }
+      department_permissions: {
+        Row: {
+          created_at: string
+          department_id: string
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_permissions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           code: string | null
@@ -1441,45 +1463,6 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employee_roles: {
-        Row: {
-          assigned_at: string
-          assigned_by: string | null
-          employee_id: string
-          id: string
-          role_id: string
-        }
-        Insert: {
-          assigned_at?: string
-          assigned_by?: string | null
-          employee_id: string
-          id?: string
-          role_id: string
-        }
-        Update: {
-          assigned_at?: string
-          assigned_by?: string | null
-          employee_id?: string
-          id?: string
-          role_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_roles_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_roles_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
             referencedColumns: ["id"]
           },
         ]
@@ -1666,6 +1649,38 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_title_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          job_title_id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          job_title_id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          job_title_id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_title_permissions_job_title_id_fkey"
+            columns: ["job_title_id"]
+            isOneToOne: false
+            referencedRelation: "job_titles"
             referencedColumns: ["id"]
           },
         ]
@@ -2553,82 +2568,6 @@ export type Database = {
             columns: ["workflow_template_id"]
             isOneToOne: false
             referencedRelation: "workflow_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      role_permissions: {
-        Row: {
-          created_at: string
-          id: string
-          permission: Database["public"]["Enums"]["app_permission"]
-          role_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          permission: Database["public"]["Enums"]["app_permission"]
-          role_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          permission?: Database["public"]["Enums"]["app_permission"]
-          role_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_permissions_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      roles: {
-        Row: {
-          color: string | null
-          company_id: string | null
-          created_at: string
-          description: string | null
-          id: string
-          is_system: boolean
-          name: string
-          name_ar: string | null
-          name_en: string | null
-          updated_at: string
-        }
-        Insert: {
-          color?: string | null
-          company_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_system?: boolean
-          name: string
-          name_ar?: string | null
-          name_en?: string | null
-          updated_at?: string
-        }
-        Update: {
-          color?: string | null
-          company_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_system?: boolean
-          name?: string
-          name_ar?: string | null
-          name_en?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "roles_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -3576,7 +3515,6 @@ export type Database = {
           min_amount: number | null
           notes: string | null
           required_app_role: Database["public"]["Enums"]["app_role"] | null
-          required_role_id: string | null
           requires_all_approvers: boolean
           stage_no: number
           updated_at: string
