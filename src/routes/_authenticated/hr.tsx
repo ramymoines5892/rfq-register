@@ -490,20 +490,40 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
             )}
 
             <section className="space-y-2">
-              <div className="text-xs font-semibold uppercase text-muted-foreground">{t("permissions")}</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase text-muted-foreground">{t("permissions")}</div>
+                <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setPermsOpen(true)}>
+                  <Shield className="h-3.5 w-3.5" />
+                  {lang === "ar" ? "إدارة الصلاحيات" : "Manage"}
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {lang === "ar"
+                  ? "الصلاحيات النهائية = الإدارة + المسمى الوظيفي + الصلاحيات الشخصية."
+                  : "Effective = Department + Job Title + Personal overrides."}
+              </div>
               {permLoading ? (
                 <div className="py-3 text-sm text-muted-foreground">{t("loading")}</div>
               ) : (
-                <div className="grid grid-cols-1 gap-1 max-h-[40vh] overflow-auto rounded border p-2">
-                  {ALL_PERMISSIONS.map((p) => (
-                    <label key={p} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                      <Checkbox checked={granted.has(p)} onCheckedChange={(c) => togglePerm(p, !!c)} />
-                      <span>{lang === "ar" ? permLabelAr[p] : p}</span>
-                    </label>
+                <div className="flex flex-wrap gap-1">
+                  {granted.size === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {lang === "ar" ? "لا توجد صلاحيات شخصية." : "No personal overrides."}
+                    </span>
+                  )}
+                  {[...granted].map((p) => (
+                    <Badge key={p} variant="secondary" className="text-[10px]">
+                      {lang === "ar" ? (permLabelAr[p] || p) : p}
+                    </Badge>
                   ))}
                 </div>
               )}
             </section>
+            <PermissionMatrix
+              open={permsOpen}
+              onOpenChange={setPermsOpen}
+              scope={{ kind: "user", id: user.id, name: user.full_name || user.email }}
+            />
           </div>
         )}
 
