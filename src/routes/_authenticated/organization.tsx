@@ -91,10 +91,27 @@ function OrganizationHub() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {tab === "branches" && <BranchesPanel canManage={access.isAdmin} />}
+        {tab === "positions" && <ComingSoonPanel titleAr="الوظائف" titleEn="Job Titles" descAr="إدارة الوظائف/المسميات الوظيفية داخل الشركة." descEn="Manage job titles and positions across the company." />}
+        {tab === "employees" && <ComingSoonPanel titleAr="الموظفون" titleEn="Employees" descAr="سجل الموظفين، ربطهم بالإدارات والوظائف." descEn="Employee registry, linked to managements and job titles." />}
       </main>
     </div>
   );
 }
+
+function ComingSoonPanel({ titleAr, titleEn, descAr, descEn }: { titleAr: string; titleEn: string; descAr: string; descEn: string }) {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+  return (
+    <Card>
+      <CardContent className="py-16 text-center space-y-2">
+        <div className="text-lg font-semibold">{ar ? titleAr : titleEn}</div>
+        <div className="text-sm text-muted-foreground max-w-md mx-auto">{ar ? descAr : descEn}</div>
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mt-3">{ar ? "قريبًا" : "Coming soon"}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 /* ─────────────────────────────────────────────────────────────────────── */
 /* Branches                                                                */
