@@ -5,6 +5,7 @@ import { useAccess } from "@/hooks/useAccess";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useDepartmentsLookup } from "@/modules/lookups/queries";
 import {
   useCurrentDocuments,
   useDocumentTypes,
