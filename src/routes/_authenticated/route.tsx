@@ -14,6 +14,8 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useFeatures, isFeatureEnabled } from "@/modules/features/queries";
 import { useCompanyBrand } from "@/hooks/useCompanyBrand";
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
