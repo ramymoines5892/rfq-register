@@ -165,6 +165,9 @@ export function useCancelTransfer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => cancelTransfer(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.transfers.all }),
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: qk.transfers.all });
+      qc.invalidateQueries({ queryKey: qk.transfers.detail(id) });
+    },
   });
 }

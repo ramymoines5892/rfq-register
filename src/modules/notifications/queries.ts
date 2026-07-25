@@ -96,6 +96,11 @@ export function useSaveNotificationPrefs() {
     onSuccess: (_data, prefs) => {
       if (!userId) return;
       qc.setQueryData(qk.notifications.prefs(userId), prefs);
+      qc.invalidateQueries({ queryKey: qk.notifications.prefs(userId) });
+    },
+    onError: () => {
+      if (!userId) return;
+      qc.invalidateQueries({ queryKey: qk.notifications.prefs(userId) });
     },
   });
 }
