@@ -19,6 +19,7 @@ import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedWarehousesRouteImport } from './routes/_authenticated/warehouses'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedRolesRouteImport } from './routes/_authenticated/roles'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
 import { Route as AuthenticatedPartnersRouteImport } from './routes/_authenticated/partners'
 import { Route as AuthenticatedOrganizationRouteImport } from './routes/_authenticated/organization'
@@ -88,6 +89,11 @@ const AuthenticatedTransfersRoute = AuthenticatedTransfersRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRolesRoute = AuthenticatedRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/organization': typeof AuthenticatedOrganizationRoute
   '/partners': typeof AuthenticatedPartnersRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/roles': typeof AuthenticatedRolesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/organization': typeof AuthenticatedOrganizationRoute
   '/partners': typeof AuthenticatedPartnersRoute
   '/products': typeof AuthenticatedProductsRoute
+  '/roles': typeof AuthenticatedRolesRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/_authenticated/organization': typeof AuthenticatedOrganizationRoute
   '/_authenticated/partners': typeof AuthenticatedPartnersRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
+  '/_authenticated/roles': typeof AuthenticatedRolesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/warehouses': typeof AuthenticatedWarehousesRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/organization'
     | '/partners'
     | '/products'
+    | '/roles'
     | '/settings'
     | '/transfers'
     | '/warehouses'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/organization'
     | '/partners'
     | '/products'
+    | '/roles'
     | '/transfers'
     | '/warehouses'
     | '/workflows'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/_authenticated/organization'
     | '/_authenticated/partners'
     | '/_authenticated/products'
+    | '/_authenticated/roles'
     | '/_authenticated/settings'
     | '/_authenticated/transfers'
     | '/_authenticated/warehouses'
@@ -484,6 +496,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/roles': {
+      id: '/_authenticated/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof AuthenticatedRolesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/products': {
@@ -682,6 +701,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOrganizationRoute: typeof AuthenticatedOrganizationRoute
   AuthenticatedPartnersRoute: typeof AuthenticatedPartnersRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
+  AuthenticatedRolesRoute: typeof AuthenticatedRolesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedWarehousesRoute: typeof AuthenticatedWarehousesRoute
@@ -700,6 +720,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOrganizationRoute: AuthenticatedOrganizationRoute,
   AuthenticatedPartnersRoute: AuthenticatedPartnersRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
+  AuthenticatedRolesRoute: AuthenticatedRolesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedWarehousesRoute: AuthenticatedWarehousesRoute,
