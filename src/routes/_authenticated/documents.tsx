@@ -24,16 +24,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { FolderArchive, Plus, Upload, History, Paperclip, AlertTriangle, CheckCircle2, Clock, FileText } from "lucide-react";
 
-const searchSchema = z.object({
-  filter: fallback(z.string(), "all").default("all"),
-  focus: fallback(z.string(), "").default(""),
-});
+type DocsSearch = { filter: "all" | "expiring"; focus: string };
 
 export const Route = createFileRoute("/_authenticated/documents")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (s: Record<string, unknown>): DocsSearch => ({
+    filter: s.filter === "expiring" ? "expiring" : "all",
+    focus: typeof s.focus === "string" ? s.focus : "",
+  }),
   component: DocumentsPage,
   head: () => ({ meta: [{ title: "مستندات الشركة | Company Documents" }] }),
 });
+
 
 
 type Dept = { id: string; name: string; name_ar: string | null; name_en: string | null };
