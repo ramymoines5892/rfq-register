@@ -156,6 +156,7 @@ function AuthenticatedLayout() {
             children: [
               { to: "/organization", labelAr: "الهيكل التنظيمي", labelEn: "Organization", icon: Landmark, match: (p: string) => p.startsWith("/organization") },
               { to: "/hr", labelAr: "المستخدمون والصلاحيات", labelEn: "Users & Permissions", icon: ShieldCheck, match: (p: string) => p.startsWith("/hr") },
+              { to: "/roles", labelAr: "الأدوار", labelEn: "Roles", icon: ShieldCheck, match: (p: string) => p.startsWith("/roles") },
             ],
           } as NavGroup,
         ] : []),
