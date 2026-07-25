@@ -60,8 +60,12 @@ export function PermissionMatrix({
   const ar = lang === "ar";
   const qc = useQueryClient();
   const [q, setQ] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "granted" | "personal" | "inherited" | "none">("all");
   const [saving, setSaving] = useState<AppPermission | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [preview, setPreview] = useState<DiffPreview | null>(null);
+
 
   const isDept = scope?.kind === "department";
   const isJob = scope?.kind === "job_title";
