@@ -18,7 +18,7 @@ import { useWarehouses } from "@/modules/warehouses/queries";
 import { useBranches } from "@/modules/branches/queries";
 import { useProducts } from "@/modules/products/queries";
 import { usePermissions } from "@/hooks/usePermissions";
-import { supabase } from "@/integrations/supabase/client";
+import { useCurrentCompany } from "@/modules/company/queries";
 import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/adjustments")({
@@ -157,15 +157,10 @@ function AdjustmentsPage() {
 /* ────────────────────────────────────────────────────────────── */
 
 function useCurrentCompanyId() {
-  return useQuery({
-    queryKey: ["company", "id"],
-    queryFn: async () => {
-      const { data } = await supabase.from("companies").select("id").limit(1).maybeSingle();
-      return data?.id ?? null;
-    },
-    staleTime: 5 * 60_000,
-  });
+  const { data } = useCurrentCompany();
+  return { data: data?.id ?? null };
 }
+
 
 function NewAdjustmentDialog({ open, onClose, ar }: { open: boolean; onClose: () => void; ar: boolean }) {
   const { data: branches = [] } = useBranches();
