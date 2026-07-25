@@ -88,10 +88,22 @@ export function PermissionMatrix({
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return ALL_PERMISSIONS.filter((p) => {
-      if (!needle) return true;
-      return p.toLowerCase().includes(needle) || (LABELS_AR[p] ?? "").toLowerCase().includes(needle);
+      if (groupFilter !== "all" && groupOf(p) !== groupFilter) return false;
+      if (needle && !p.toLowerCase().includes(needle) && !(LABELS_AR[p] ?? "").toLowerCase().includes(needle)) return false;
+      if (sourceFilter !== "all") {
+        const own = ownSet.has(p);
+        const fromDept = inheritedDept.has(p);
+        const fromJob = inheritedJob.has(p);
+        const effective = own || fromDept || fromJob;
+        if (sourceFilter === "granted" && !effective) return false;
+        if (sourceFilter === "personal" && !own) return false;
+        if (sourceFilter === "inherited" && !(fromDept || fromJob)) return false;
+        if (sourceFilter === "none" && effective) return false;
+      }
+      return true;
     });
-  }, [q]);
+  }, [q, groupFilter, sourceFilter, ownSet, inheritedDept, inheritedJob]);
+
 
   const groups = useMemo(() => {
     const map = new Map<string, AppPermission[]>();
