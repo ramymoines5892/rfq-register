@@ -167,3 +167,77 @@ export async function fetchEffectivePermissions(userId: string): Promise<Effecti
 
   return { own, fromDept, fromJob, deptName, jobName };
 }
+
+/* ─── Bulk fetchers for HR table (effective badges) ─────────────── */
+
+/** Map department_id → Set<permission>. One query. */
+export async function fetchAllDeptPermissionsMap(): Promise<Map<string, Set<AppPermission>>> {
+  const { data, error } = await supabase.from("department_permissions").select("department_id, permission");
+  if (error) throw error;
+  const map = new Map<string, Set<AppPermission>>();
+  (data ?? []).forEach((r) => {
+    const k = r.department_id as string;
+    if (!map.has(k)) map.set(k, new Set());
+    map.get(k)!.add(r.permission as AppPermission);
+  });
+  return map;
+}
+
+/** Map job_title_id → Set<permission>. */
+export async function fetchAllJobPermissionsMap(): Promise<Map<string, Set<AppPermission>>> {
+  const { data, error } = await supabase.from("job_title_permissions").select("job_title_id, permission");
+  if (error) throw error;
+  const map = new Map<string, Set<AppPermission>>();
+  (data ?? []).forEach((r) => {
+    const k = r.job_title_id as string;
+    if (!map.has(k)) map.set(k, new Set());
+    map.get(k)!.add(r.permission as AppPermission);
+  });
+  return map;
+}
+
+/** Map user_id → Set<personal permission>. */
+export async function fetchAllUserPermissionsMap(): Promise<Map<string, Set<AppPermission>>> {
+  const { data, error } = await supabase.from("user_permissions").select("user_id, permission");
+  if (error) throw error;
+  const map = new Map<string, Set<AppPermission>>();
+  (data ?? []).forEach((r) => {
+    const k = r.user_id as string;
+    if (!map.has(k)) map.set(k, new Set());
+    map.get(k)!.add(r.permission as AppPermission);
+  });
+  return map;
+}
+
+/** Recent permission audit entries across all scopes (admin only via RLS). */
+export type GlobalAuditEntry = {
+  id: string;
+  actor_id: string | null;
+  actor_name?: string | null;
+  actor_email?: string | null;
+  scope: "department" | "job_title" | "user";
+  target_id: string;
+  target_name: string | null;
+  permission: AppPermission;
+  action: "grant" | "revoke";
+  created_at: string;
+};
+
+export async function fetchGlobalPermissionAudit(limit = 100): Promise<GlobalAuditEntry[]> {
+  const { data, error } = await supabase
+    .from("permission_audit_log")
+    .select("id, actor_id, scope, target_id, target_name, permission, action, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const entries = (data ?? []) as GlobalAuditEntry[];
+  const actorIds = Array.from(new Set(entries.map((e) => e.actor_id).filter(Boolean))) as string[];
+  if (!actorIds.length) return entries;
+  const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", actorIds);
+  const map = new Map<string, { full_name: string | null; email: string }>();
+  (profiles ?? []).forEach((p) => map.set(p.id, { full_name: p.full_name, email: p.email }));
+  return entries.map((e) => {
+    const a = e.actor_id ? map.get(e.actor_id) : null;
+    return { ...e, actor_name: a?.full_name ?? null, actor_email: a?.email ?? null };
+  });
+}
