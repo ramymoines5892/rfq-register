@@ -1702,6 +1702,7 @@ export type Database = {
         Row: {
           branch_id: string | null
           company_id: string | null
+          cost_center: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -1709,7 +1710,9 @@ export type Database = {
           direct_manager_id: string | null
           email: string | null
           employee_code: string | null
+          employee_number: string | null
           employment_status: Database["public"]["Enums"]["employment_status"]
+          employment_type: Database["public"]["Enums"]["employment_type"] | null
           full_name: string
           full_name_ar: string | null
           full_name_en: string | null
@@ -1720,16 +1723,19 @@ export type Database = {
           national_id: string | null
           notes: string | null
           passport_no: string | null
+          person_id: string | null
           phone: string | null
           photo_url: string | null
           position_id: string | null
           signature_url: string | null
+          termination_date: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           branch_id?: string | null
           company_id?: string | null
+          cost_center?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -1737,7 +1743,11 @@ export type Database = {
           direct_manager_id?: string | null
           email?: string | null
           employee_code?: string | null
+          employee_number?: string | null
           employment_status?: Database["public"]["Enums"]["employment_status"]
+          employment_type?:
+            | Database["public"]["Enums"]["employment_type"]
+            | null
           full_name: string
           full_name_ar?: string | null
           full_name_en?: string | null
@@ -1748,16 +1758,19 @@ export type Database = {
           national_id?: string | null
           notes?: string | null
           passport_no?: string | null
+          person_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position_id?: string | null
           signature_url?: string | null
+          termination_date?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           branch_id?: string | null
           company_id?: string | null
+          cost_center?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -1765,7 +1778,11 @@ export type Database = {
           direct_manager_id?: string | null
           email?: string | null
           employee_code?: string | null
+          employee_number?: string | null
           employment_status?: Database["public"]["Enums"]["employment_status"]
+          employment_type?:
+            | Database["public"]["Enums"]["employment_type"]
+            | null
           full_name?: string
           full_name_ar?: string | null
           full_name_en?: string | null
@@ -1776,10 +1793,12 @@ export type Database = {
           national_id?: string | null
           notes?: string | null
           passport_no?: string | null
+          person_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position_id?: string | null
           signature_url?: string | null
+          termination_date?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1817,6 +1836,13 @@ export type Database = {
             columns: ["management_id"]
             isOneToOne: false
             referencedRelation: "managements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "persons"
             referencedColumns: ["id"]
           },
           {
@@ -2694,6 +2720,78 @@ export type Database = {
           scope?: string
           target_id?: string
           target_name?: string | null
+        }
+        Relationships: []
+      }
+      persons: {
+        Row: {
+          birth_date: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          first_name: string | null
+          full_name: string | null
+          full_name_ar: string | null
+          full_name_en: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          middle_name: string | null
+          national_id: string | null
+          nationality: string | null
+          notes: string | null
+          passport_no: string | null
+          personal_email: string | null
+          personal_phone: string | null
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          full_name_ar?: string | null
+          full_name_en?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          middle_name?: string | null
+          national_id?: string | null
+          nationality?: string | null
+          notes?: string | null
+          passport_no?: string | null
+          personal_email?: string | null
+          personal_phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          full_name_ar?: string | null
+          full_name_en?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          middle_name?: string | null
+          national_id?: string | null
+          nationality?: string | null
+          notes?: string | null
+          passport_no?: string | null
+          personal_email?: string | null
+          personal_phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -4108,6 +4206,18 @@ export type Database = {
         | "suspended"
         | "terminated"
         | "probation"
+        | "planned"
+        | "retired"
+        | "resigned"
+        | "archived"
+      employment_type:
+        | "full_time"
+        | "part_time"
+        | "contract"
+        | "temporary"
+        | "intern"
+        | "consultant"
+        | "freelancer"
       numbering_reset_policy: "never" | "yearly" | "monthly" | "daily"
       org_unit_status:
         | "planning"
@@ -4363,6 +4473,19 @@ export const Constants = {
         "suspended",
         "terminated",
         "probation",
+        "planned",
+        "retired",
+        "resigned",
+        "archived",
+      ],
+      employment_type: [
+        "full_time",
+        "part_time",
+        "contract",
+        "temporary",
+        "intern",
+        "consultant",
+        "freelancer",
       ],
       numbering_reset_policy: ["never", "yearly", "monthly", "daily"],
       org_unit_status: [
