@@ -427,19 +427,19 @@ function RoleAssignmentsEditor({ roleId }: { roleId: string }) {
     queryKey: ["role-scope-targets", scope],
     queryFn: async () => {
       if (scope === "department") {
-        const { data } = await supabase.from("departments").select("id, name, name_ar, name_en").is("deleted_at", null).order("name");
-        return (data ?? []).map((r) => ({ id: r.id, label: ar ? (r.name_ar || r.name) : (r.name_en || r.name) }));
+        const data = await import("@/modules/lookups/api").then((m) => m.listDepartments());
+        return data.map((r) => ({ id: r.id, label: ar ? (r.name_ar || r.name) : (r.name_en || r.name) }));
       }
       if (scope === "job_title") {
-        const { data } = await supabase.from("job_titles").select("id, name, name_ar, name_en").is("deleted_at", null).order("name");
-        return (data ?? []).map((r) => ({ id: r.id, label: ar ? (r.name_ar || r.name) : (r.name_en || r.name) }));
+        const data = await import("@/modules/lookups/api").then((m) => m.listJobTitles());
+        return data.map((r) => ({ id: r.id, label: ar ? (r.name_ar || r.name) : (r.name_en || r.name) }));
       }
       if (scope === "branch") {
-        const { data } = await supabase.from("branches").select("id, name, name_ar").eq("is_active", true).order("name");
-        return (data ?? []).map((r) => ({ id: r.id, label: ar ? (r.name_ar || r.name) : r.name }));
+        const data = await import("@/modules/lookups/api").then((m) => m.listBranches());
+        return data.map((r) => ({ id: r.id, label: ar ? (r.name_ar || r.name) : r.name }));
       }
-      const { data } = await supabase.from("profiles").select("id, full_name, email").order("full_name");
-      return (data ?? []).map((r) => ({ id: r.id, label: r.full_name ? `${r.full_name} · ${r.email}` : r.email }));
+      const data = await import("@/modules/lookups/api").then((m) => m.listUsers());
+      return data.map((r) => ({ id: r.id, label: r.full_name ? `${r.full_name} · ${r.email}` : (r.email ?? "") }));
     },
   });
 
@@ -456,26 +456,28 @@ function RoleAssignmentsEditor({ roleId }: { roleId: string }) {
     queryFn: async () => {
       const scopes = { department: [] as string[], job_title: [] as string[], branch: [] as string[], user: [] as string[] };
       (assignsQ.data ?? []).forEach((a) => scopes[a.scope].push(a.target_id));
+      const lookups = await import("@/modules/lookups/api");
       const map = new Map<string, string>();
       if (scopes.department.length) {
-        const { data } = await supabase.from("departments").select("id, name, name_ar").in("id", scopes.department);
-        (data ?? []).forEach((r) => map.set(`department:${r.id}`, ar ? (r.name_ar || r.name) : r.name));
+        const data = await lookups.getDepartmentsByIds(scopes.department);
+        data.forEach((r) => map.set(`department:${r.id}`, ar ? (r.name_ar || r.name) : r.name));
       }
       if (scopes.job_title.length) {
-        const { data } = await supabase.from("job_titles").select("id, name, name_ar").in("id", scopes.job_title);
-        (data ?? []).forEach((r) => map.set(`job_title:${r.id}`, ar ? (r.name_ar || r.name) : r.name));
+        const data = await lookups.getJobTitlesByIds(scopes.job_title);
+        data.forEach((r) => map.set(`job_title:${r.id}`, ar ? (r.name_ar || r.name) : r.name));
       }
       if (scopes.branch.length) {
-        const { data } = await supabase.from("branches").select("id, name, name_ar").in("id", scopes.branch);
-        (data ?? []).forEach((r) => map.set(`branch:${r.id}`, ar ? (r.name_ar || r.name) : r.name));
+        const data = await lookups.getBranchesByIds(scopes.branch);
+        data.forEach((r) => map.set(`branch:${r.id}`, ar ? (r.name_ar || r.name) : r.name));
       }
       if (scopes.user.length) {
-        const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", scopes.user);
-        (data ?? []).forEach((r) => map.set(`user:${r.id}`, r.full_name || r.email));
+        const data = await lookups.getUsersByIds(scopes.user);
+        data.forEach((r) => map.set(`user:${r.id}`, r.full_name || r.email || ""));
       }
       return map;
     },
   });
+
 
   function submit() {
     if (!targetId) { toast.error(ar ? "اختر الهدف" : "Pick a target"); return; }
