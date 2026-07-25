@@ -6,7 +6,10 @@
  */
 
 import { z } from "zod";
-import { isArabic, isEnglish } from "@/lib/textFilters";
+import { hasNonArabic, hasNonEnglish } from "@/lib/textFilters";
+
+const isArabic = (v: string) => v.length === 0 || !hasNonArabic(v);
+const isEnglish = (v: string) => v.length === 0 || !hasNonEnglish(v);
 
 const trim = (s: string) => s.trim();
 
