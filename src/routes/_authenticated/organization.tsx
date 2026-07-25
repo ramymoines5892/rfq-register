@@ -47,13 +47,14 @@ function OrganizationHub() {
   const ar = lang === "ar";
   const access = useAccess();
   const search = Route.useSearch();
-  // Map legacy tab values to new ones.
+  // Default: Branches → Departments & Jobs → Employees.
   const initialTab: TabId =
-    search.tab === "branches" ? "branches"
+    search.tab === "structure" ? "structure"
     : search.tab === "employees" ? "employees"
-    : "structure";
+    : "branches";
   const [tab, setTab] = useState<TabId>(initialTab);
   useEffect(() => { if (search.tab) setTab(initialTab); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [search.tab]);
+
 
   const tabs: { id: TabId; ar: string; en: string; icon: typeof Landmark }[] = [
     { id: "branches",  ar: "الفروع",              en: "Branches",              icon: Landmark  },
