@@ -72,6 +72,18 @@ export const qk = {
     detail: (id: string) => ["branches", "detail", id] as const,
     users: (branchId: string) => ["branches", "users", branchId] as const,
   },
+  employees: {
+    all: ["employees"] as const,
+    list: (filters?: Record<string, unknown>) =>
+      filters ? (["employees", "list", filters] as const) : (["employees", "list"] as const),
+    detail: (id: string) => ["employees", "detail", id] as const,
+  },
+  persons: {
+    all: ["persons"] as const,
+    list: () => ["persons", "list"] as const,
+    detail: (id: string) => ["persons", "detail", id] as const,
+  },
+
   warehouses: {
     all: ["warehouses"] as const,
     list: (branchId?: string | null) => ["warehouses", "list", branchId ?? "all"] as const,
