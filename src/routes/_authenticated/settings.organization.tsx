@@ -42,11 +42,11 @@ const DEPT_COLORS = [
 ];
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
-  component: OrganizationPage,
+  component: () => <OrganizationStructurePanel />,
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization" }] }),
 });
 
-function OrganizationPage() {
+export function OrganizationStructurePanel() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const confirm = useConfirm();
