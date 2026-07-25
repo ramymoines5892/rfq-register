@@ -5,9 +5,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Briefcase, User, Shield, Search } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Building2, Briefcase, User, Shield, Search, History, PlusCircle, MinusCircle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+import { usePermissionAudit } from "@/modules/permissions/audit";
 import {
   ALL_PERMISSIONS, PERMISSION_GROUPS, groupOf,
   grantDeptPermission, revokeDeptPermission,
