@@ -27,6 +27,8 @@ import {
   useUpsertBranch,
 } from "@/modules/branches/queries";
 import type { BranchAssignment, BranchWithCounts } from "@/modules/branches/api";
+import { useOrganizationData } from "@/modules/organization/queries";
+
 import { getCities, getStates, hasGeo } from "@/lib/geoData";
 
 export const Route = createFileRoute("/_authenticated/organization")({
