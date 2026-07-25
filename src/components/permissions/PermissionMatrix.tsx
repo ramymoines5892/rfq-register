@@ -299,6 +299,13 @@ export function PermissionMatrix({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <PermissionDiffDialog
+        open={!!preview}
+        onOpenChange={(o) => { if (!o) setPreview(null); }}
+        preview={preview}
+        onConfirm={confirmToggle}
+        saving={!!saving}
+      />
     </Dialog>
   );
 }
