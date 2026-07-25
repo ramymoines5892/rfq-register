@@ -444,3 +444,20 @@ function AuditPanel({
     </ScrollArea>
   );
 }
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-background text-muted-foreground border-border hover:bg-muted"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
