@@ -1,103 +1,71 @@
 
-# الخطة — 3 مراحل متتابعة
+# نظام الصلاحيات الهرمي (Cascading Permissions)
 
-بعد كل مرحلة أوقف وأعرض النتيجة عشان تراجع قبل ما نكمل. ده شغل كبير وحساس (تغييرات في مسارات الاستيراد لكل المشروع)، فالتقسيم ده بيقلل المخاطر.
+## الفكرة الأساسية (بأبسط شكل)
 
----
+كل موظف مربوط بـ **إدارة** و **وظيفة**. الصلاحيات بتتجمع من 3 مصادر:
 
-## المرحلة 1 — فحص شامل للداتابيز والكود
-
-**الهدف:** أتأكد إن كل حاجة شغالة صح قبل ما نبني فوقها.
-
-- **فحص الداتابيز:**
-  - كل الجداول: RLS مفعّل؟ GRANTs موجودة لكل جدول public؟
-  - العلاقات (FKs): سليمة ومربوطة صح؟ فيه أعمدة orphan؟
-  - الـ enums وقيمها متطابقة مع الكود؟
-  - الـ functions/triggers شغالة (security definer, search_path)?
-  - `supabase--linter` لأي تحذيرات
-- **فحص الكود:**
-  - كل `useQuery`/`useMutation` عندها queryKey متسق ومفيش invalidation ناقصة
-  - كل استخدامات `as any` — أيها بيخفي bug فعلي
-  - كل الحقول اللي في UI مقابلها في الداتابيز والعكس (خصوصاً `companies` — فيه عمود `fax` و `faxes` jsonb، لازم نتأكد)
-  - أي imports مكسورة، أي routes بدون `head()`، أي شاشة بترمي error صامت
-- **المخرج:** تقرير `AUDIT_PHASE1.md` فيه:
-  - ✅ حاجات سليمة
-  - ⚠️ مشاكل غير حرجة (اقتراحات)
-  - ❌ مشاكل حرجة — بصلحها فوراً في نفس المرحلة
-
----
-
-## المرحلة 2 — إعادة تصميم `/settings/company` كـ Wizard
-
-**الشكل:** نفس تجربة `/setup` بالظبط، 4 خطوات:
-
-```text
-[1 عام] → [2 متقدم] → [3 وثائق] → [4 ترقيم]
+```
+صلاحيات الإدارة  ─┐
+صلاحيات الوظيفة  ─┼─► اتحاد (Union) ─► صلاحيات المستخدم النهائية
+صلاحيات المستخدم ─┘   (مفيش تعارض، أي مصدر يمنح = ممنوح)
 ```
 
-- **Stepper علوي sticky** مع progress bar (نفس مكون setup) — قابل للنقر للتنقل بين الخطوات
-- **الخطوات:**
-  1. **عام:** الاسم AR/EN، الكود، الشعار، جهات الاتصال المتعددة (emails/phones/mobiles/faxes/websites) — بنفس مكون `MultiContactField`
-  2. **متقدم:** الدولة/المحافظة/المدينة (cascading)، العملة الأساسية، اللغة الافتراضية، التوقيت، صيغ التاريخ/الأرقام، السنة المالية، أرقام ضريبية/تجارية
-  3. **وثائق الشركة:** نفس شبكة البلاطات المربعة (`DocumentsDialog`) مع الصلاحيات وتنبيهات الانتهاء
-  4. **ترقيم المستندات:** نفس محرر السلاسل بـ prefix + preview + reset policy
-- **الفروق عن `/setup`:**
-  - العنوان "تعديل بيانات الشركة" بدل "الإعداد الأولي"
-  - زر "حفظ التغييرات" في كل خطوة (بدل "التالي" فقط)
-  - مفيش auto-signOut بعد الحفظ
-  - العودة للـ Settings hub بعد الحفظ النهائي
-- **مشاركة الكود:** أستخرج مكونات الخطوات من `src/routes/setup.tsx` إلى `src/modules/company/wizard/` عشان الشاشتين يستعملوا نفس الكود (source of truth واحد)
-- **بعد التنفيذ:** تحقق يدوي في المتصفح (screenshot) قبل ما ننتقل
+**مثال:** إدارة الحسابات فيها `finance.view + finance.manage`. وظيفة "محاسب" فيها `reports.view`. المستخدم "أحمد" مضاف له شخصياً `quotes.approve`.
+النتيجة: أحمد عنده الأربعة كلهم تلقائياً.
 
----
+## المميزات
 
-## المرحلة 3 — إعادة تنظيم فولدرات المشروع
+- **بدون Roles منفصلة** — الإدارة والوظيفة نفسهم بيلعبوا دور الـ Role.
+- **توارث تلقائي** — أي موظف جديد في الإدارة بياخد صلاحياتها فوراً.
+- **مرونة استثنائية** — ممكن تضيف صلاحية لمستخدم واحد بس بدون ما تأثر على غيره.
+- **شفافية** — في شاشة المستخدم بنعرض "الصلاحية دي جاية من: الإدارة / الوظيفة / إضافة شخصية".
 
-**الهيكل الجديد** `src/modules/<name>/`:
+## قاعدة البيانات
 
-```text
-src/modules/
-  company/       api.ts queries.ts components/ wizard/ tests/
-  branches/
-  warehouses/
-  inventory/
-  transfers/
-  adjustments/
-  partners/
-  customers/
-  products/
-  organization/  (departments, managements, positions, employees)
-  hr/
-  approvals/
-  workflows/
-  quotes/
-  notifications/
-  search/
-  appearance/
-  foundation/
-  features/
-  formBuilder/
-  trash/
-  companyDocs/
-```
+### 1) جداول جديدة
+- `department_permissions (department_id, permission)` — الصلاحيات على مستوى الإدارة.
+- `job_title_permissions (job_title_id, permission)` — الصلاحيات على مستوى الوظيفة.
+- `user_permissions` موجود بالفعل ✓ — بيتستخدم للإضافات الشخصية.
 
-- `src/routes/` تفضل مكانها (TanStack file-based routing — تغييرها بيكسر الـ router)
-- كل route بيستورد من `@/modules/<name>` بدل `@/features/<name>`
-- `src/components/ui/` (shadcn), `src/hooks/`, `src/lib/`, `src/integrations/` تفضل مكانها (shared)
-- `src/components/organization/*` → `src/modules/organization/components/`
-- `src/features/*` → `src/modules/*` مع تحديث كل الـ imports
-- **الأدوات:** ripgrep لإيجاد كل `@/features/` و `@/components/organization/` واستبدالها، بعدها typecheck كامل + `bunx vitest run`
-- **الاختبار:** بعد النقل، تشغيل الـ dev server والتأكد من كل route بيفتح صح
+### 2) تحديث `has_permission()` (Security Definer)
+تفحص بالترتيب: user_permissions → job_title_permissions (عبر employees) → department_permissions (عبر employees). لو أي مصدر رجّع صف = TRUE.
 
----
+### 3) حذف نظام الأدوار القديم
+- إلغاء جداول `roles` و `role_permissions` و `employee_roles`.
+- الاحتفاظ بـ `user_roles` (owner/admin/member) لأنها لسه مستخدمة كـ system-level guard.
 
-## تفاصيل تقنية (للمراجعة)
+## واجهة الاستخدام
 
-- **جدول companies** فيه ازدواج: `fax` (text) + `faxes` (jsonb). خلال المرحلة 1 هحدد لو `fax` القديم لسه مستعمل؛ لو لأ، هقترح إسقاطه في migration.
-- **حقول ناقصة محتملة:** `companies` مفيهاش `industry` أو `size` أو `established_year` — لو الويزرد بيحتاجهم نضيفهم في migration.
-- **الاستخدامات المتأثرة بإعادة التنظيم:** ~60 ملف route + component. كل التغييرات مسارات imports فقط، لا logic changes.
-- **Backwards compat:** ممكن أخلي `src/features/` فيها re-exports مؤقتة لو حبيت — لكن الأنضف نعمل النقل مرة واحدة كاملة.
+### /organization
+تبويبات موجودة + نضيف **زرار "الصلاحيات"** على كل صف في:
 
----
+**تبويب الإدارات:** أيقونة قفل بجانب كل إدارة → dialog بيعرض قائمة الصلاحيات مقسمة بالوحدات (Sales, HR, Inventory...) ومربعات اختيار.
 
-**نبدأ بالمرحلة 1؟** لما توافق، هبدأ الفحص فوراً وأرجعلك بالتقرير قبل ما نلمس أي كود.
+**تبويب الوظائف:** نفس الـ dialog على مستوى الوظيفة.
+
+**تبويب الموظفين/المستخدمين:** dialog بيعرض 3 أقسام:
+- الصلاحيات الموروثة من الإدارة (للقراءة فقط، badge أخضر)
+- الصلاحيات الموروثة من الوظيفة (للقراءة فقط، badge أزرق)
+- **الصلاحيات الإضافية للمستخدم** (checkboxes قابلة للتعديل)
+
+## الملفات المتأثرة
+
+**Backend (Migration واحد):**
+- `department_permissions`, `job_title_permissions` + RLS + GRANT.
+- تحديث `has_permission()` للاستعلام من الثلاث مصادر.
+- حذف `roles`, `role_permissions`, `employee_roles`.
+
+**Frontend:**
+- `src/modules/permissions/api.ts` (جديد) — CRUD للثلاث مستويات + fetch للـ effective permissions لمستخدم.
+- `src/modules/permissions/queries.ts` (جديد).
+- `src/components/permissions/PermissionMatrix.tsx` (جديد) — الـ dialog الموحّد لاختيار الصلاحيات.
+- `src/routes/_authenticated/organization.tsx` — إضافة أزرار "الصلاحيات" في التبويبات.
+- `src/routes/_authenticated/hr.tsx` — استبدال شاشة الصلاحيات الحالية بالـ Matrix الجديد اللي بيوضح المصدر.
+- حذف `src/routes/_authenticated/settings.foundation.tsx` أو الأجزاء الخاصة بـ Roles منها.
+
+## ملاحظات تقنية
+
+- `has_permission()` هتفضل SECURITY DEFINER عشان تتجنب RLS recursion.
+- الصلاحية على مستوى الإدارة **مش بتتوارث للأقسام الفرعية** (اخترت الخيار الأبسط). لو الإدارة عندها أقسام تحتها، بنطلب صلاحية منفصلة لكل قسم — أوضح للـ Admin.
+- للـ `admin`/`owner` (system role): بيتخطوا الفحص كله ويرجع TRUE على طول (زي دلوقتي).

@@ -17,8 +17,9 @@ import { toPng } from "html-to-image";
 import { OrgChartImage } from "@/components/organization/OrgChartImage";
 import {
   Network, Building2, Briefcase, Plus, Trash2, Search, Save, Sparkles,
-  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye,
+  LayoutGrid, Users, ChevronRight, Pencil, Info, Download, ImageIcon, Eye, Shield,
 } from "lucide-react";
+import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
 
 
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
@@ -877,8 +878,11 @@ function RecordEditor({
     ((record as any).metadata as Record<string, any>) || {}
   );
   const [saving, setSaving] = useState(false);
+  const [permsOpen, setPermsOpen] = useState(false);
   const upsertDept = useUpsertDepartment();
   const upsertJob = useUpsertJobTitle();
+  const recordId = (record as any).id as string | undefined;
+  const displayName = ar ? (nameAr || nameEn) : (nameEn || nameAr);
 
   const save = async () => {
     if (!nameAr.trim() && !nameEn.trim()) {
@@ -923,12 +927,29 @@ function RecordEditor({
   return (
     <>
       <SheetHeader>
-        <SheetTitle>
-          {isNew
-            ? (isDept ? (ar ? "إدارة جديدة" : "New Department") : (ar ? "مسمى وظيفي جديد" : "New Job Title"))
-            : (isDept ? (ar ? "تعديل الإدارة" : "Edit Department") : (ar ? "تعديل المسمى" : "Edit Job Title"))}
-        </SheetTitle>
+        <div className="flex items-center justify-between gap-2">
+          <SheetTitle>
+            {isNew
+              ? (isDept ? (ar ? "إدارة جديدة" : "New Department") : (ar ? "مسمى وظيفي جديد" : "New Job Title"))
+              : (isDept ? (ar ? "تعديل الإدارة" : "Edit Department") : (ar ? "تعديل المسمى" : "Edit Job Title"))}
+          </SheetTitle>
+          {!isNew && recordId && (
+            <Button
+              type="button" size="sm" variant="outline"
+              className="gap-1.5"
+              onClick={() => setPermsOpen(true)}
+            >
+              <Shield className="h-3.5 w-3.5" />
+              {ar ? "الصلاحيات" : "Permissions"}
+            </Button>
+          )}
+        </div>
       </SheetHeader>
+      <PermissionMatrix
+        open={permsOpen}
+        onOpenChange={setPermsOpen}
+        scope={recordId ? { kind: isDept ? "department" : "job_title", id: recordId, name: displayName || "" } : null}
+      />
       <div className="flex-1 overflow-y-auto space-y-4 py-2">
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
