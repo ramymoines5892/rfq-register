@@ -4071,6 +4071,8 @@ export type Database = {
         | "inventory.adjust.approve"
         | "approvals.view"
         | "approvals.decide"
+        | "org.view"
+        | "org.manage"
       app_role: "owner" | "admin" | "member"
       approval_action: "post" | "cancel" | "delete"
       approval_decision: "pending" | "approved" | "rejected"
@@ -4320,6 +4322,8 @@ export const Constants = {
         "inventory.adjust.approve",
         "approvals.view",
         "approvals.decide",
+        "org.view",
+        "org.manage",
       ],
       app_role: ["owner", "admin", "member"],
       approval_action: ["post", "cancel", "delete"],
