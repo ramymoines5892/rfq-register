@@ -54,7 +54,7 @@ export const PERMISSION_IMPACT: Record<string, ImpactEntry[]> = {
   "templates.manage":          [{ ar: "إدارة القوالب", en: "Manage templates" }],
   "notifications.view":        [{ ar: "عرض الإشعارات", en: "View notifications" }],
   "reports.view":              [{ ar: "عرض التقارير", en: "View reports" }],
-  "manage_customer_fields":    [{ ar: "إدارة حقول العملاء", en: "Manage customer fields", path: "/admin/customer-fields" }],
+  "manage_customer_fields":    [{ ar: "إدارة حقول العملاء", en: "Manage customer fields", path: "/settings/form-builder" }],
   "manage_form_fields":        [{ ar: "إدارة حقول النماذج", en: "Manage form fields", path: "/settings/form-builder" }],
 };
 
