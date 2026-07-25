@@ -473,24 +473,103 @@ function AuthenticatedLayout() {
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 inset-x-0 z-20 h-14 bg-sidebar text-sidebar-foreground flex items-center justify-between px-3 border-b border-sidebar-border">
-        <Brand tight />
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {mobileLeaves.slice(0, 5).map((n, i) => {
-            const active = n.to && (n.match ? n.match(pathname) : pathname === n.to);
-            const Icon = n.icon;
-            return (
-              <Link key={i} to={n.to!} className={`p-2 rounded-lg ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70"}`}>
-                <Icon className="h-4 w-4" />
-              </Link>
-            );
-          })}
-          <button onClick={() => window.dispatchEvent(new Event("open-global-search"))} className="p-2 rounded-lg text-sidebar-foreground/70" title={ar ? "بحث" : "Search"}>
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            aria-label={ar ? "فتح القائمة" : "Open menu"}
+            className="p-2 -ms-1 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Brand tight />
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => window.dispatchEvent(new Event("open-global-search"))}
+            className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent/60"
+            title={ar ? "بحث" : "Search"}
+          >
             <Search className="h-4 w-4" />
           </button>
           <NotificationBell />
           <Button variant="ghost" size="sm" className="text-sidebar-foreground" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
         </div>
       </div>
+
+      {/* Mobile navigation drawer */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent
+          side={dir === "rtl" ? "right" : "left"}
+          className="p-0 w-[86vw] max-w-xs bg-sidebar text-sidebar-foreground border-sidebar-border"
+        >
+          <TooltipProvider delayDuration={200}>
+            <div className="flex flex-col h-full">
+              <div className="px-5 pt-6 pb-3"><Brand tight /></div>
+              <div className="px-3 pb-2"><GlobalSearchTrigger className="w-full justify-start" /></div>
+              <nav className="flex-1 px-3 space-y-1 overflow-y-auto pb-4 scrollbar-slim">
+                {sections.map((s) => {
+                  const entries = s.entries.filter((e) => (isGroup(e) ? featOn(e.featureKey) : true));
+                  if (!entries.length) return null;
+                  return (
+                    <div key={s.labelEn} className="space-y-1">
+                      <div className="text-[10px] uppercase tracking-widest font-bold px-3 pt-4 pb-1.5 text-sidebar-primary/70">
+                        {ar ? s.labelAr : s.labelEn}
+                      </div>
+                      {entries.map((e, i) => {
+                        if (!isGroup(e)) return <LeafItem key={i} n={e} forceExpanded />;
+                        const Icon = e.icon;
+                        return (
+                          <div key={e.id} className="space-y-0.5">
+                            <div className="flex items-center gap-2 px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+                              <Icon className="h-3.5 w-3.5" />
+                              <span>{ar ? e.labelAr : e.labelEn}</span>
+                            </div>
+                            {e.children.map((c, j) => <LeafItem key={j} n={c} forceExpanded nested />)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </nav>
+              <div className="p-3 border-t border-sidebar-border/40 space-y-2">
+                <div className="bg-sidebar-accent/60 rounded-xl p-2.5 flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center font-bold text-sidebar-primary-foreground shrink-0">
+                    {initial}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold truncate">{email}</div>
+                    <div className="text-[10px] text-sidebar-foreground/60">
+                      {isAdmin ? (ar ? "مدير النظام" : "Administrator") : (ar ? "مستخدم" : "Member")}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-1 items-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+                  >
+                    <Languages className="h-4 w-4" />
+                    <span className="ms-1 text-xs">{lang === "ar" ? "EN" : "ع"}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    onClick={signOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </TooltipProvider>
+        </SheetContent>
+      </Sheet>
+
 
       <main className="flex-1 min-w-0 pt-14 md:pt-0">
         <Outlet />
