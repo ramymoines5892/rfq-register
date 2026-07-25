@@ -118,11 +118,26 @@ function DocumentsPage() {
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
       <header className="border-b bg-background sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <FolderArchive className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold">{ar ? "مستندات الشركة" : "Company Documents"}</h1>
+          <h1 className="text-lg font-bold flex-1">{ar ? "مستندات الشركة" : "Company Documents"}</h1>
+          <div className="flex items-center gap-1 rounded-md border p-0.5 bg-muted/40 text-xs">
+            <button
+              onClick={() => navigate({ search: (p) => ({ ...p, filter: "all" }) })}
+              className={`px-2.5 py-1 rounded ${filter === "all" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"}`}
+            >{ar ? "الكل" : "All"} <span className="opacity-60">({types.length})</span></button>
+            <button
+              onClick={() => navigate({ search: (p) => ({ ...p, filter: "expiring" }) })}
+              className={`px-2.5 py-1 rounded flex items-center gap-1 ${filter === "expiring" ? "bg-background shadow-sm font-medium text-rose-600" : "text-muted-foreground"}`}
+            >
+              <AlertTriangle className="h-3 w-3" />
+              {ar ? "قارب على الانتهاء" : "Expiring / expired"}
+              <span className="opacity-60">({types.filter((t) => isExpiringOrExpired(currentByType.get(t.id), t)).length})</span>
+            </button>
+          </div>
         </div>
       </header>
+
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-3">
         {!types.length ? (
