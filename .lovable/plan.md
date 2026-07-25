@@ -1,60 +1,105 @@
-# Module 02 — Identity & Employee Framework
 
-هذا مواصفات كبيرة (Person / Employee / Assignment / User / Position / Grade / Delegation / Promotion / Transfer / History / Calendar…). لأنه لا يمكن بناؤه في دفعة واحدة بشكل سليم، سأقسمه إلى مراحل صغيرة قابلة للاختبار. نبدأ بالمرحلة الأولى فقط، ونتفق على التالي بعدها.
+# Architectural Refactor Plan — ERP-Ready Structure
 
-## المبدأ الأساسي (نطبقه في كل المراحل)
-- **Person ≠ Employee ≠ User ≠ Role ≠ Permission ≠ Authority**
-- الـ Identity ثابتة، الـ Employment تاريخية، الـ User اختياري.
-- Workflow يشير إلى Assignment/Position، لا لأسماء موظفين.
+The project already uses a module-based layout (`src/modules/*`), TanStack Query, RLS-backed services, and typed Supabase. The audit shows the real friction is concentrated in a few hotspots, not the whole codebase. A single "refactor everything" pass would be high-risk (12,586 LOC in `_authenticated/`, 26 routes, live business rules) and would likely break behavior. I'll do this in **safe, verifiable phases**, each shippable on its own.
 
----
+## Scope guardrails
+- No UI redesign, no behavior changes, no schema changes.
+- Every phase ends with typecheck + targeted route smoke tests.
+- Routes stay thin wrappers over module code (TanStack Start requires this).
 
-## المرحلة 1 — Persons + Employee refactor (نبدأ بها الآن)
+## Current state (quick audit)
+- Good: `src/modules/{partners,branches,inventory,...}` with `api.ts` / `queries.ts`; shared `hooks/`, `lib/`, `components/ui/`; permissions + i18n centralized.
+- Hotspots:
+  - `customers.tsx` (1846 LOC), `settings.form-builder.tsx` (1305), `settings.company.tsx` (923), `hr.tsx` (833), `partners.tsx` (761), `organization.tsx` (750) — mixed UI + business logic + direct Supabase.
+  - 13 route files import `@/integrations/supabase/client` directly instead of going through a module service.
+  - `as any` scattered across 15+ files.
+  - No shared `types/`, `constants/`, `validation/`, `errors/` folders; validation lives inline; toast calls are ad-hoc.
 
-### DB
-- إنشاء جدول `persons` (National ID / Passport / Names AR/EN / Birth / Gender / Nationality / Personal Email / Personal Phone / Photo).
-- إضافة `person_id` على `employees` + backfill من الحقول الحالية.
-- إضافة على `employees`:
-  - `employee_number` (unique per company)
-  - `employment_type` (enum: full_time, part_time, contract, temporary, intern, consultant, freelancer)
-  - `termination_date`, `cost_center` (text placeholder للـ Finance)
-  - توسيع `employment_status` enum: planned, active, probation, on_leave, suspended, retired, resigned, terminated, archived.
-- Trigger: منع login لموظف غير Active (لاحقاً في User).
-- RLS + GRANTs + audit fields.
+## Target structure (additive, not disruptive)
+```text
+src/
+  routes/                 # thin TanStack route files (unchanged locations)
+  modules/<domain>/
+    api.ts                # Supabase calls (service layer)
+    queries.ts            # TanStack Query keys + hooks
+    schema.ts             # zod validation
+    types.ts              # domain types
+    constants.ts          # enums, defaults
+    components/           # domain-specific UI
+    hooks/                # domain hooks
+  shared/
+    types/                # cross-domain interfaces
+    constants/            # app-wide constants
+    validation/           # shared zod primitives (bilingual, phone, etc.)
+    errors/               # normalizeError, toastError, ErrorBoundary helpers
+    notifications/        # toast wrappers (success/error/info/promise)
+    ui/                   # existing shadcn primitives (moved from components/ui)
+    loading/              # Skeletons, Spinner, PageLoader
+  hooks/  contexts/  lib/ config/   # unchanged
+```
+`shared/` is added alongside existing folders; nothing is deleted until callers migrate.
 
-### UI
-- `/organization` → تبويب **Employees**:
-  - قسمين: **Person Info** (identity) / **Employment Info** (job).
-  - عرض Employee Number + Status + Type + Hire/Termination.
-  - Filter بالـ status و type.
-- استخدام `ScriptInput` للأسماء العربي/الإنجليزي.
+## Phased execution
 
-### Out of scope in Phase 1 (نأجلها)
-- Positions & Grades كجداول مستقلة
-- Assignments متعددة primary/secondary (الجدول موجود، UI لاحقاً)
-- Delegation / Promotion / Transfer / History timeline
-- Work Calendar / Shifts / Leave status
-- Skills / Documents attachments
-- User Account lifecycle (Pending/Locked/Expired…)
-- Approval authority (module منفصل)
+### Phase 1 — Shared foundations (low risk, no behavior change)
+- Add `src/shared/errors/normalizeError.ts` + `toastError()` wrapping current toast calls.
+- Add `src/shared/notifications/notify.ts` (success/error/promise wrappers around `sonner`).
+- Add `src/shared/loading/` (`PageLoader`, `InlineSpinner`, `TableSkeleton`) built from existing skeleton primitives.
+- Add `src/shared/validation/primitives.ts` (bilingual name, email, phone, national id — reuse `textFilters`, `countryFormats`).
+- Add `src/shared/types/common.ts` (Id, Timestamped, Paginated<T>, ApiResult<T>).
+- No existing file changes required; new files ready for adoption.
 
----
+### Phase 2 — Service layer completeness
+For each domain that still calls Supabase from a route (`documents`, `hr`, `adjustments`, `settings.features`, `settings.document-types`, `roles`, `settings.tsx`, `index.tsx`, `route.tsx`):
+- Extract the calls into `modules/<domain>/api.ts` (create if missing).
+- Add matching `queries.ts` with typed query keys and hooks.
+- Routes import hooks only; no direct `supabase` in routes.
+- Preserve exact query shapes to avoid behavior drift.
 
-## المراحل التالية (للموافقة لاحقاً)
+### Phase 3 — Decompose the 3 largest routes
+Target: `customers.tsx`, `settings.form-builder.tsx`, `settings.company.tsx`.
+- Split into `modules/<domain>/components/` (sub-panels, dialogs, tables).
+- Move business logic (row mapping, derived totals, form transforms) into `modules/<domain>/logic.ts` with unit tests where cheap.
+- Route file becomes a thin composition (< 200 LOC target).
+- Others (`hr`, `partners`, `organization`) follow the same pattern in a later pass — flagged as remaining debt if time-bound.
 
-- **Phase 2**: Job Positions + Grades كجداول (بدل حقل نصي) + ربطها بالـ Assignment.
-- **Phase 3**: Assignments UI (Primary/Secondary, Manager Types, Reporting Matrix).
-- **Phase 4**: Employee History + Transfer/Promotion/Delegation flows.
-- **Phase 5**: User Account lifecycle (Pending, Locked, Expired, MFA hooks).
-- **Phase 6**: Work Calendar + Shifts + Leave Status.
-- **Phase 7**: Skills + Documents + Search + Reports.
-- **Phase 8**: Audit expansion + Security على الحقول الحساسة.
+### Phase 4 — Type-safety pass
+- Replace `as any` in the 15 flagged files with generated Supabase row types or narrow interfaces in `modules/<d>/types.ts`.
+- Introduce `Database['public']['Tables'][...]['Row']` aliases in each module's `types.ts`.
 
----
+### Phase 5 — Validation consolidation
+- Move ad-hoc validators in `partners`, `customers`, `company`, `setup` into `modules/<d>/schema.ts` using zod, backed by shared primitives from Phase 1.
+- Forms call `schema.parse` / `safeParse`; error messages route through `shared/errors`.
 
-## ماذا أحتاج منك قبل ما أبدأ Phase 1
-1. موافقة على البدء بـ Phase 1 كما هو موصّف أعلاه؟
-2. Employee Number: توليد تلقائي (باستخدام `next_document_number` لكل شركة) أم إدخال يدوي؟
-3. الحقول الحالية على `employees` (full_name/full_name_ar/full_name_en/national_id/passport_no/phone/email) — أنقلها للـ `persons` وأخليها views/computed على `employees`، أم أسيبها duplicated لفترة انتقالية؟
+### Phase 6 — Performance sweep (surgical)
+- Add `React.memo` + stable selectors to heavy tables (partners docs, inventory, permission matrix).
+- Convert expensive `useMemo` deps to primitive keys.
+- Replace inline `useQuery` refetch spam with proper invalidation keys (audit hits found in HR/notifications already fixed; verify remaining).
+- No speculative rewrites; only measurable hotspots.
 
-قل لي "ابدأ Phase 1" + إجابات النقطتين 2 و3، وأبدأ فوراً.
+### Phase 7 — Dead-code + duplication sweep
+- Remove unused imports/files flagged by `tsgo` + `rg`.
+- Consolidate duplicate helpers (bilingual formatters, date formatters, empty-state components).
+
+## Verification per phase
+- `tsgo` clean.
+- `bunx vitest run` for touched modules.
+- Playwright smoke on affected routes.
+- Cache invalidation manually reviewed for each moved mutation.
+
+## Deliverable after execution
+`ARCHITECTURE_REFACTOR.md` at repo root:
+- Improvements applied per phase
+- Files changed / moved / added
+- Final folder tree
+- Remaining technical debt (routes not yet decomposed, `any` residue, etc.)
+- Recommendations before adding new ERP modules (Purchases, Manufacturing, ISO 9001 QMS)
+
+## What I need from you
+This is 2–4 hours of focused work if done in one shot and will touch dozens of files. Options:
+1. **Do all 7 phases now** in one pass, report at the end.
+2. **Do Phases 1–2 first** (foundations + service layer, lowest risk, highest leverage), review, then continue.
+3. **Pick specific phases** you care about (e.g., "only 1, 2, 4").
+
+Reply "all", "1-2", or list the phases you want.
