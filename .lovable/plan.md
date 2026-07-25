@@ -1,71 +1,73 @@
+# End-to-End System Scenarios, Audit & Cohesion Pass
 
-# نظام الصلاحيات الهرمي (Cascading Permissions)
+Goal: walk through the ERP the way a real user would, from first launch to daily operations, find weak points, and fix them so every module is connected, consistent, and effortless to use.
 
-## الفكرة الأساسية (بأبسط شكل)
+## Scenarios to Test
 
-كل موظف مربوط بـ **إدارة** و **وظيفة**. الصلاحيات بتتجمع من 3 مصادر:
+1. **First launch (empty system)**
+   - `/` with no company → `/setup` wizard (Company → Advanced → Documents → Numbering) → auto sign-out → sign-in → dashboard.
+   - Verify: draft persistence, logo delete, doc tiles, numbering uniqueness, no way to skip to app before setup.
 
-```
-صلاحيات الإدارة  ─┐
-صلاحيات الوظيفة  ─┼─► اتحاد (Union) ─► صلاحيات المستخدم النهائية
-صلاحيات المستخدم ─┘   (مفيش تعارض، أي مصدر يمنح = ممنوح)
-```
+2. **First admin / owner**
+   - Sign-up → auto owner role → dashboard tiles unlock progressively.
+   - Verify: `handle_new_user`, `handle_new_user_role`, UI prefs seeded.
 
-**مثال:** إدارة الحسابات فيها `finance.view + finance.manage`. وظيفة "محاسب" فيها `reports.view`. المستخدم "أحمد" مضاف له شخصياً `quotes.approve`.
-النتيجة: أحمد عنده الأربعة كلهم تلقائياً.
+3. **Building the org**
+   - Branches → Managements → Departments → Job Titles → Employees → link Employee to Auth User.
+   - Verify: `/organization` tabs order (Branches → Depts & Jobs → Employees), deep-link `?tab=`, org chart renders, icons per dept.
 
-## المميزات
+4. **Roles & permissions**
+   - Create custom role → attach permissions → assign to dept / job / branch / user.
+   - Open `/hr` → user drawer → change dept → **must not throw** (just fixed `current_profile_locked_fields`) → view effective perms with source badges → diff dialog before save.
+   - Verify audit log entries in `permission_audit_log` + `custom_roles` audit.
 
-- **بدون Roles منفصلة** — الإدارة والوظيفة نفسهم بيلعبوا دور الـ Role.
-- **توارث تلقائي** — أي موظف جديد في الإدارة بياخد صلاحياتها فوراً.
-- **مرونة استثنائية** — ممكن تضيف صلاحية لمستخدم واحد بس بدون ما تأثر على غيره.
-- **شفافية** — في شاشة المستخدم بنعرض "الصلاحية دي جاية من: الإدارة / الوظيفة / إضافة شخصية".
+5. **Pending user approval**
+   - New sign-up lands on `/pending` → admin sees join request in `/hr` → approve → user gets `member` role and lands on dashboard.
 
-## قاعدة البيانات
+6. **Warehouses & inventory**
+   - Warehouses → Bins → Opening balances → Transfers (draft → in_transit → completed) → Adjustments (draft → pending → approved → posted).
+   - Verify approval matrix routing, movement history, CSV export.
 
-### 1) جداول جديدة
-- `department_permissions (department_id, permission)` — الصلاحيات على مستوى الإدارة.
-- `job_title_permissions (job_title_id, permission)` — الصلاحيات على مستوى الوظيفة.
-- `user_permissions` موجود بالفعل ✓ — بيتستخدم للإضافات الشخصية.
+7. **Partners → Quotes → Approvals**
+   - Create supplier + customer → quote with workflow template → approver decides → email log → docs tab shows the quote.
 
-### 2) تحديث `has_permission()` (Security Definer)
-تفحص بالترتيب: user_permissions → job_title_permissions (عبر employees) → department_permissions (عبر employees). لو أي مصدر رجّع صف = TRUE.
+8. **Bilingual + responsive + a11y**
+   - Toggle AR/EN, RTL flip, ScriptInput rejects wrong script, mobile/tablet layouts, elegant scrollbar everywhere, Tab key skips buttons (TabFlowManager).
 
-### 3) حذف نظام الأدوار القديم
-- إلغاء جداول `roles` و `role_permissions` و `employee_roles`.
-- الاحتفاظ بـ `user_roles` (owner/admin/member) لأنها لسه مستخدمة كـ system-level guard.
+9. **Trash / soft delete / restore** across customers, quotes, workflows, branches, departments, employees.
 
-## واجهة الاستخدام
+10. **Global search & notifications** — search from sidebar returns entities across modules; doc-expiry notifications fire for Admin/Owner.
 
-### /organization
-تبويبات موجودة + نضيف **زرار "الصلاحيات"** على كل صف في:
+## Weakness Hunt (what I'll actively look for)
 
-**تبويب الإدارات:** أيقونة قفل بجانب كل إدارة → dialog بيعرض قائمة الصلاحيات مقسمة بالوحدات (Sales, HR, Inventory...) ومربعات اختيار.
+- Server functions or RPCs missing `GRANT EXECUTE` (like today's `current_profile_locked_fields`).
+- Tables in `public` without GRANTs for `authenticated` / `service_role`.
+- Routes that call protected server fns from a public loader.
+- Broken links / dead sidebar entries after the `features` → `modules` reorg.
+- Duplicated concepts (e.g. Settings > Organization vs `/organization`) and stale sub-routes.
+- Places still hardcoded that should read from Feature Flags / Company settings.
+- Screens missing responsive treatment or custom scrollbars.
+- Query cache invalidation gaps after mutations (stale lists after create/edit/delete).
+- Missing `errorComponent` / `notFoundComponent` on routes with loaders.
 
-**تبويب الوظائف:** نفس الـ dialog على مستوى الوظيفة.
+## Deliverables
 
-**تبويب الموظفين/المستخدمين:** dialog بيعرض 3 أقسام:
-- الصلاحيات الموروثة من الإدارة (للقراءة فقط، badge أخضر)
-- الصلاحيات الموروثة من الوظيفة (للقراءة فقط، badge أزرق)
-- **الصلاحيات الإضافية للمستخدم** (checkboxes قابلة للتعديل)
+- `AUDIT_SCENARIOS.md`: each scenario, expected flow, observed result, verdict (PASS / FAIL / IMPROVE), and the exact fix applied.
+- Code fixes applied in the same turn for every FAIL and every quick IMPROVE (permissions, grants, cache invalidations, broken links, responsive gaps, unified navigation).
+- A short "Recommended UX simplifications" section for larger changes that need your approval before I rewrite flows (e.g. merging Settings-Organization into `/organization` for good, collapsing overlapping HR/Roles screens, first-run wizard order changes).
+- Playwright smoke run across the key routes to confirm nothing regressed.
 
-## الملفات المتأثرة
+## Technical Notes
 
-**Backend (Migration واحد):**
-- `department_permissions`, `job_title_permissions` + RLS + GRANT.
-- تحديث `has_permission()` للاستعلام من الثلاث مصادر.
-- حذف `roles`, `role_permissions`, `employee_roles`.
+- Use `supabase--read_query` + `supabase--linter` to sweep for missing grants, RLS gaps, SECURITY DEFINER exposure.
+- Use `acp_subagent--explore` in parallel for: (a) route/loader audit, (b) RPC/grant audit, (c) query-invalidation audit.
+- Drive Playwright headless against `http://localhost:8080` with the injected Supabase session to reproduce each scenario and capture screenshots into `/tmp/browser/scenarios/`.
+- Fix categories, not instances: when one RPC lacks EXECUTE, sweep all SECURITY DEFINER functions; when one list doesn't refresh, sweep sibling mutations.
 
-**Frontend:**
-- `src/modules/permissions/api.ts` (جديد) — CRUD للثلاث مستويات + fetch للـ effective permissions لمستخدم.
-- `src/modules/permissions/queries.ts` (جديد).
-- `src/components/permissions/PermissionMatrix.tsx` (جديد) — الـ dialog الموحّد لاختيار الصلاحيات.
-- `src/routes/_authenticated/organization.tsx` — إضافة أزرار "الصلاحيات" في التبويبات.
-- `src/routes/_authenticated/hr.tsx` — استبدال شاشة الصلاحيات الحالية بالـ Matrix الجديد اللي بيوضح المصدر.
-- حذف `src/routes/_authenticated/settings.foundation.tsx` أو الأجزاء الخاصة بـ Roles منها.
+## Out of Scope (will flag, not build)
 
-## ملاحظات تقنية
+- New modules (Sales orders, Purchase orders, Finance) — brief only mentions them; I won't scaffold without your go-ahead.
+- Redesigning the dashboard widgets beyond wiring fixes.
+- Data migrations that would destroy existing rows.
 
-- `has_permission()` هتفضل SECURITY DEFINER عشان تتجنب RLS recursion.
-- الصلاحية على مستوى الإدارة **مش بتتوارث للأقسام الفرعية** (اخترت الخيار الأبسط). لو الإدارة عندها أقسام تحتها، بنطلب صلاحية منفصلة لكل قسم — أوضح للـ Admin.
-- للـ `admin`/`owner` (system role): بيتخطوا الفحص كله ويرجع TRUE على طول (زي دلوقتي).
+Reply "go" to run the full pass, or tell me which scenarios to prioritise first (e.g. "start with 1–4").
