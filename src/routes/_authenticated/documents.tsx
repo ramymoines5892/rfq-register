@@ -59,11 +59,14 @@ function statusMeta(doc: CompanyDocument | undefined, type: DocumentType, ar: bo
 function DocumentsPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
+  const { filter, focus } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: types = [] } = useDocumentTypes();
   const { data: currents = [] } = useCurrentDocuments();
   const [depts, setDepts] = useState<Dept[]>([]);
   const [addingType, setAddingType] = useState<DocumentType | null>(null);
   const [historyType, setHistoryType] = useState<DocumentType | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     (async () => {
@@ -71,6 +74,7 @@ function DocumentsPage() {
       setDepts((data ?? []) as Dept[]);
     })();
   }, []);
+
 
   const currentByType = useMemo(() => {
     const m = new Map<string, CompanyDocument>();
