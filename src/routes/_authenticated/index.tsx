@@ -266,7 +266,7 @@ function Dashboard() {
                   <span className="flex items-center gap-2"><ToggleRight className="h-4 w-4 text-muted-foreground" />{ar ? "مميزات النظام" : "System features"}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180" />
                 </Link>
-                <Link to="/settings/organization" className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors">
+                <Link to="/organization" search={{ tab: "branches" }} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors">
                   <span className="flex items-center gap-2"><UsersRound className="h-4 w-4 text-muted-foreground" />{ar ? "الهيكل التنظيمي" : "Organization"}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180" />
                 </Link>
