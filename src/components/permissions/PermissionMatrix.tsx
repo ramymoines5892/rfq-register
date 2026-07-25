@@ -256,3 +256,65 @@ export function PermissionMatrix({
     </Dialog>
   );
 }
+
+/* ─── Audit log panel ───────────────────────────────────────────── */
+
+function AuditPanel({
+  scope, targetId,
+}: { scope: "department" | "job_title" | "user"; targetId: string }) {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+  const q = usePermissionAudit(scope, targetId);
+  const fmt = new Intl.DateTimeFormat(ar ? "ar-EG" : "en-US", {
+    dateStyle: "medium", timeStyle: "short",
+  });
+
+  if (q.isLoading) {
+    return <div className="py-6 text-center text-sm text-muted-foreground">{ar ? "جاري التحميل..." : "Loading..."}</div>;
+  }
+  if (q.error) {
+    return (
+      <div className="py-6 text-center text-sm text-destructive">
+        {ar ? "تعذر تحميل السجل (تحتاج صلاحية مسؤول)." : "Cannot load audit log (admin permission required)."}
+      </div>
+    );
+  }
+  const entries = q.data ?? [];
+  if (entries.length === 0) {
+    return (
+      <div className="py-8 text-center text-sm text-muted-foreground">
+        {ar ? "لا توجد تغييرات مسجلة بعد." : "No changes recorded yet."}
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[55vh] -mx-6 px-6">
+      <ul className="divide-y">
+        {entries.map((e) => (
+          <li key={e.id} className="py-2.5 flex items-start gap-3">
+            {e.action === "grant" ? (
+              <PlusCircle className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+            ) : (
+              <MinusCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[11px] rounded bg-muted px-1.5 py-0.5">{e.permission}</span>
+                <span className="text-muted-foreground">
+                  {e.action === "grant" ? (ar ? "تم منح" : "granted") : (ar ? "تم إلغاء" : "revoked")}
+                </span>
+              </div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {ar ? "بواسطة" : "by"} {" "}
+                <span className="font-medium">{e.actor_name || e.actor_email || (ar ? "نظام" : "system")}</span>
+                {" · "}
+                {fmt.format(new Date(e.created_at))}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </ScrollArea>
+  );
+}
