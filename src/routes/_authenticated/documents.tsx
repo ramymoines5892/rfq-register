@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   useCurrentDocuments,
@@ -23,10 +24,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { FolderArchive, Plus, Upload, History, Paperclip, AlertTriangle, CheckCircle2, Clock, FileText } from "lucide-react";
 
+type DocsSearch = { filter: "all" | "expiring"; focus: string };
+
 export const Route = createFileRoute("/_authenticated/documents")({
+  validateSearch: (s: Record<string, unknown>): DocsSearch => ({
+    filter: s.filter === "expiring" ? "expiring" : "all",
+    focus: typeof s.focus === "string" ? s.focus : "",
+  }),
   component: DocumentsPage,
   head: () => ({ meta: [{ title: "مستندات الشركة | Company Documents" }] }),
 });
+
+
 
 type Dept = { id: string; name: string; name_ar: string | null; name_en: string | null };
 
@@ -50,11 +59,14 @@ function statusMeta(doc: CompanyDocument | undefined, type: DocumentType, ar: bo
 function DocumentsPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
+  const { filter, focus } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: types = [] } = useDocumentTypes();
   const { data: currents = [] } = useCurrentDocuments();
   const [depts, setDepts] = useState<Dept[]>([]);
   const [addingType, setAddingType] = useState<DocumentType | null>(null);
   const [historyType, setHistoryType] = useState<DocumentType | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     (async () => {
@@ -62,6 +74,7 @@ function DocumentsPage() {
       setDepts((data ?? []) as Dept[]);
     })();
   }, []);
+
 
   const currentByType = useMemo(() => {
     const m = new Map<string, CompanyDocument>();
@@ -75,14 +88,56 @@ function DocumentsPage() {
     return ar ? (d.name_ar || d.name) : (d.name_en || d.name);
   };
 
+  const isExpiringOrExpired = (doc: CompanyDocument | undefined, t: DocumentType) => {
+    if (!doc) return true; // missing counts as needing attention
+    const days = daysBetween(doc.expiry_date);
+    if (days === null) return false;
+    const threshold = doc.notify_days_before ?? t.notify_days_before;
+    return days < 0 || days <= threshold;
+  };
+
+  const visibleTypes = useMemo(
+    () => filter === "expiring" ? types.filter((t) => isExpiringOrExpired(currentByType.get(t.id), t)) : types,
+    [types, filter, currentByType],
+  );
+
+  // Scroll to & highlight focused card (deep-link from dashboard / notification)
+  useEffect(() => {
+    if (!focus) return;
+    const el = cardRefs.current[focus];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary");
+      const t = setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2400);
+      return () => clearTimeout(t);
+    }
+  }, [focus, visibleTypes.length]);
+
+
+
   return (
     <div className="min-h-screen bg-muted/20" dir={dir}>
       <header className="border-b bg-background sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <FolderArchive className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold">{ar ? "مستندات الشركة" : "Company Documents"}</h1>
+          <h1 className="text-lg font-bold flex-1">{ar ? "مستندات الشركة" : "Company Documents"}</h1>
+          <div className="flex items-center gap-1 rounded-md border p-0.5 bg-muted/40 text-xs">
+            <button
+              onClick={() => navigate({ search: (p: DocsSearch) => ({ ...p, filter: "all" as const }) })}
+              className={`px-2.5 py-1 rounded ${filter === "all" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"}`}
+            >{ar ? "الكل" : "All"} <span className="opacity-60">({types.length})</span></button>
+            <button
+              onClick={() => navigate({ search: (p: DocsSearch) => ({ ...p, filter: "expiring" as const }) })}
+              className={`px-2.5 py-1 rounded flex items-center gap-1 ${filter === "expiring" ? "bg-background shadow-sm font-medium text-rose-600" : "text-muted-foreground"}`}
+            >
+              <AlertTriangle className="h-3 w-3" />
+              {ar ? "قارب على الانتهاء" : "Expiring / expired"}
+              <span className="opacity-60">({types.filter((t) => isExpiringOrExpired(currentByType.get(t.id), t)).length})</span>
+            </button>
+          </div>
         </div>
       </header>
+
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-3">
         {!types.length ? (
@@ -100,13 +155,14 @@ function DocumentsPage() {
         ) : (
 
           <div className="grid gap-3 md:grid-cols-2">
-            {types.map((t) => {
+            {visibleTypes.map((t) => {
               const cur = currentByType.get(t.id);
+
               const s = statusMeta(cur, t, ar);
               const Icon = s.icon;
               const depts = cur?.department_ids?.length ? cur.department_ids : t.default_department_ids;
               return (
-                <Card key={t.id} className="overflow-hidden">
+                <Card key={t.id} ref={(el) => { cardRefs.current[t.id] = el; }} className="overflow-hidden scroll-mt-24 transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -150,9 +206,15 @@ function DocumentsPage() {
                 </Card>
               );
             })}
+            {visibleTypes.length === 0 && (
+              <div className="md:col-span-2 text-center py-10 text-sm text-muted-foreground">
+                {ar ? "لا توجد مستندات قاربت على الانتهاء." : "No documents are expiring or expired."}
+              </div>
+            )}
           </div>
         )}
       </div>
+
 
       {addingType && (
         <AddDocumentDialog

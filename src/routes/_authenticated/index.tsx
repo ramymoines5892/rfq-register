@@ -100,14 +100,14 @@ function Dashboard() {
         : (ar ? "عضو الفريق" : "Team Member");
 
   /* Role-based KPI selection */
-  type Kpi = { key: string; label: string; value: number; icon: any; tint: string; to?: string };
+  type Kpi = { key: string; label: string; value: number; icon: any; tint: string; to?: string; search?: Record<string, string> };
   const kpis: Kpi[] = useMemo(() => {
     const all: Kpi[] = [];
     if (access.isAdmin) {
       all.push(
         { key: "pendingUsers", label: ar ? "مستخدمون بانتظار التفعيل" : "Pending Users", value: counts.pendingUsers, icon: UserPlus, tint: "text-amber-600 bg-amber-500/10", to: "/hr" },
         { key: "quotesPending", label: ar ? "عروض قيد الاعتماد" : "Quotes Awaiting Approval", value: counts.quotesPending, icon: ClipboardList, tint: "text-blue-600 bg-blue-500/10", to: "/workflows" },
-        { key: "expiringDocs", label: ar ? "مستندات تنتهي خلال أسبوع" : "Docs Expiring in 7d", value: counts.expiringDocs, icon: FolderArchive, tint: "text-rose-600 bg-rose-500/10", to: "/settings/company" },
+        { key: "expiringDocs", label: ar ? "مستندات تنتهي خلال أسبوع" : "Docs Expiring in 7d", value: counts.expiringDocs, icon: FolderArchive, tint: "text-rose-600 bg-rose-500/10", to: "/documents", search: { filter: "expiring" } },
         { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
       );
     } else if (access.canApprove) {
@@ -198,7 +198,7 @@ function Dashboard() {
                 </CardContent>
               </Card>
             );
-            return k.to ? <Link key={k.key} to={k.to}>{body}</Link> : <div key={k.key}>{body}</div>;
+            return k.to ? <Link key={k.key} to={k.to} search={k.search as any}>{body}</Link> : <div key={k.key}>{body}</div>;
           })}
         </section>
 
