@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { notify } from "@/shared/notifications/notify";
 import { Loader2, Lock, AlertTriangle } from "lucide-react";
 import {
   FEATURE_REGISTRY,
@@ -14,6 +13,7 @@ import {
   type FeatureDef,
 } from "@/lib/features/registry";
 import { useFeatures, useUpdateFeatures } from "@/modules/features/queries";
+import { useCurrentUserRoles } from "@/modules/auth/queries";
 
 export const Route = createFileRoute("/_authenticated/settings/features")({
   component: FeaturesPage,
@@ -26,17 +26,10 @@ function FeaturesPage() {
   const { data: features, isLoading } = useFeatures();
   const updateMut = useUpdateFeatures();
 
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { data: roles = [] } = useCurrentUserRoles();
+  const isAdmin = useMemo(() => roles.includes("owner") || roles.includes("admin"), [roles]);
   const [draft, setDraft] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-      setIsAdmin(!!roles?.some((r) => r.role === "owner" || r.role === "admin"));
-    })();
-  }, []);
 
   useEffect(() => {
     if (features) setDraft(features);
