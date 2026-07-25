@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, Link, useRouterState, redirect } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { useCurrentUserPermissions, useCurrentUserRoles } from "@/modules/auth/queries";
 import { Settings2, LayoutGrid, Languages, FileText, ShieldCheck, Sliders, Trash2, Network, Palette, FolderArchive, ToggleRight, Building2, Layers } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -46,25 +47,12 @@ function SettingsLayout() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [perms, setPerms] = useState<Set<string>>(new Set());
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
+  const { data: roles = [] } = useCurrentUserRoles();
+  const { data: userPerms = [] } = useCurrentUserPermissions();
+  const isOwner = useMemo(() => roles.includes("owner"), [roles]);
+  const isAdmin = useMemo(() => isOwner || roles.includes("admin"), [isOwner, roles]);
+  const perms = useMemo(() => new Set(userPerms), [userPerms]);
 
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const [{ data: roles }, { data: userPerms }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", u.user.id),
-        supabase.from("user_permissions").select("permission").eq("user_id", u.user.id),
-      ]);
-      const owner = !!roles?.some((r) => r.role === "owner");
-      const admin = owner || !!roles?.some((r) => r.role === "admin");
-      setIsOwner(owner);
-      setIsAdmin(admin);
-      setPerms(new Set((userPerms ?? []).map((p) => p.permission)));
-    })();
-  }, []);
 
   const canSee = (tab: TabDef) => {
     if (tab.ownerOnly) return isOwner;
