@@ -131,13 +131,19 @@ export function useUserPermissions(userId: string | null | undefined) {
   });
 }
 
+function invalidateUserPerms(qc: ReturnType<typeof useQueryClient>, userId: string) {
+  qc.invalidateQueries({ queryKey: qk.hr.userPermissions(userId) });
+  qc.invalidateQueries({ queryKey: ["perms", "effective", userId] });
+  qc.invalidateQueries({ queryKey: ["perms", "audit"] });
+  qc.invalidateQueries({ queryKey: ["hr"] });
+}
+
 export function useGrantPermission() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { userId: string; permission: AppPermission }) =>
       grantUserPermission(v.userId, v.permission),
-    onSuccess: (_d, v) =>
-      qc.invalidateQueries({ queryKey: qk.hr.userPermissions(v.userId) }),
+    onSuccess: (_d, v) => invalidateUserPerms(qc, v.userId),
   });
 }
 
@@ -146,7 +152,6 @@ export function useRevokePermission() {
   return useMutation({
     mutationFn: (v: { userId: string; permission: AppPermission }) =>
       revokeUserPermission(v.userId, v.permission),
-    onSuccess: (_d, v) =>
-      qc.invalidateQueries({ queryKey: qk.hr.userPermissions(v.userId) }),
+    onSuccess: (_d, v) => invalidateUserPerms(qc, v.userId),
   });
 }

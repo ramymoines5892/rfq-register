@@ -24,7 +24,11 @@ export function useReorderDepartments() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (updates: DepartmentPositionUpdate[]) => reorderDepartments(updates),
-    onSettled: () => {
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.organization.all });
+    },
+    onError: () => {
+      // Resync from server so a failed drag doesn't leave optimistic order stuck
       qc.invalidateQueries({ queryKey: qk.organization.all });
     },
   });
