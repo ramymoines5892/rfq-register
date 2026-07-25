@@ -162,7 +162,7 @@ function DocumentsPage() {
               const Icon = s.icon;
               const depts = cur?.department_ids?.length ? cur.department_ids : t.default_department_ids;
               return (
-                <Card key={t.id} className="overflow-hidden">
+                <Card key={t.id} ref={(el) => { cardRefs.current[t.id] = el; }} className="overflow-hidden scroll-mt-24 transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
