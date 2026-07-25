@@ -211,8 +211,24 @@ export function PermissionMatrix({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScopeIcon className="h-5 w-5 text-primary" />
-            {ar ? "الصلاحيات" : "Permissions"} — {scope.name}
+            <span className="flex-1">{ar ? "الصلاحيات" : "Permissions"} — {scope.name}</span>
+            {saving && (
+              <Badge variant="secondary" className="gap-1 text-[10px] font-normal">
+                <Loader2 className="h-3 w-3 animate-spin" />{ar ? "جاري الحفظ..." : "Saving..."}
+              </Badge>
+            )}
+            {!saving && lastSavedAt && (
+              <Badge className="gap-1 text-[10px] font-normal bg-emerald-600 hover:bg-emerald-600">
+                <Check className="h-3 w-3" />{ar ? "تم الحفظ" : "Saved"}
+              </Badge>
+            )}
+            {!saving && !lastSavedAt && anyLoading && (
+              <Badge variant="outline" className="gap-1 text-[10px] font-normal">
+                <RefreshCw className="h-3 w-3 animate-spin" />{ar ? "تحديث" : "Refreshing"}
+              </Badge>
+            )}
           </DialogTitle>
+
           <DialogDescription className="text-xs">
             {isUser
               ? (ar
