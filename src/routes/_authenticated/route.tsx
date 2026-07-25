@@ -386,8 +386,8 @@ function AuthenticatedLayout() {
     <ThemeProvider>
     <div className="min-h-screen flex bg-background" dir={dir}>
       <aside
-        className={`hidden md:flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out sticky top-0 h-screen ${
-          pinned ? "md:w-64 lg:w-72" : "md:w-20"
+        className={`flex flex-col bg-sidebar text-sidebar-foreground ${sideStart} border-sidebar-border transition-[width] duration-200 ease-out sticky top-0 h-screen ${
+          pinned ? "w-64 lg:w-72" : "w-16 md:w-20"
         }`}
       >
 
