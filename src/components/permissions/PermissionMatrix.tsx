@@ -21,6 +21,7 @@ import {
   useDeptPermissions, useJobPermissions, useEffectivePermissions,
 } from "@/modules/permissions/queries";
 import { grantUserPermission as _u1, revokeUserPermission as _u2 } from "@/modules/hr/api";
+import { PermissionDiffDialog, type DiffPreview } from "./PermissionDiffDialog";
 
 /** Permission labels — mirrors the master list in hr.tsx */
 const LABELS_AR: Partial<Record<AppPermission, string>> = {
