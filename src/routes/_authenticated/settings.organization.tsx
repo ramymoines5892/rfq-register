@@ -878,8 +878,11 @@ function RecordEditor({
     ((record as any).metadata as Record<string, any>) || {}
   );
   const [saving, setSaving] = useState(false);
+  const [permsOpen, setPermsOpen] = useState(false);
   const upsertDept = useUpsertDepartment();
   const upsertJob = useUpsertJobTitle();
+  const recordId = (record as any).id as string | undefined;
+  const displayName = ar ? (nameAr || nameEn) : (nameEn || nameAr);
 
   const save = async () => {
     if (!nameAr.trim() && !nameEn.trim()) {
