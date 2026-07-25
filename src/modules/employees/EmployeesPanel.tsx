@@ -308,10 +308,10 @@ function EmployeeEditor({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label={ar ? "الاسم بالعربية" : "Full name (AR)"}>
-                <ScriptInput script="arabic" isAr value={person.full_name_ar} onChange={(v) => setPerson({ ...person, full_name_ar: v })} dir="rtl" placeholder="أحمد محمد" />
+                <ScriptInput script="ar" isAr value={person.full_name_ar} onChange={(v) => setPerson({ ...person, full_name_ar: v })} dir="rtl" placeholder="أحمد محمد" />
               </Field>
               <Field label={ar ? "الاسم بالإنجليزية" : "Full name (EN)"}>
-                <ScriptInput script="latin" value={person.full_name_en} onChange={(v) => setPerson({ ...person, full_name_en: v })} placeholder="Ahmed Mohamed" />
+                <ScriptInput script="en" value={person.full_name_en} onChange={(v) => setPerson({ ...person, full_name_en: v })} placeholder="Ahmed Mohamed" />
               </Field>
               <Field label={ar ? "الاسم الأول" : "First name"}>
                 <Input value={person.first_name} onChange={(e) => setPerson({ ...person, first_name: e.target.value })} />
