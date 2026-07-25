@@ -38,6 +38,7 @@ import { useI18n } from "@/lib/i18n";
 import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
 import { supabase } from "@/integrations/supabase/client";
+import { sendPasswordReset } from "@/modules/auth/api";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -163,10 +164,7 @@ function HrPage() {
   }
   async function sendReset(email: string) {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      await sendPasswordReset(email, `${window.location.origin}/reset-password`);
       toast.success(ar ? "تم إرسال رابط إعادة التعيين" : "Reset link sent");
     } catch (e) { toast.error((e as Error).message); }
   }
