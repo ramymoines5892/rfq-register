@@ -180,6 +180,7 @@ function AuthenticatedLayout() {
             ],
           } as NavGroup,
         ] : []),
+        { to: "/documents", labelAr: "مستندات الشركة", labelEn: "Company Documents", icon: FolderArchive, match: (p: string) => p.startsWith("/documents") },
         { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
       ],
     },
