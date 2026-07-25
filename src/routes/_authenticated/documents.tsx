@@ -123,11 +123,11 @@ function DocumentsPage() {
           <h1 className="text-lg font-bold flex-1">{ar ? "مستندات الشركة" : "Company Documents"}</h1>
           <div className="flex items-center gap-1 rounded-md border p-0.5 bg-muted/40 text-xs">
             <button
-              onClick={() => navigate({ search: (p) => ({ ...p, filter: "all" }) })}
+              onClick={() => navigate({ search: (p: DocsSearch) => ({ ...p, filter: "all" as const }) })}
               className={`px-2.5 py-1 rounded ${filter === "all" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"}`}
             >{ar ? "الكل" : "All"} <span className="opacity-60">({types.length})</span></button>
             <button
-              onClick={() => navigate({ search: (p) => ({ ...p, filter: "expiring" }) })}
+              onClick={() => navigate({ search: (p: DocsSearch) => ({ ...p, filter: "expiring" as const }) })}
               className={`px-2.5 py-1 rounded flex items-center gap-1 ${filter === "expiring" ? "bg-background shadow-sm font-medium text-rose-600" : "text-muted-foreground"}`}
             >
               <AlertTriangle className="h-3 w-3" />
