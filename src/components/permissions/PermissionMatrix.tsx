@@ -159,77 +159,93 @@ export function PermissionMatrix({
           </div>
         )}
 
-        <div className="relative">
-          <Search className="absolute start-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder={ar ? "بحث عن صلاحية..." : "Search permissions..."}
-            className="ps-8 h-9"
-          />
-        </div>
+        <Tabs defaultValue="perms" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="perms" className="gap-1.5">
+              <Shield className="h-3.5 w-3.5" />{ar ? "الصلاحيات" : "Permissions"}
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-1.5">
+              <History className="h-3.5 w-3.5" />{ar ? "سجل التغييرات" : "Audit log"}
+            </TabsTrigger>
+          </TabsList>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-4 py-2">
-            {groups.map((g) => (
-              <div key={g.key} className="rounded-lg border">
-                <div className="px-3 py-2 bg-muted/40 border-b flex items-center gap-2">
-                  <Shield className="h-3.5 w-3.5 text-primary" />
-                  <div className="text-sm font-semibold">{ar ? g.ar : g.en}</div>
-                  <Badge variant="secondary" className="ms-auto text-[10px]">{g.perms.length}</Badge>
-                </div>
-                <div className="divide-y">
-                  {g.perms.map((p) => {
-                    const fromDept = inheritedDept.has(p);
-                    const fromJob  = inheritedJob.has(p);
-                    const own = ownSet.has(p);
-                    const effective = own || fromDept || fromJob;
-                    return (
-                      <label
-                        key={p}
-                        className={`flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer ${saving === p ? "opacity-50" : ""}`}
-                      >
-                        <Checkbox
-                          checked={own}
-                          disabled={saving === p}
-                          onCheckedChange={(v) => toggle(p, Boolean(v))}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm">{ar ? (LABELS_AR[p] || p) : p}</div>
-                          <div className="text-[10px] font-mono text-muted-foreground truncate">{p}</div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-wrap justify-end">
-                          {isUser && fromDept && (
-                            <Badge variant="outline" className="gap-1 text-[10px]">
-                              <Building2 className="h-2.5 w-2.5" />{ar ? "من الإدارة" : "Dept"}
-                            </Badge>
-                          )}
-                          {isUser && fromJob && (
-                            <Badge variant="outline" className="gap-1 text-[10px]">
-                              <Briefcase className="h-2.5 w-2.5" />{ar ? "من المسمى" : "Job"}
-                            </Badge>
-                          )}
-                          {isUser && own && (
-                            <Badge className="gap-1 text-[10px]">
-                              <User className="h-2.5 w-2.5" />{ar ? "شخصية" : "Personal"}
-                            </Badge>
-                          )}
-                          {isUser && effective && !own && !fromDept && !fromJob && (
-                            <Badge variant="secondary" className="text-[10px]">{ar ? "فعّالة" : "Effective"}</Badge>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
+          <TabsContent value="perms" className="flex-1 flex flex-col min-h-0 mt-3 space-y-3">
+            <div className="relative">
+              <Search className="absolute start-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder={ar ? "بحث عن صلاحية..." : "Search permissions..."}
+                className="ps-8 h-9"
+              />
+            </div>
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="space-y-4 py-2">
+                {groups.map((g) => (
+                  <div key={g.key} className="rounded-lg border">
+                    <div className="px-3 py-2 bg-muted/40 border-b flex items-center gap-2">
+                      <Shield className="h-3.5 w-3.5 text-primary" />
+                      <div className="text-sm font-semibold">{ar ? g.ar : g.en}</div>
+                      <Badge variant="secondary" className="ms-auto text-[10px]">{g.perms.length}</Badge>
+                    </div>
+                    <div className="divide-y">
+                      {g.perms.map((p) => {
+                        const fromDept = inheritedDept.has(p);
+                        const fromJob  = inheritedJob.has(p);
+                        const own = ownSet.has(p);
+                        const effective = own || fromDept || fromJob;
+                        return (
+                          <label
+                            key={p}
+                            className={`flex items-center gap-3 px-3 py-2 hover:bg-muted/30 cursor-pointer ${saving === p ? "opacity-50" : ""}`}
+                          >
+                            <Checkbox
+                              checked={own}
+                              disabled={saving === p}
+                              onCheckedChange={(v) => toggle(p, Boolean(v))}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm">{ar ? (LABELS_AR[p] || p) : p}</div>
+                              <div className="text-[10px] font-mono text-muted-foreground truncate">{p}</div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-wrap justify-end">
+                              {isUser && fromDept && (
+                                <Badge variant="outline" className="gap-1 text-[10px]">
+                                  <Building2 className="h-2.5 w-2.5" />{ar ? "من الإدارة" : "Dept"}
+                                </Badge>
+                              )}
+                              {isUser && fromJob && (
+                                <Badge variant="outline" className="gap-1 text-[10px]">
+                                  <Briefcase className="h-2.5 w-2.5" />{ar ? "من المسمى" : "Job"}
+                                </Badge>
+                              )}
+                              {isUser && own && (
+                                <Badge className="gap-1 text-[10px]">
+                                  <User className="h-2.5 w-2.5" />{ar ? "شخصية" : "Personal"}
+                                </Badge>
+                              )}
+                              {isUser && effective && !own && !fromDept && !fromJob && (
+                                <Badge variant="secondary" className="text-[10px]">{ar ? "فعّالة" : "Effective"}</Badge>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {groups.length === 0 && (
+                  <div className="text-center text-sm text-muted-foreground py-8">
+                    {ar ? "لا توجد نتائج" : "No matches"}
+                  </div>
+                )}
               </div>
-            ))}
-            {groups.length === 0 && (
-              <div className="text-center text-sm text-muted-foreground py-8">
-                {ar ? "لا توجد نتائج" : "No matches"}
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="audit" className="flex-1 min-h-0 mt-3">
+            <AuditPanel scope={scope.kind} targetId={scope.id} />
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
