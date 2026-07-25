@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { z } from "zod";
-import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { useI18n } from "@/lib/i18n";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   useCurrentDocuments,
