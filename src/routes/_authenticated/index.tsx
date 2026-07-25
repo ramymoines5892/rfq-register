@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAccess } from "@/hooks/useAccess";
 import { useCurrentCompany } from "@/modules/company/queries";
+import { useCurrentUser } from "@/modules/auth/queries";
+import { useDashboardCounts } from "@/modules/dashboard/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
