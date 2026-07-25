@@ -42,7 +42,7 @@ const DEPT_COLORS = [
 ];
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
-  component: OrganizationPage,
+  component: () => <OrganizationStructurePanel />,
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization" }] }),
 });
 
