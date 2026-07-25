@@ -220,13 +220,14 @@ function AuthenticatedLayout() {
     }
 
     return (
-      <Link to={n.to} title={label} className={`${base} ${stateClass}`}>
+      <Link to={n.to} search={n.search as never} title={label} className={`${base} ${stateClass}`}>
         <Icon className="h-4 w-4 shrink-0" />
         {collapsed
           ? <span className="line-clamp-2 w-full break-words">{label}</span>
           : <span className="truncate">{label}</span>}
       </Link>
     );
+
   };
 
 
