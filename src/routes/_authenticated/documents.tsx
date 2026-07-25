@@ -5,6 +5,7 @@ import { useAccess } from "@/hooks/useAccess";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useDepartmentsLookup } from "@/modules/lookups/queries";
 import {
   useCurrentDocuments,
   useDocumentTypes,
@@ -93,17 +94,12 @@ function DocumentsPage() {
 function DocumentsPageInner({ ar, dir, filter, focus, navigate }: { ar: boolean; dir: "rtl" | "ltr"; filter: "all" | "expiring"; focus: string; navigate: ReturnType<typeof Route.useNavigate> }) {
   const { data: types = [] } = useDocumentTypes();
   const { data: currents = [] } = useCurrentDocuments();
-  const [depts, setDepts] = useState<Dept[]>([]);
+  const { data: depts = [] } = useDepartmentsLookup();
   const [addingType, setAddingType] = useState<DocumentType | null>(null);
   const [historyType, setHistoryType] = useState<DocumentType | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("departments").select("id,name,name_ar,name_en").is("deleted_at", null).order("name");
-      setDepts((data ?? []) as Dept[]);
-    })();
-  }, []);
+
 
 
   const currentByType = useMemo(() => {
