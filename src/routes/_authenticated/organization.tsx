@@ -655,3 +655,89 @@ function DeleteBranchDialog({
     </Dialog>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/* Employees                                                                */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+function EmployeesPanel() {
+  const { lang } = useI18n();
+  const ar = lang === "ar";
+  const { data: org, isLoading } = useOrganizationData();
+  const [query, setQuery] = useState("");
+
+  const deptById = useMemo(() => {
+    const m = new Map<string, string>();
+    (org?.depts ?? []).forEach((d) => m.set(d.id, ar ? (d.name_ar || d.name) : d.name));
+    return m;
+  }, [org, ar]);
+
+  const rows = useMemo(() => {
+    const list = org?.profiles ?? [];
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((p) =>
+      [p.full_name, p.email, p.department_id ? deptById.get(p.department_id) : null]
+        .filter(Boolean).some((v) => v!.toString().toLowerCase().includes(q)),
+    );
+  }, [org, query, deptById]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder={ar ? "بحث بالاسم أو البريد أو الإدارة…" : "Search by name, email, department…"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="ps-9"
+          />
+        </div>
+        <Link to="/hr">
+          <Button size="sm" variant="outline" className="gap-1.5">
+            <ChevronRight className="h-4 w-4" />
+            {ar ? "إدارة الموارد البشرية" : "Manage in HR"}
+          </Button>
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
+          <Loader2 className="h-4 w-4 animate-spin" /> {ar ? "جارٍ التحميل…" : "Loading…"}
+        </div>
+      ) : rows.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center space-y-2">
+            <Users2 className="h-8 w-8 mx-auto text-muted-foreground/50" />
+            <div className="text-sm font-medium">{ar ? "لا يوجد موظفون بعد" : "No employees yet"}</div>
+            <div className="text-xs text-muted-foreground">
+              {ar ? "تُضاف الحسابات من شاشة الموارد البشرية." : "Users are onboarded from the HR screen."}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {rows.map((p) => (
+            <Card key={p.id} className="hover:border-primary/60 transition-colors">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0 font-semibold">
+                  {(p.full_name || p.email || "?").trim().charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{p.full_name || (ar ? "بدون اسم" : "Unnamed")}</div>
+                  <div className="text-xs text-muted-foreground truncate">{p.email}</div>
+                  {p.department_id && deptById.get(p.department_id) && (
+                    <Badge variant="secondary" className="mt-2 text-[10px]">
+                      {deptById.get(p.department_id)}
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
