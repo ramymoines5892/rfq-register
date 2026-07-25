@@ -385,6 +385,7 @@ export type Database = {
           default_language: string | null
           email: string | null
           emails: Json
+          enterprise_id: string | null
           fax: string | null
           faxes: Json
           finance_manager: string | null
@@ -427,6 +428,7 @@ export type Database = {
           default_language?: string | null
           email?: string | null
           emails?: Json
+          enterprise_id?: string | null
           fax?: string | null
           faxes?: Json
           finance_manager?: string | null
@@ -469,6 +471,7 @@ export type Database = {
           default_language?: string | null
           email?: string | null
           emails?: Json
+          enterprise_id?: string | null
           fax?: string | null
           faxes?: Json
           finance_manager?: string | null
@@ -498,7 +501,15 @@ export type Database = {
           website?: string | null
           websites?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_enterprise_id_fkey"
+            columns: ["enterprise_id"]
+            isOneToOne: false
+            referencedRelation: "enterprises"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       company_document_files: {
         Row: {
@@ -1581,6 +1592,112 @@ export type Database = {
           },
         ]
       }
+      employee_assignments: {
+        Row: {
+          allocation_percent: number
+          assignment_type: Database["public"]["Enums"]["employee_assignment_type"]
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          department_id: string | null
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_acting: boolean
+          is_deputy: boolean
+          is_manager: boolean
+          job_title_id: string | null
+          management_id: string | null
+          notes: string | null
+          org_unit_id: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          allocation_percent?: number
+          assignment_type?: Database["public"]["Enums"]["employee_assignment_type"]
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_acting?: boolean
+          is_deputy?: boolean
+          is_manager?: boolean
+          job_title_id?: string | null
+          management_id?: string | null
+          notes?: string | null
+          org_unit_id?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          allocation_percent?: number
+          assignment_type?: Database["public"]["Enums"]["employee_assignment_type"]
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          department_id?: string | null
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_acting?: boolean
+          is_deputy?: boolean
+          is_manager?: boolean
+          job_title_id?: string | null
+          management_id?: string | null
+          notes?: string | null
+          org_unit_id?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_assignments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_assignments_job_title_id_fkey"
+            columns: ["job_title_id"]
+            isOneToOne: false
+            referencedRelation: "job_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_assignments_management_id_fkey"
+            columns: ["management_id"]
+            isOneToOne: false
+            referencedRelation: "managements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_assignments_org_unit_id_fkey"
+            columns: ["org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           branch_id: string | null
@@ -1710,6 +1827,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      enterprises: {
+        Row: {
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          name_ar: string | null
+          name_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       fiscal_years: {
         Row: {
@@ -2097,6 +2253,195 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      org_level_definitions: {
+        Row: {
+          code: string
+          color: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          depth: number
+          description: string | null
+          icon: string | null
+          id: string
+          is_enabled: boolean
+          is_system: boolean
+          name_ar: string
+          name_en: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          depth: number
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_enabled?: boolean
+          is_system?: boolean
+          name_ar: string
+          name_en: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          depth?: number
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_enabled?: boolean
+          is_system?: boolean
+          name_ar?: string
+          name_en?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_level_definitions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_units: {
+        Row: {
+          branch_id: string | null
+          code: string | null
+          color: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deputy_employee_id: string | null
+          description: string | null
+          effective_date: string | null
+          end_date: string | null
+          icon: string | null
+          id: string
+          level_code: string
+          management_id: string | null
+          manager_employee_id: string | null
+          metadata: Json
+          name: string
+          name_ar: string | null
+          name_en: string | null
+          parent_unit_id: string | null
+          position: number
+          status: Database["public"]["Enums"]["org_unit_status"]
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          code?: string | null
+          color?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deputy_employee_id?: string | null
+          description?: string | null
+          effective_date?: string | null
+          end_date?: string | null
+          icon?: string | null
+          id?: string
+          level_code: string
+          management_id?: string | null
+          manager_employee_id?: string | null
+          metadata?: Json
+          name: string
+          name_ar?: string | null
+          name_en?: string | null
+          parent_unit_id?: string | null
+          position?: number
+          status?: Database["public"]["Enums"]["org_unit_status"]
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          code?: string | null
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deputy_employee_id?: string | null
+          description?: string | null
+          effective_date?: string | null
+          end_date?: string | null
+          icon?: string | null
+          id?: string
+          level_code?: string
+          management_id?: string | null
+          manager_employee_id?: string | null
+          metadata?: Json
+          name?: string
+          name_ar?: string | null
+          name_en?: string | null
+          parent_unit_id?: string | null
+          position?: number
+          status?: Database["public"]["Enums"]["org_unit_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_units_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_units_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_units_deputy_employee_id_fkey"
+            columns: ["deputy_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_units_management_id_fkey"
+            columns: ["management_id"]
+            isOneToOne: false
+            referencedRelation: "managements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_units_manager_employee_id_fkey"
+            columns: ["manager_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_units_parent_unit_id_fkey"
+            columns: ["parent_unit_id"]
+            isOneToOne: false
+            referencedRelation: "org_units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partner_addresses: {
         Row: {
@@ -3726,6 +4071,8 @@ export type Database = {
         | "inventory.adjust.approve"
         | "approvals.view"
         | "approvals.decide"
+        | "org.view"
+        | "org.manage"
       app_role: "owner" | "admin" | "member"
       approval_action: "post" | "cancel" | "delete"
       approval_decision: "pending" | "approved" | "rejected"
@@ -3750,6 +4097,11 @@ export type Database = {
         | "multiselect"
         | "bilingual_text"
       doc_notify_repeat: "none" | "daily" | "weekly" | "monthly"
+      employee_assignment_type:
+        | "primary"
+        | "secondary"
+        | "temporary"
+        | "project"
       employment_status:
         | "active"
         | "on_leave"
@@ -3757,6 +4109,14 @@ export type Database = {
         | "terminated"
         | "probation"
       numbering_reset_policy: "never" | "yearly" | "monthly" | "daily"
+      org_unit_status:
+        | "planning"
+        | "draft"
+        | "active"
+        | "inactive"
+        | "merged"
+        | "closed"
+        | "archived"
       partner_role:
         | "customer"
         | "supplier"
@@ -3962,6 +4322,8 @@ export const Constants = {
         "inventory.adjust.approve",
         "approvals.view",
         "approvals.decide",
+        "org.view",
+        "org.manage",
       ],
       app_role: ["owner", "admin", "member"],
       approval_action: ["post", "cancel", "delete"],
@@ -3989,6 +4351,12 @@ export const Constants = {
         "bilingual_text",
       ],
       doc_notify_repeat: ["none", "daily", "weekly", "monthly"],
+      employee_assignment_type: [
+        "primary",
+        "secondary",
+        "temporary",
+        "project",
+      ],
       employment_status: [
         "active",
         "on_leave",
@@ -3997,6 +4365,15 @@ export const Constants = {
         "probation",
       ],
       numbering_reset_policy: ["never", "yearly", "monthly", "daily"],
+      org_unit_status: [
+        "planning",
+        "draft",
+        "active",
+        "inactive",
+        "merged",
+        "closed",
+        "archived",
+      ],
       partner_role: [
         "customer",
         "supplier",
