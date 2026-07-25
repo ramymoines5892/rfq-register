@@ -69,9 +69,9 @@ function FeaturesPage() {
   async function save() {
     try {
       await updateMut.mutateAsync(draft);
-      toast.success(ar ? "تم حفظ المميزات" : "Features saved");
+      notify.success(ar ? "تم حفظ المميزات" : "Features saved");
     } catch (e) {
-      toast.error(ar ? "تعذّر الحفظ" : "Failed to save", { description: String((e as Error).message) });
+      notify.error(e, ar ? "تعذّر الحفظ" : "Failed to save");
     }
   }
 
