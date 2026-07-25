@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.current_profile_locked_fields() TO authenticated;
