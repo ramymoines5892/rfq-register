@@ -379,11 +379,8 @@ function AuthenticatedLayout() {
     </div>
   );
 
-  /* ─── Mobile nav (flat list) ─── */
-  const mobileLeaves: NavLeaf[] = sections.flatMap((s) =>
-    s.entries.filter((e) => (isGroup(e) ? featOn(e.featureKey) : true))
-      .flatMap((e) => isGroup(e) ? e.children.filter((c) => c.to && !c.soon) : [e])
-  ) as NavLeaf[];
+
+
 
   return (
     <ThemeProvider>
