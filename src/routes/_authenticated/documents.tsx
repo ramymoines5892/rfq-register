@@ -206,9 +206,15 @@ function DocumentsPage() {
                 </Card>
               );
             })}
+            {visibleTypes.length === 0 && (
+              <div className="md:col-span-2 text-center py-10 text-sm text-muted-foreground">
+                {ar ? "لا توجد مستندات قاربت على الانتهاء." : "No documents are expiring or expired."}
+              </div>
+            )}
           </div>
         )}
       </div>
+
 
       {addingType && (
         <AddDocumentDialog
