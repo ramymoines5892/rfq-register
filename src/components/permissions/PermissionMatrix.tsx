@@ -165,17 +165,25 @@ export function PermissionMatrix({
         if (next) await grantDeptPermission(scope.id, perm);
         else await revokeDeptPermission(scope.id, perm);
         qc.invalidateQueries({ queryKey: ["perms", "dept", scope.id] });
+        qc.invalidateQueries({ queryKey: ["perms", "dept-map"] });
       } else if (scope.kind === "job_title") {
         if (next) await grantJobPermission(scope.id, perm);
         else await revokeJobPermission(scope.id, perm);
         qc.invalidateQueries({ queryKey: ["perms", "job", scope.id] });
+        qc.invalidateQueries({ queryKey: ["perms", "job-map"] });
       } else {
         if (next) await _u1(scope.id, perm);
         else await _u2(scope.id, perm);
         qc.invalidateQueries({ queryKey: ["perms", "effective", scope.id] });
+        qc.invalidateQueries({ queryKey: ["perms", "user-map"] });
         qc.invalidateQueries({ queryKey: ["hr"] });
       }
-      qc.invalidateQueries({ queryKey: ["perm-audit", scope.kind, scope.id] });
+      // Broad cross-cutting invalidations so every dependent view refreshes.
+      qc.invalidateQueries({ queryKey: ["perms", "effective"] });
+      qc.invalidateQueries({ queryKey: ["has_permission"] });
+      qc.invalidateQueries({ queryKey: ["perm-check"] });
+      qc.invalidateQueries({ queryKey: ["perm-audit"] });
+      setLastSavedAt(Date.now());
       setPreview(null);
     } catch (e: any) {
       toast.error(ar ? "تعذر الحفظ" : "Failed", { description: e?.message });
@@ -183,6 +191,16 @@ export function PermissionMatrix({
       setSaving(null);
     }
   }
+
+  // Auto-clear the "saved" pulse after a moment.
+  useEffect(() => {
+    if (!lastSavedAt) return;
+    const t = setTimeout(() => setLastSavedAt(null), 2500);
+    return () => clearTimeout(t);
+  }, [lastSavedAt]);
+
+  const anyLoading = deptQ.isFetching || jobQ.isFetching || effQ.isFetching;
+
 
   if (!scope) return null;
   const ScopeIcon = scope.kind === "department" ? Building2 : scope.kind === "job_title" ? Briefcase : User;
