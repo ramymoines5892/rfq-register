@@ -23,8 +23,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { toast } from "sonner";
 import {
   ArrowLeft, Building2, UserCheck, Users, Ban, Play,
-  Search, ArrowUpDown, ChevronUp, ChevronDown,
+  Search, ArrowUpDown, ChevronUp, ChevronDown, Shield,
 } from "lucide-react";
+import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
 import { useI18n } from "@/lib/i18n";
 import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
