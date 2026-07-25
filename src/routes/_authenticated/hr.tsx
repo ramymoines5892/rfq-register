@@ -403,6 +403,7 @@ function UserDrawer({ user, role, me, departments, jobTitles, activeProfiles, on
   const permsQ = useUserPermissions(user?.id);
   const granted = useMemo(() => new Set(permsQ.data ?? []), [permsQ.data]);
   const permLoading = permsQ.isLoading || permsQ.isFetching;
+  const [permsOpen, setPermsOpen] = useState(false);
   const isSelf = user?.id === me;
   const isOwner = role === "owner";
 
