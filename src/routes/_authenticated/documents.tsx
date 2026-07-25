@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { useAccess } from "@/hooks/useAccess";
+import { ShieldAlert, Loader2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -59,8 +61,36 @@ function statusMeta(doc: CompanyDocument | undefined, type: DocumentType, ar: bo
 function DocumentsPage() {
   const { lang, dir } = useI18n();
   const ar = lang === "ar";
+  const access = useAccess();
   const { filter, focus } = Route.useSearch();
   const navigate = Route.useNavigate();
+
+  if (!access.ready) {
+    return (
+      <div className="flex items-center justify-center py-16 text-muted-foreground" dir={dir}>
+        <Loader2 className="h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
+  if (!access.isAdmin) {
+    return (
+      <div className="max-w-md mx-auto my-16 rounded-lg border bg-card p-6 text-center space-y-3" dir={dir}>
+        <ShieldAlert className="h-10 w-10 mx-auto text-destructive" />
+        <div className="text-lg font-semibold">
+          {ar ? "لا تملك صلاحية عرض مستندات الشركة" : "You don't have permission to view company documents"}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {ar
+            ? "هذه الصفحة متاحة للمسؤولين ومالكي النظام فقط. تواصل مع المسؤول لمنحك الصلاحية."
+            : "This page is restricted to administrators and system owners. Contact your admin to request access."}
+        </div>
+      </div>
+    );
+  }
+  return <DocumentsPageInner ar={ar} dir={dir} filter={filter} focus={focus} navigate={navigate} />;
+}
+
+function DocumentsPageInner({ ar, dir, filter, focus, navigate }: { ar: boolean; dir: "rtl" | "ltr"; filter: "all" | "expiring"; focus: string; navigate: ReturnType<typeof Route.useNavigate> }) {
   const { data: types = [] } = useDocumentTypes();
   const { data: currents = [] } = useCurrentDocuments();
   const [depts, setDepts] = useState<Dept[]>([]);
