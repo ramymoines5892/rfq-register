@@ -43,7 +43,9 @@ export const Route = createFileRoute("/_authenticated/organization")({
 });
 
 import { OrganizationStructurePanel } from "@/modules/organization/StructurePanel";
+import { EmployeesPanel } from "@/modules/employees/EmployeesPanel";
 import { Link } from "@tanstack/react-router";
+
 
 const TAB_ICONS = { landmark: Landmark, building2: Building2, users2: Users2 } as const;
 
@@ -665,7 +667,7 @@ function DeleteBranchDialog({
 /* Employees                                                                */
 /* ─────────────────────────────────────────────────────────────────────── */
 
-function EmployeesPanel() {
+function _LegacyEmployeesPanel() {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const { data: org, isLoading } = useOrganizationData();
