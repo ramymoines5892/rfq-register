@@ -667,7 +667,7 @@ function DeleteBranchDialog({
 /* Employees                                                                */
 /* ─────────────────────────────────────────────────────────────────────── */
 
-function EmployeesPanel() {
+function _LegacyEmployeesPanel() {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const { data: org, isLoading } = useOrganizationData();
