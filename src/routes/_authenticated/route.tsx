@@ -426,9 +426,11 @@ function AuthenticatedLayout() {
           </button>
         )}
 
-        <nav className={`flex-1 ${collapsed ? "px-2" : "px-3"} space-y-2 overflow-y-auto overflow-x-hidden pb-4 scrollbar-slim`}>
-          {sections.map(renderSection)}
-        </nav>
+        <TooltipProvider delayDuration={200}>
+          <nav className={`flex-1 ${collapsed ? "px-2" : "px-3"} space-y-1 overflow-y-auto overflow-x-hidden pb-4 scrollbar-slim`}>
+            {sections.map(renderSection)}
+          </nav>
+        </TooltipProvider>
 
 
         <div className={`${collapsed ? "p-2" : "p-3"} space-y-2 border-t border-sidebar-border/40`}>
