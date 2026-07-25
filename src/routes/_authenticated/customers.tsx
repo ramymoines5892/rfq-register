@@ -113,127 +113,27 @@ export const Route = createFileRoute("/_authenticated/customers")({
   }),
 });
 
-type Customer = {
-  id: string;
-  user_id: string;
-  name: string;
-  name_ar: string | null;
-  name_en: string | null;
-  tax_id: string | null;
-  currency: string;
-  terms: string | null;
-  notes: string | null;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  address: string | null;
-  address_ar: string | null;
-  address_en: string | null;
-  city: string | null;
-  country: string | null;
-  industry: string | null;
-  industry_ar: string | null;
-  industry_en: string | null;
-  payment_terms: string | null;
-  payment_terms_ar: string | null;
-  payment_terms_en: string | null;
-  created_at: string;
-};
-
-type Contact = {
-  id: string;
-  customer_id: string;
-  name: string;
-  name_ar: string | null;
-  name_en: string | null;
-  title: string | null;
-  title_ar: string | null;
-  title_en: string | null;
-  email: string | null;
-  phone: string | null;
-  is_primary: boolean;
-  notes: string | null;
-};
-
-type Bank = {
-  id: string;
-  customer_id: string;
-  bank_name: string;
-  bank_name_ar: string | null;
-  bank_name_en: string | null;
-  account_name: string | null;
-  account_name_ar: string | null;
-  account_name_en: string | null;
-  account_number: string | null;
-  iban: string | null;
-  swift: string | null;
-  currency: string;
-  branch: string | null;
-  branch_ar: string | null;
-  branch_en: string | null;
-  is_primary: boolean;
-  notes: string | null;
-};
-
-type DraftContact = Omit<Contact, "id" | "customer_id"> & { _key: string };
-type DraftBank = Omit<Bank, "id" | "customer_id"> & { _key: string };
-
-type AttachmentCategory = "company_profile" | "commercial_register" | "tax_card" | "bank_letter" | "other";
-
-type Attachment = {
-  id: string;
-  customer_id: string;
-  category: AttachmentCategory;
-  label: string | null;
-  file_path: string;
-  file_name: string;
-  mime_type: string | null;
-  size_bytes: number | null;
-  created_at: string;
-};
-
-type DraftAttachment = {
-  _key: string;
-  file: File;
-  category: AttachmentCategory;
-  label: string | null;
-};
-
-
-const ATTACHMENT_CATEGORIES: AttachmentCategory[] = [
-  "company_profile",
-  "commercial_register",
-  "tax_card",
-  "bank_letter",
-  "other",
-];
-
-function attachmentCategoryLabel(cat: AttachmentCategory, lang: "ar" | "en") {
-  const ar: Record<AttachmentCategory, string> = {
-    company_profile: "بروفيل الشركة",
-    commercial_register: "السجل التجاري",
-    tax_card: "البطاقة الضريبية",
-    bank_letter: "خطاب البنوك",
-    other: "أخرى",
-  };
-  const en: Record<AttachmentCategory, string> = {
-    company_profile: "Company profile",
-    commercial_register: "Commercial register",
-    tax_card: "Tax card",
-    bank_letter: "Bank letter",
-    other: "Other",
-  };
-  return lang === "ar" ? ar[cat] : en[cat];
-}
-
-function formatBytes(n: number | null | undefined) {
-  if (!n) return "";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-const CURRENCIES = ["EGP", "USD", "EUR", "SAR", "AED", "GBP"];
+import {
+  ATTACHMENT_CATEGORIES,
+  CURRENCIES,
+  attachmentCategoryLabel,
+  formatBytes,
+  type Attachment,
+  type AttachmentCategory,
+  type Bank,
+  type Contact,
+  type Customer,
+  type DraftAttachment,
+  type DraftBank,
+  type DraftContact,
+} from "@/modules/customers/types";
+import {
+  SectionTitle,
+  Field,
+  ContactRow,
+  BankRow,
+  AttachmentRow,
+} from "@/modules/customers/components/sheet-parts";
 
 function CustomersPage() {
   const { t, lang } = useI18n();
