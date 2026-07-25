@@ -100,8 +100,6 @@ function AuthenticatedLayout() {
     return localStorage.getItem("cs.sidebar.pinned") !== "0";
   });
   const collapsed = !pinned;
-  const [mobileOpen, setMobileOpen] = useState(false);
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     if (typeof window === "undefined") return {};
