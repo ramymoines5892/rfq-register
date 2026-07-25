@@ -1,73 +1,116 @@
-# End-to-End System Scenarios, Audit & Cohesion Pass
+# Organization Structure v2 — Flexible Hierarchy
 
-Goal: walk through the ERP the way a real user would, from first launch to daily operations, find weak points, and fix them so every module is connected, consistent, and effortless to use.
+Based on your answers:
+- **Enterprise:** prepare the field but keep it optional (single company today, multi later)
+- **Levels between Branch and Employee:** fully configurable per company, not hardcoded
+- **Multiple Assignments:** required now
+- **Cost Centers:** deferred to the Finance phase
+- **Managements:** kept as-is (stays a first-class layer)
 
-## Scenarios to Test
+## Core idea
 
-1. **First launch (empty system)**
-   - `/` with no company → `/setup` wizard (Company → Advanced → Documents → Numbering) → auto sign-out → sign-in → dashboard.
-   - Verify: draft persistence, logo delete, doc tiles, numbering uniqueness, no way to skip to app before setup.
+Instead of hardcoding 9 fixed levels (Business Unit, Division, Section, Team, Work Group), we introduce a **generic `org_units` table** whose depth is defined by a **company-configurable level catalog**. The admin decides how many layers exist and what each is called (AR/EN).
 
-2. **First admin / owner**
-   - Sign-up → auto owner role → dashboard tiles unlock progressively.
-   - Verify: `handle_new_user`, `handle_new_user_role`, UI prefs seeded.
+```text
+Company
+  └─ Branch
+       └─ Management                     (kept, layer #1)
+            └─ [any custom layers]       (Division / Section / Team ... optional)
+                 └─ Department           (kept, terminal business unit)
+                      └─ Job Title
+                           └─ Employee (via assignments)
+```
 
-3. **Building the org**
-   - Branches → Managements → Departments → Job Titles → Employees → link Employee to Auth User.
-   - Verify: `/organization` tabs order (Branches → Depts & Jobs → Employees), deep-link `?tab=`, org chart renders, icons per dept.
+Existing `managements`, `departments`, `job_titles`, `employees` tables stay untouched. New layers slot **between Management and Department** as needed, driven by a per-company config.
 
-4. **Roles & permissions**
-   - Create custom role → attach permissions → assign to dept / job / branch / user.
-   - Open `/hr` → user drawer → change dept → **must not throw** (just fixed `current_profile_locked_fields`) → view effective perms with source badges → diff dialog before save.
-   - Verify audit log entries in `permission_audit_log` + `custom_roles` audit.
+## New database objects
 
-5. **Pending user approval**
-   - New sign-up lands on `/pending` → admin sees join request in `/hr` → approve → user gets `member` role and lands on dashboard.
+### 1. `org_level_definitions` (company-scoped catalog)
+Defines which levels exist and their order. Seeded with defaults but fully editable.
 
-6. **Warehouses & inventory**
-   - Warehouses → Bins → Opening balances → Transfers (draft → in_transit → completed) → Adjustments (draft → pending → approved → posted).
-   - Verify approval matrix routing, movement history, CSV export.
+| field | purpose |
+|---|---|
+| company_id | scoping |
+| code | stable key (e.g. `business_unit`, `division`, `section`, `team`) |
+| name_ar / name_en | display |
+| depth | integer ordering (Management=10, Division=20, Section=30, Team=40, Department=100) |
+| is_enabled | toggle on/off per company |
+| icon, color | UI |
 
-7. **Partners → Quotes → Approvals**
-   - Create supplier + customer → quote with workflow template → approver decides → email log → docs tab shows the quote.
+### 2. `org_units` (generic node table)
+Holds every unit that isn't a Company/Branch/Department (which keep their dedicated tables).
 
-8. **Bilingual + responsive + a11y**
-   - Toggle AR/EN, RTL flip, ScriptInput rejects wrong script, mobile/tablet layouts, elegant scrollbar everywhere, Tab key skips buttons (TabFlowManager).
+| field | purpose |
+|---|---|
+| company_id, branch_id | scope |
+| level_code | FK to `org_level_definitions.code` |
+| parent_unit_id | self-reference (nullable) |
+| parent_management_id | when directly under a Management |
+| code, name_ar, name_en, description | identity |
+| manager_employee_id, deputy_employee_id | leadership |
+| status | planning / draft / active / inactive / merged / closed / archived |
+| effective_date, end_date | version window |
+| position, metadata | ordering + extensibility |
 
-9. **Trash / soft delete / restore** across customers, quotes, workflows, branches, departments, employees.
+### 3. `employee_assignments` (multiple assignments)
+Replaces the single `employees.department_id + position_id` binding with a proper N:N model. The columns on `employees` are **kept for backward compatibility** and treated as "primary assignment" mirror.
 
-10. **Global search & notifications** — search from sidebar returns entities across modules; doc-expiry notifications fire for Admin/Owner.
+| field | purpose |
+|---|---|
+| employee_id | who |
+| assignment_type | `primary` / `secondary` / `temporary` / `project` |
+| branch_id, management_id, org_unit_id, department_id, job_title_id | where (any combination) |
+| is_manager, is_deputy, is_acting | leadership flags |
+| allocation_percent | for split time (default 100) |
+| start_date, end_date | validity window |
+| notes |  |
 
-## Weakness Hunt (what I'll actively look for)
+Constraint: exactly one active `primary` assignment per employee at any moment.
 
-- Server functions or RPCs missing `GRANT EXECUTE` (like today's `current_profile_locked_fields`).
-- Tables in `public` without GRANTs for `authenticated` / `service_role`.
-- Routes that call protected server fns from a public loader.
-- Broken links / dead sidebar entries after the `features` → `modules` reorg.
-- Duplicated concepts (e.g. Settings > Organization vs `/organization`) and stale sub-routes.
-- Places still hardcoded that should read from Feature Flags / Company settings.
-- Screens missing responsive treatment or custom scrollbars.
-- Query cache invalidation gaps after mutations (stale lists after create/edit/delete).
-- Missing `errorComponent` / `notFoundComponent` on routes with loaders.
+### 4. `enterprises` (forward-looking, optional)
+Minimal table (id, name, code). `companies.enterprise_id` becomes a nullable FK. Nothing enforced yet — activates when you add company #2.
 
-## Deliverables
+### 5. Audit
+All org units feed the existing `audit_logs` table via a shared trigger, capturing create / update / move / merge / split / close / manager change.
 
-- `AUDIT_SCENARIOS.md`: each scenario, expected flow, observed result, verdict (PASS / FAIL / IMPROVE), and the exact fix applied.
-- Code fixes applied in the same turn for every FAIL and every quick IMPROVE (permissions, grants, cache invalidations, broken links, responsive gaps, unified navigation).
-- A short "Recommended UX simplifications" section for larger changes that need your approval before I rewrite flows (e.g. merging Settings-Organization into `/organization` for good, collapsing overlapping HR/Roles screens, first-run wizard order changes).
-- Playwright smoke run across the key routes to confirm nothing regressed.
+## RLS & Permissions
 
-## Technical Notes
+- Read: everyone in the same company sees the tree.
+- Write: gated by a new `org.manage` permission (assignable through the existing Roles engine).
+- Multiple-assignment writes: `hr.manage`.
+- Never edit history rows; changes create new versions when `effective_date` differs.
 
-- Use `supabase--read_query` + `supabase--linter` to sweep for missing grants, RLS gaps, SECURITY DEFINER exposure.
-- Use `acp_subagent--explore` in parallel for: (a) route/loader audit, (b) RPC/grant audit, (c) query-invalidation audit.
-- Drive Playwright headless against `http://localhost:8080` with the injected Supabase session to reproduce each scenario and capture screenshots into `/tmp/browser/scenarios/`.
-- Fix categories, not instances: when one RPC lacks EXECUTE, sweep all SECURITY DEFINER functions; when one list doesn't refresh, sweep sibling mutations.
+## Frontend impact
 
-## Out of Scope (will flag, not build)
+**`/organization` page** gets a third-level tree between Managements and Departments:
+- New "Structure Levels" tab under Settings → Organization to enable/rename/reorder custom levels.
+- Tree view supports drag-to-reparent, showing only enabled levels.
+- Department/Employee forms show a **dynamic breadcrumb picker** that adapts to enabled levels — if a company disables Division & Section, they simply don't appear in the picker.
 
-- New modules (Sales orders, Purchase orders, Finance) — brief only mentions them; I won't scaffold without your go-ahead.
-- Redesigning the dashboard widgets beyond wiring fixes.
-- Data migrations that would destroy existing rows.
+**Employee editor** gains an "Assignments" tab with a list of active/historical assignments, primary flag, allocation %, and manager/deputy toggles.
 
-Reply "go" to run the full pass, or tell me which scenarios to prioritise first (e.g. "start with 1–4").
+**Permissions matrix, Approvals, Workflows** continue to reference Department + Job Title (unchanged). Custom layers are for **reporting and grouping only**, not for permission scope — matches your principle of keeping structure independent from authority.
+
+## Migration strategy (safe rollout)
+
+1. **Migration A — Schema only:** add tables, indexes, RLS, GRANTs. Zero data change. Nothing breaks.
+2. **Backfill script:** copy each employee's current `department_id + position_id` into `employee_assignments` as `primary`. Idempotent.
+3. **Migration B — Level catalog seeding:** insert default `org_level_definitions` rows per existing company, all `is_enabled = false` except Management & Department. Admin opts in per level when needed.
+4. **UI phase 1:** Assignments tab + Structure Levels settings page.
+5. **UI phase 2:** dynamic tree in `/organization` + breadcrumb picker.
+6. **UI phase 3:** reports (Employee Distribution, Vacant Positions, Manager Report).
+
+Each phase ships independently; you can stop after any of them and the app stays consistent.
+
+## What we are explicitly NOT doing now
+
+- Enterprise-level rollups, cross-company shared users, shared policies (deferred until company #2 exists).
+- Cost Centers, Revenue/Profit/Investment centers (deferred to Finance module).
+- Multiple parallel hierarchies (admin + functional + project) — single tree for now; project assignments handled through `employee_assignments.assignment_type='project'` instead.
+- GPS/floor/building location fields — deferred, current address fields are enough.
+
+## Deliverables of the first step
+
+If you approve, I start with **Migration A + backfill only** (no UI). You review the schema, then we build the UI in the next turns. This keeps risk minimal and lets you sanity-check the shape before any screen depends on it.
+
+Reply "approve step 1" and I'll issue the migration, or tell me what to adjust first.
