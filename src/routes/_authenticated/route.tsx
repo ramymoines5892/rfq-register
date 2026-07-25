@@ -211,15 +211,39 @@ function AuthenticatedLayout() {
 
   const soonToast = () => toast.info(ar ? "قريبًا — قيد التطوير" : "Coming soon");
 
-  const LeafItem = ({ n, nested = false }: { n: NavLeaf; nested?: boolean }) => {
+  const LeafItem = ({ n, nested = false, forceExpanded = false }: { n: NavLeaf; nested?: boolean; forceExpanded?: boolean }) => {
     const active = n.to && (n.match ? n.match(pathname) : pathname === n.to);
     const Icon = n.icon;
     const label = ar ? n.labelAr : n.labelEn;
+    const showText = !collapsed || forceExpanded;
 
-    const collapsedBase = "flex flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] leading-tight text-center transition-all";
-    const expandedBase = `flex items-center gap-3 rounded-lg text-sm transition-all ${nested ? "ps-9 pe-3" : "px-3"} py-2`;
-    const base = collapsed ? collapsedBase : expandedBase;
+    if (!showText) {
+      // Icon-only rail item with tooltip
+      const stateClass = n.soon
+        ? "text-sidebar-foreground/40 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
+        : active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/50";
+      const inner = (
+        <span className={`grid place-items-center h-10 w-10 mx-auto rounded-lg transition-all ${stateClass}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      );
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {n.soon || !n.to
+              ? <button type="button" onClick={soonToast} aria-label={label} className="block w-full">{inner}</button>
+              : <Link to={n.to} search={n.search as never} aria-label={label} className="block w-full">{inner}</Link>}
+          </TooltipTrigger>
+          <TooltipContent side={dir === "rtl" ? "left" : "right"} className="text-xs">
+            {label}{n.soon && <span className="ms-2 opacity-60">({ar ? "قريبًا" : "Soon"})</span>}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
 
+    const base = `flex items-center gap-3 rounded-lg text-sm transition-all ${nested ? "ps-9 pe-3" : "px-3"} py-2`;
     const stateClass = n.soon
       ? "text-sidebar-foreground/40 hover:text-sidebar-foreground/60 hover:bg-sidebar-accent/30"
       : active
@@ -230,16 +254,10 @@ function AuthenticatedLayout() {
       return (
         <button type="button" onClick={soonToast} title={label} className={`${base} ${stateClass} w-full text-start`}>
           <Icon className="h-4 w-4 shrink-0" />
-          {collapsed ? (
-            <span className="line-clamp-2 w-full break-words">{label}</span>
-          ) : (
-            <>
-              <span className="truncate flex-1">{label}</span>
-              <span className="text-[9px] uppercase tracking-wide bg-sidebar-accent/50 text-sidebar-foreground/50 px-1.5 py-0.5 rounded">
-                {ar ? "قريبًا" : "Soon"}
-              </span>
-            </>
-          )}
+          <span className="truncate flex-1">{label}</span>
+          <span className="text-[9px] uppercase tracking-wide bg-sidebar-accent/50 text-sidebar-foreground/50 px-1.5 py-0.5 rounded">
+            {ar ? "قريبًا" : "Soon"}
+          </span>
         </button>
       );
     }
@@ -247,12 +265,9 @@ function AuthenticatedLayout() {
     return (
       <Link to={n.to} search={n.search as never} title={label} className={`${base} ${stateClass}`}>
         <Icon className="h-4 w-4 shrink-0" />
-        {collapsed
-          ? <span className="line-clamp-2 w-full break-words">{label}</span>
-          : <span className="truncate">{label}</span>}
+        <span className="truncate">{label}</span>
       </Link>
     );
-
   };
 
 
@@ -260,17 +275,45 @@ function AuthenticatedLayout() {
     const open = !!openGroups[g.id];
     const Icon = g.icon;
     const activeChild = g.children.some((c) => c.to && (c.match ? c.match(pathname) : pathname === c.to));
+    const label = ar ? g.labelAr : g.labelEn;
 
     if (collapsed) {
-      // In icon-rail mode, show children as icon+label tiles (no group header)
+      // Single icon representing the whole group; children live inside a popover
       return (
-        <div className="space-y-0.5">
-          {g.children.map((c, i) => <LeafItem key={i} n={c} />)}
-          <div className="mx-2 my-1.5 border-t border-sidebar-border/40" />
-        </div>
+        <Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={label}
+                  className={`relative grid place-items-center h-10 w-10 mx-auto rounded-lg transition-all ${
+                    activeChild
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {activeChild && (
+                    <span className={`absolute top-1 ${dir === "rtl" ? "left-1" : "right-1"} h-1.5 w-1.5 rounded-full bg-sidebar-primary`} />
+                  )}
+                </button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent side={dir === "rtl" ? "left" : "right"} className="text-xs">{label}</TooltipContent>
+          </Tooltip>
+          <PopoverContent side={dir === "rtl" ? "left" : "right"} align="start" className="w-56 p-2 bg-sidebar text-sidebar-foreground border-sidebar-border">
+            <div className="flex items-center gap-2 px-2 pt-1 pb-2 border-b border-sidebar-border/60 mb-1">
+              <Icon className="h-4 w-4 text-sidebar-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
+            </div>
+            <div className="space-y-0.5">
+              {g.children.map((c, i) => <LeafItem key={i} n={c} forceExpanded />)}
+            </div>
+          </PopoverContent>
+        </Popover>
       );
     }
-
 
     return (
       <div>
@@ -282,7 +325,7 @@ function AuthenticatedLayout() {
           }`}
         >
           <Icon className="h-4 w-4 shrink-0" />
-          <span className="truncate flex-1 text-start">{ar ? g.labelAr : g.labelEn}</span>
+          <span className="truncate flex-1 text-start">{label}</span>
           <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
         {open && (
@@ -297,16 +340,25 @@ function AuthenticatedLayout() {
   const renderSection = (s: NavSection) => {
     const entries = s.entries.filter((e) => (isGroup(e) ? featOn(e.featureKey) : true));
     if (!entries.length) return null;
+    const sectionLabel = ar ? s.labelAr : s.labelEn;
     return (
       <div key={s.labelEn} className="space-y-1">
         {!collapsed ? (
           <div className="text-[10px] uppercase tracking-widest font-bold px-3 pt-4 pb-1.5 text-sidebar-primary/70">
-            {ar ? s.labelAr : s.labelEn}
+            {sectionLabel}
           </div>
         ) : (
-          <div className="mx-3 my-2 border-t border-sidebar-border/40" />
+          <div className="flex items-center gap-2 px-2 pt-3 pb-1" aria-label={sectionLabel}>
+            <span className="h-px flex-1 bg-sidebar-border/50" />
+            <span className="text-[8px] font-bold uppercase tracking-widest text-sidebar-primary/60" title={sectionLabel}>
+              {sectionLabel.slice(0, ar ? 3 : 3)}
+            </span>
+            <span className="h-px flex-1 bg-sidebar-border/50" />
+          </div>
         )}
-        {entries.map((e, i) => isGroup(e) ? <GroupItem key={e.id} g={e} /> : <LeafItem key={i} n={e} />)}
+        <div className={collapsed ? "space-y-1" : ""}>
+          {entries.map((e, i) => isGroup(e) ? <GroupItem key={e.id} g={e} /> : <LeafItem key={i} n={e} />)}
+        </div>
       </div>
     );
   };
