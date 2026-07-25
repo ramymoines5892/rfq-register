@@ -21,9 +21,14 @@ import {
   useTemplateMutations,
 } from "@/modules/workflows/queries";
 import type { Template } from "@/modules/workflows/api";
+import { PermissionGate } from "@/components/permissions/PermissionGate";
 
 export const Route = createFileRoute("/_authenticated/workflows")({
-  component: WorkflowsPage,
+  component: () => (
+    <PermissionGate permission="workflows.view">
+      <WorkflowsPage />
+    </PermissionGate>
+  ),
   head: () => ({ meta: [{ title: "قوالب الموافقات" }] }),
 });
 
