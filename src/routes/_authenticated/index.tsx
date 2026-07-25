@@ -100,7 +100,7 @@ function Dashboard() {
         : (ar ? "عضو الفريق" : "Team Member");
 
   /* Role-based KPI selection */
-  type Kpi = { key: string; label: string; value: number; icon: any; tint: string; to?: string };
+  type Kpi = { key: string; label: string; value: number; icon: any; tint: string; to?: string; search?: Record<string, string> };
   const kpis: Kpi[] = useMemo(() => {
     const all: Kpi[] = [];
     if (access.isAdmin) {
