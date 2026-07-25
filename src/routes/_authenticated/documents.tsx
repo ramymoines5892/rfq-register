@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { useAccess } from "@/hooks/useAccess";
+import { ShieldAlert, Loader2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
