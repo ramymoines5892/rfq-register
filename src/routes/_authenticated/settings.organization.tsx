@@ -41,10 +41,25 @@ const DEPT_COLORS = [
   "#06b6d4", "#ef4444", "#84cc16", "#f97316", "#6366f1",
 ];
 
+import { Navigate } from "@tanstack/react-router";
+import { parseOrgTab, type OrgTabId } from "@/modules/organization/tabs";
+
 export const Route = createFileRoute("/_authenticated/settings/organization")({
-  component: () => <OrganizationStructurePanel />,
+  // Settings > Organization is a legacy entry point. Forward it to the
+  // unified `/organization` hub so tab ordering and defaults come from a
+  // single source (`src/modules/organization/tabs.ts`).
+  component: SettingsOrganizationRedirect,
   head: () => ({ meta: [{ title: "الهيكل التنظيمي | Organization" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: typeof s.tab === "string" ? (s.tab as OrgTabId) : undefined,
+  }),
 });
+
+function SettingsOrganizationRedirect() {
+  const search = Route.useSearch();
+  return <Navigate to="/organization" search={{ tab: parseOrgTab(search.tab) }} replace />;
+}
+
 
 export function OrganizationStructurePanel() {
   const { lang, dir } = useI18n();
