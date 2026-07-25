@@ -58,7 +58,7 @@ export function OrganizationHub() {
   // back/forward navigation restore the correct section.
   const tab: OrgTabId = parseOrgTab(search.tab);
   const setTab = (id: OrgTabId) => {
-    navigate({ search: (prev) => ({ ...prev, tab: id }), replace: false });
+    navigate({ search: (prev: { tab?: OrgTabId }) => ({ ...prev, tab: id }), replace: false });
   };
 
   return (
