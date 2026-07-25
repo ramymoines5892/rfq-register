@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Building2, Briefcase, User, Shield, Search, History, PlusCircle, MinusCircle } from "lucide-react";
+import { Building2, Briefcase, User, Shield, Search, History, PlusCircle, MinusCircle, Loader2, Check, RefreshCw } from "lucide-react";
+
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { usePermissionAudit } from "@/modules/permissions/audit";
