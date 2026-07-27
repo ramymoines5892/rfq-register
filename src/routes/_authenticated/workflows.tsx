@@ -34,16 +34,23 @@ export const Route = createFileRoute("/_authenticated/workflows")({
 
 function WorkflowsPage() {
   const { t, lang } = useI18n();
+  const ar = lang === "ar";
   const confirm = useConfirm();
   const { data: templates = [], isLoading: loading } = useTemplates();
   const createMut = useCreateTemplate();
   const deleteMut = useDeleteTemplate();
   const [editing, setEditing] = useState<Template | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [newName, setNewName] = useState("");
 
-  async function createTemplate() {
+  async function confirmCreate() {
+    const name = newName.trim();
+    if (!name) { toast.error(ar ? "أدخل اسم القالب" : "Enter a name"); return; }
     try {
-      const tpl = await createMut.mutateAsync(lang === "ar" ? "قالب جديد" : "New workflow");
+      const tpl = await createMut.mutateAsync(name);
+      setNewOpen(false);
+      setNewName("");
       setEditing(tpl);
       setDialogOpen(true);
     } catch (e) {
@@ -69,12 +76,21 @@ function WorkflowsPage() {
           <div className="flex items-center gap-2">
             <Link to="/"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 me-1" />{t("backToQuotes")}</Button></Link>
           </div>
-          <h1 className="text-lg font-bold">{t("workflows")}</h1>
+          <h1 className="text-lg font-bold">{ar ? "قوالب الاعتمادات" : "Approval Workflows"}</h1>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground leading-relaxed">
+            {ar
+              ? "قوالب الاعتمادات تحدد مسار الموافقة على المستندات (مثل عروض الأسعار وأوامر الشراء): كل قالب يحتوي على مراحل مرتبة، ولكل مرحلة معتمدون أساسيون واحتياطيون. عند إنشاء مستند مرتبط بقالب، يمر تلقائيًا على هذه المراحل بالترتيب."
+              : "Approval workflows define how documents (quotes, purchase orders, etc.) get approved: each template contains ordered stages, and each stage has primary/backup approvers. Documents linked to a template are routed through these stages in order."}
+          </CardContent>
+        </Card>
         <div className="flex justify-end">
-          <Button onClick={createTemplate}><Plus className="h-4 w-4 me-1" />{t("newWorkflow")}</Button>
+          <Button onClick={() => { setNewName(ar ? "قالب اعتماد" : "New workflow"); setNewOpen(true); }}>
+            <Plus className="h-4 w-4 me-1" />{t("newWorkflow")}
+          </Button>
         </div>
         {loading ? (
           <div className="text-center py-16 text-muted-foreground">{t("loading")}</div>
@@ -88,6 +104,30 @@ function WorkflowsPage() {
           </div>
         )}
       </main>
+
+      <Dialog open={newOpen} onOpenChange={(v) => { if (!createMut.isPending) setNewOpen(v); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{ar ? "قالب اعتماد جديد" : "New approval workflow"}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label>{t("workflowName")}</Label>
+            <Input
+              value={newName}
+              autoFocus
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmCreate(); }}
+              placeholder={ar ? "مثال: اعتماد عروض الأسعار" : "e.g. Quote approval"}
+            />
+            <p className="text-xs text-muted-foreground">
+              {ar ? "لن يُنشأ القالب إلا بعد الحفظ." : "The template will only be created after saving."}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewOpen(false)} disabled={createMut.isPending}>{t("cancel") ?? "Cancel"}</Button>
+            <Button onClick={confirmCreate} disabled={createMut.isPending || !newName.trim()}>{t("save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {editing && (
         <TemplateEditor
           open={dialogOpen}
@@ -98,6 +138,7 @@ function WorkflowsPage() {
     </div>
   );
 }
+
 
 function TemplateRow({ template, onEdit, onDelete }: { template: Template; onEdit: () => void; onDelete: () => void }) {
   const { data: stageCount = 0 } = useStageCount(template.id);
