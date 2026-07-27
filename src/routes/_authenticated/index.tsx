@@ -129,10 +129,8 @@ function Dashboard() {
               <Button asChild variant="outline" size="sm">
                 <Link to="/settings"><Settings2 className="h-3.5 w-3.5 me-1.5" />{ar ? "الإعدادات" : "Settings"}</Link>
               </Button>
-              <Button asChild size="sm">
-                <Link to="/workflows"><FileText className="h-3.5 w-3.5 me-1.5" />{ar ? "عرض جديد" : "New Quote"}</Link>
-              </Button>
             </div>
+
           </div>
         </div>
       </div>
