@@ -51,21 +51,18 @@ export async function fetchTemplateDetail(templateId: string) {
 }
 
 export async function fetchTeamProfiles(): Promise<Profile[]> {
+  const { data: roles, error: rolesErr } = await supabase.from("user_roles").select("user_id");
+  if (rolesErr) throw rolesErr;
+  const ids = Array.from(new Set((roles ?? []).map((r: { user_id: string }) => r.user_id)));
+  if (ids.length === 0) return [];
   const { data, error } = await supabase
-    .from("user_roles")
-    .select("user_id, profiles!inner(id, email, full_name)");
+    .from("profiles")
+    .select("id, email, full_name")
+    .in("id", ids);
   if (error) throw error;
-  const seen = new Set<string>();
-  const list: Profile[] = [];
-  (data as unknown as Array<{ profiles: Profile | null }> ?? []).forEach((row) => {
-    const p = row.profiles;
-    if (p && !seen.has(p.id)) {
-      seen.add(p.id);
-      list.push(p);
-    }
-  });
-  return list;
+  return (data ?? []) as Profile[];
 }
+
 
 export async function createTemplate(name: string): Promise<Template> {
   const { data: userData } = await supabase.auth.getUser();
