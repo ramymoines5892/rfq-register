@@ -67,6 +67,7 @@ function HrPage() {
   const me = data?.me ?? "";
   const [drawerUser, setDrawerUser] = useState<Profile | null>(null);
   const [matrixUser, setMatrixUser] = useState<Profile | null>(null);
+  const [approveUser, setApproveUser] = useState<Profile | null>(null);
 
   // Bulk permission maps for effective-badge computation.
   const deptMapQ = useAllDeptPermissionsMap();
