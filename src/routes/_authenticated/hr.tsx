@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { PermissionMatrix } from "@/components/permissions/PermissionMatrix";
 import { KpiCard, EffectiveBadges, RowMenu, GlobalAuditPanel, UserDrawer } from "@/modules/hr/components/parts";
+import { ApproveRequestDialog } from "@/modules/hr/components/ApproveRequestDialog";
 import { useI18n } from "@/lib/i18n";
 import { pickLangValue } from "@/lib/bilingual";
 import { flattenDeptsHierarchy } from "@/lib/orgTree";
@@ -66,6 +67,7 @@ function HrPage() {
   const me = data?.me ?? "";
   const [drawerUser, setDrawerUser] = useState<Profile | null>(null);
   const [matrixUser, setMatrixUser] = useState<Profile | null>(null);
+  const [approveUser, setApproveUser] = useState<Profile | null>(null);
 
   // Bulk permission maps for effective-badge computation.
   const deptMapQ = useAllDeptPermissionsMap();
@@ -449,7 +451,7 @@ function HrPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
-                          <Button size="sm" onClick={() => approve(p.id)}><UserCheck className="h-4 w-4 me-1" />{ar ? "موافقة" : "Approve"}</Button>
+                          <Button size="sm" onClick={() => setApproveUser(p)}><UserCheck className="h-4 w-4 me-1" />{ar ? "قبول وتعيين" : "Approve & Assign"}</Button>
                           <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "suspended")}>
                             <UserX className="h-4 w-4 me-1" />{ar ? "رفض" : "Reject"}
                           </Button>
@@ -487,6 +489,13 @@ function HrPage() {
         open={!!matrixUser}
         onOpenChange={(o) => { if (!o) { setMatrixUser(null); load(); } }}
         scope={matrixUser ? { kind: "user", id: matrixUser.id, name: matrixUser.full_name || matrixUser.email } : null}
+      />
+
+      <ApproveRequestDialog
+        user={approveUser}
+        departments={departments}
+        jobTitles={jobTitles}
+        onClose={() => { setApproveUser(null); load(); }}
       />
     </div>
   );
