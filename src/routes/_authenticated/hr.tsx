@@ -451,7 +451,7 @@ function HrPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
-                          <Button size="sm" onClick={() => approve(p.id)}><UserCheck className="h-4 w-4 me-1" />{ar ? "موافقة" : "Approve"}</Button>
+                          <Button size="sm" onClick={() => setApproveUser(p)}><UserCheck className="h-4 w-4 me-1" />{ar ? "قبول وتعيين" : "Approve & Assign"}</Button>
                           <Button size="sm" variant="outline" onClick={() => setStatus(p.id, "suspended")}>
                             <UserX className="h-4 w-4 me-1" />{ar ? "رفض" : "Reject"}
                           </Button>
