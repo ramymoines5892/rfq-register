@@ -183,6 +183,7 @@ function AuthenticatedLayout() {
           } as NavGroup,
         ] : []),
         ...(isAdmin ? [{ to: "/documents", labelAr: "مستندات الشركة", labelEn: "Company Documents", icon: FolderArchive, match: (p: string) => p.startsWith("/documents") } as NavLeaf] : []),
+        ...(isAdmin ? [{ to: "/workflows", labelAr: "قوالب الاعتمادات", labelEn: "Approval Workflows", icon: ShieldCheck, match: (p: string) => p.startsWith("/workflows") } as NavLeaf] : []),
         { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", icon: Settings2, match: (p: string) => p.startsWith("/settings") },
       ],
     },
