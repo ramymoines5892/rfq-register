@@ -490,6 +490,13 @@ function HrPage() {
         onOpenChange={(o) => { if (!o) { setMatrixUser(null); load(); } }}
         scope={matrixUser ? { kind: "user", id: matrixUser.id, name: matrixUser.full_name || matrixUser.email } : null}
       />
+
+      <ApproveRequestDialog
+        user={approveUser}
+        departments={departments}
+        jobTitles={jobTitles}
+        onClose={() => { setApproveUser(null); load(); }}
+      />
     </div>
   );
 }
