@@ -88,7 +88,6 @@ function Dashboard() {
   type Action = { label: string; desc: string; to: string; icon: any };
   const actions: Action[] = useMemo(() => {
     const list: Action[] = [
-      { label: ar ? "عروض الأسعار" : "Quotes", desc: ar ? "إنشاء ومتابعة العروض" : "Create & track quotes", to: "/workflows", icon: FileText },
       { label: ar ? "العملاء" : "Customers", desc: ar ? "قاعدة بيانات العملاء" : "Customer database", to: "/customers", icon: Users },
     ];
     if (access.isAdmin) {
