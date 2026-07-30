@@ -64,25 +64,29 @@ function applyPrefs(p: Partial<UIPreferences>) {
   }
 }
 
-/** Apply cached prefs synchronously on module import (before React mounts). */
-if (typeof window !== "undefined") {
-  const cached = readCached();
-  if (cached) applyPrefs(cached);
-}
-
 /**
  * Reads the signed-in user's UI preferences from the DB and applies them to
  * <html>. Falls back to localStorage cache while loading. Also listens to
  * OS dark-mode changes when the user picked "system".
+ *
+ * NOTE: prefs are applied only AFTER hydration. Mutating <html> attributes
+ * before React hydrates causes a hydration mismatch on the <html> element.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { data: prefs } = useMyUIPrefs();
+
+  // Apply the cached prefs as soon as we're on the client (post-hydration).
+  useEffect(() => {
+    const cached = readCached();
+    if (cached) applyPrefs(cached);
+  }, []);
 
   useEffect(() => {
     if (!prefs) return;
     applyPrefs(prefs);
     writeCached(prefs);
   }, [prefs]);
+
 
   // React to OS scheme changes while on "system".
   useEffect(() => {
