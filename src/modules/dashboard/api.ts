@@ -66,5 +66,6 @@ export async function getDashboardCounts(
     pendingUsers:  count(3),
     unreadNotifs:  count(4),
     expiringDocs:  count(5),
+    expiredDocs:   count(6),
   };
 }
