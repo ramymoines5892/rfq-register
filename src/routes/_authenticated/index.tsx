@@ -35,7 +35,7 @@ function Dashboard() {
 
   const { data: counts = {
     quotesMine: 0, quotesPending: 0, customers: 0,
-    pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0,
+    pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0, expiredDocs: 0,
   } } = useDashboardCounts(
     access.ready && access.userId
       ? { userId: access.userId, canManageUsers: !!access.canManageUsers }
@@ -66,7 +66,7 @@ function Dashboard() {
       all.push(
         { key: "pendingUsers", label: ar ? "مستخدمون بانتظار التفعيل" : "Pending Users", value: counts.pendingUsers, icon: UserPlus, tint: "text-amber-600 bg-amber-500/10", to: "/hr" },
         { key: "quotesPending", label: ar ? "عروض قيد الاعتماد" : "Quotes Awaiting Approval", value: counts.quotesPending, icon: ClipboardList, tint: "text-blue-600 bg-blue-500/10", to: "/workflows" },
-        { key: "expiringDocs", label: ar ? "مستندات تنتهي خلال أسبوع" : "Docs Expiring in 7d", value: counts.expiringDocs, icon: FolderArchive, tint: "text-rose-600 bg-rose-500/10", to: "/documents", search: { filter: "expiring" } },
+        { key: "expiringDocs", label: ar ? "مستندات منتهية أو تنتهي قريبًا" : "Docs Expired / Expiring", value: counts.expiringDocs + counts.expiredDocs, icon: FolderArchive, tint: "text-rose-600 bg-rose-500/10", to: "/documents", search: { filter: "expiring" } },
         { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
       );
     } else if (access.canApprove) {
@@ -201,6 +201,7 @@ function Dashboard() {
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3 text-sm">
                 <HealthRow label={ar ? "المستخدمون المعلّقون" : "Pending users"} value={counts.pendingUsers} warn={counts.pendingUsers > 0} />
+                <HealthRow label={ar ? "مستندات منتهية" : "Expired documents"} value={counts.expiredDocs} warn={counts.expiredDocs > 0} />
                 <HealthRow label={ar ? "مستندات قاربت الانتهاء" : "Expiring documents"} value={counts.expiringDocs} warn={counts.expiringDocs > 0} />
                 <HealthRow label={ar ? "عروض بانتظار الاعتماد" : "Quotes in approval"} value={counts.quotesPending} />
                 <HealthRow label={ar ? "إشعارات غير مقروءة" : "Unread notifications"} value={counts.unreadNotifs} />

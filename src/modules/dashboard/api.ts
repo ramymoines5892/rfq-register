@@ -13,6 +13,7 @@ export interface DashboardCounts {
   pendingUsers: number;
   unreadNotifs: number;
   expiringDocs: number;
+  expiredDocs: number;
 }
 
 export interface DashboardCountsInput {
@@ -46,6 +47,10 @@ export async function getDashboardCounts(
       .not("expiry_date", "is", null)
       .gte("expiry_date", today)
       .lte("expiry_date", in7),
+    supabase.from("company_documents").select("id", { count: "exact", head: true })
+      .is("superseded_at", null)
+      .not("expiry_date", "is", null)
+      .lt("expiry_date", today),
   ]);
 
   const count = (idx: number): number => {
@@ -61,5 +66,6 @@ export async function getDashboardCounts(
     pendingUsers:  count(3),
     unreadNotifs:  count(4),
     expiringDocs:  count(5),
+    expiredDocs:   count(6),
   };
 }
