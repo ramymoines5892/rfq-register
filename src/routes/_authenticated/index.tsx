@@ -35,7 +35,7 @@ function Dashboard() {
 
   const { data: counts = {
     quotesMine: 0, quotesPending: 0, customers: 0,
-    pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0,
+    pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0, expiredDocs: 0,
   } } = useDashboardCounts(
     access.ready && access.userId
       ? { userId: access.userId, canManageUsers: !!access.canManageUsers }
