@@ -13,6 +13,7 @@ export interface DashboardCounts {
   pendingUsers: number;
   unreadNotifs: number;
   expiringDocs: number;
+  expiredDocs: number;
 }
 
 export interface DashboardCountsInput {
