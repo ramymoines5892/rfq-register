@@ -201,6 +201,7 @@ function Dashboard() {
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3 text-sm">
                 <HealthRow label={ar ? "المستخدمون المعلّقون" : "Pending users"} value={counts.pendingUsers} warn={counts.pendingUsers > 0} />
+                <HealthRow label={ar ? "مستندات منتهية" : "Expired documents"} value={counts.expiredDocs} warn={counts.expiredDocs > 0} />
                 <HealthRow label={ar ? "مستندات قاربت الانتهاء" : "Expiring documents"} value={counts.expiringDocs} warn={counts.expiringDocs > 0} />
                 <HealthRow label={ar ? "عروض بانتظار الاعتماد" : "Quotes in approval"} value={counts.quotesPending} />
                 <HealthRow label={ar ? "إشعارات غير مقروءة" : "Unread notifications"} value={counts.unreadNotifs} />
