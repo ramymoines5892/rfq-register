@@ -4,7 +4,7 @@ import { getDashboardCounts, type DashboardCountsInput } from "./api";
 
 export const dashboardKeys = {
   counts: (input: DashboardCountsInput) =>
-    ["dashboard", "counts", input.userId, input.canManageUsers] as const,
+    ["dashboard", "counts", input.userId, input.canManageUsers, input.expiryWarningDays ?? 7] as const,
 };
 
 export function useDashboardCounts(input: DashboardCountsInput | null) {

@@ -383,6 +383,7 @@ export type Database = {
           created_by: string | null
           date_format: string | null
           default_language: string | null
+          doc_expiry_warning_days: number
           email: string | null
           emails: Json
           enterprise_id: string | null
@@ -426,6 +427,7 @@ export type Database = {
           created_by?: string | null
           date_format?: string | null
           default_language?: string | null
+          doc_expiry_warning_days?: number
           email?: string | null
           emails?: Json
           enterprise_id?: string | null
@@ -469,6 +471,7 @@ export type Database = {
           created_by?: string | null
           date_format?: string | null
           default_language?: string | null
+          doc_expiry_warning_days?: number
           email?: string | null
           emails?: Json
           enterprise_id?: string | null

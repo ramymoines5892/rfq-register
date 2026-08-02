@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCurrentCompany } from "@/modules/company/queries";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAccess } from "@/hooks/useAccess";
@@ -95,6 +96,8 @@ function DocumentsPageInner({ ar, dir, filter, focus, navigate }: { ar: boolean;
   const { data: types = [] } = useDocumentTypes();
   const { data: currents = [] } = useCurrentDocuments();
   const { data: depts = [] } = useDepartmentsLookup();
+  const { data: company } = useCurrentCompany();
+  const companyWindow = (company as { doc_expiry_warning_days?: number } | null | undefined)?.doc_expiry_warning_days ?? null;
   const [addingType, setAddingType] = useState<DocumentType | null>(null);
   const [historyType, setHistoryType] = useState<DocumentType | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -118,7 +121,7 @@ function DocumentsPageInner({ ar, dir, filter, focus, navigate }: { ar: boolean;
     if (!doc) return true; // missing counts as needing attention
     const days = daysBetween(doc.expiry_date);
     if (days === null) return false;
-    const threshold = doc.notify_days_before ?? t.notify_days_before;
+    const threshold = doc.notify_days_before ?? companyWindow ?? t.notify_days_before;
     return days < 0 || days <= threshold;
   };
 

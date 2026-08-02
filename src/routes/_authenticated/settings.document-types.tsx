@@ -20,6 +20,62 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, FolderArchive } from "lucide-react";
 import { useConfirm } from "@/hooks/useConfirm";
+import { useCurrentCompany, useUpdateCompany } from "@/modules/company/queries";
+
+const EXPIRY_PRESETS = [7, 14, 30, 60, 90];
+
+function ExpiryWindowCard({ ar }: { ar: boolean }) {
+  const { data: company } = useCurrentCompany();
+  const update = useUpdateCompany();
+  const saved = (company as { doc_expiry_warning_days?: number } | null | undefined)?.doc_expiry_warning_days ?? 7;
+  const [days, setDays] = useState<number>(saved);
+  useEffect(() => { setDays(saved); }, [saved]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{ar ? "مدة التنبيه “قريب الانتهاء”" : "\"Expiring soon\" window"}</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          {ar
+            ? "تُستخدم في لوحة التحكم وفي فلتر المستندات القريبة من الانتهاء."
+            : "Used by the dashboard KPI and the documents “expiring” filter."}
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-wrap items-end gap-3">
+        <div className="w-32">
+          <Label className="text-xs">{ar ? "عدد الأيام" : "Days"}</Label>
+          <Input
+            type="number"
+            min={1}
+            max={365}
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {EXPIRY_PRESETS.map((p) => (
+            <Button key={p} type="button" size="sm" variant={days === p ? "default" : "outline"} onClick={() => setDays(p)}>
+              {p} {ar ? "يوم" : "d"}
+            </Button>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          disabled={!company?.id || update.isPending || days === saved || days < 1 || days > 365}
+          onClick={async () => {
+            if (!company?.id) return;
+            try {
+              await update.mutateAsync({ id: company.id, patch: { doc_expiry_warning_days: days } });
+              toast.success(ar ? "تم الحفظ" : "Saved");
+            } catch (e) { toast.error((e as Error).message); }
+          }}
+        >
+          {ar ? "حفظ" : "Save"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/settings/document-types")({
   component: DocumentTypesPage,
@@ -74,6 +130,8 @@ function DocumentTypesPage() {
           {ar ? "نوع جديد" : "New Type"}
         </Button>
       </div>
+
+      <ExpiryWindowCard ar={ar} />
 
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{ar ? "جاري التحميل..." : "Loading..."}</div>
