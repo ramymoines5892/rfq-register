@@ -55,7 +55,12 @@ function PartnersPage() {
   const ar = lang === "ar";
   const confirm = useConfirm();
   const prompt = usePrompt();
-  const [role, setRole] = useState<PartnerRole | "all">("all");
+  const { role: roleParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const role: PartnerRole | "all" = roleParam ?? "all";
+  const setRole = (v: PartnerRole | "all") =>
+    navigate({ search: v === "all" ? {} : { role: v }, replace: true });
+
   const [search, setSearch] = useState("");
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
   const [showAdv, setShowAdv] = useState(false);
