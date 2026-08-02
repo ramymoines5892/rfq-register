@@ -91,11 +91,12 @@ export function PartnerSheet({
           <Tabs defaultValue="general" className="mt-4">
             <TabsList className="w-full grid grid-cols-6">
               <TabsTrigger value="general">{ar ? "عام" : "General"}</TabsTrigger>
-              <TabsTrigger value="contacts">{ar ? "اتصال" : "Contacts"}</TabsTrigger>
-              <TabsTrigger value="addresses">{ar ? "عناوين" : "Addr."}</TabsTrigger>
-              <TabsTrigger value="banks">{ar ? "بنوك" : "Banks"}</TabsTrigger>
-              <TabsTrigger value="docs">{ar ? "مستندات" : "Docs"}</TabsTrigger>
-              <TabsTrigger value="audit">{ar ? "التدقيق" : "Audit"}</TabsTrigger>
+              <TabsTrigger value="contacts" disabled={creating}>{ar ? "اتصال" : "Contacts"}</TabsTrigger>
+              <TabsTrigger value="addresses" disabled={creating}>{ar ? "عناوين" : "Addr."}</TabsTrigger>
+              <TabsTrigger value="banks" disabled={creating}>{ar ? "بنوك" : "Banks"}</TabsTrigger>
+              <TabsTrigger value="docs" disabled={creating}>{ar ? "مستندات" : "Docs"}</TabsTrigger>
+              <TabsTrigger value="audit" disabled={creating}>{ar ? "التدقيق" : "Audit"}</TabsTrigger>
+
             </TabsList>
 
             <TabsContent value="general" className="space-y-4 mt-4">
