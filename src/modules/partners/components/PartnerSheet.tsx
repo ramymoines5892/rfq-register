@@ -200,11 +200,16 @@ export function PartnerSheet({
               </div>
             </TabsContent>
 
-            <TabsContent value="contacts" className="mt-4"><ContactsPanel partnerId={partner.id} ar={ar} /></TabsContent>
-            <TabsContent value="addresses" className="mt-4"><AddressesPanel partnerId={partner.id} ar={ar} /></TabsContent>
-            <TabsContent value="banks" className="mt-4"><BanksPanel partnerId={partner.id} ar={ar} /></TabsContent>
-            <TabsContent value="docs" className="mt-4"><DocsPanel partner={partner} ar={ar} /></TabsContent>
-            <TabsContent value="audit" className="mt-4"><AuditPanel partnerId={partner.id} ar={ar} /></TabsContent>
+            {partner && (
+              <>
+                <TabsContent value="contacts" className="mt-4"><ContactsPanel partnerId={partner.id} ar={ar} /></TabsContent>
+                <TabsContent value="addresses" className="mt-4"><AddressesPanel partnerId={partner.id} ar={ar} /></TabsContent>
+                <TabsContent value="banks" className="mt-4"><BanksPanel partnerId={partner.id} ar={ar} /></TabsContent>
+                <TabsContent value="docs" className="mt-4"><DocsPanel partner={partner} ar={ar} /></TabsContent>
+                <TabsContent value="audit" className="mt-4"><AuditPanel partnerId={partner.id} ar={ar} /></TabsContent>
+              </>
+            )}
+
           </Tabs>
         )}
 
