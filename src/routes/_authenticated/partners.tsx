@@ -214,7 +214,14 @@ function PartnersPage() {
           </TabsContent>
         </Tabs>
 
-        <PartnerSheet id={openId} onClose={() => setOpenId(null)} />
+        <PartnerSheet
+          id={openId}
+          creating={creating}
+          defaultRoles={role === "all" ? [] : [role]}
+          onCreated={(newId) => { setCreating(false); setOpenId(newId); }}
+          onClose={() => { setCreating(false); setOpenId(null); }}
+        />
+
       </div>
     </TooltipProvider>
   );
