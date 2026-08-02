@@ -75,6 +75,8 @@ function DocumentTypesPage() {
         </Button>
       </div>
 
+      <ExpiryWindowCard ar={ar} />
+
       {isLoading ? (
         <div className="text-muted-foreground text-sm">{ar ? "جاري التحميل..." : "Loading..."}</div>
       ) : (
