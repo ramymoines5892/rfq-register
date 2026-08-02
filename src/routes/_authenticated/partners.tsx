@@ -138,8 +138,12 @@ function PartnersPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">{ar ? "شركاء الأعمال" : "Business Partners"}</h1>
-            <p className="text-sm text-muted-foreground">{ar ? "إدارة موحّدة للعملاء والموردين وباقي الأطراف" : "Unified partners across the enterprise"}</p>
+            <p className="text-sm text-muted-foreground">
+              {ar ? "بيانات أساسية — سجل واحد لكل جهة، والأدوار متعدّدة (نفس الشريك ممكن يكون عميل ومورد في نفس الوقت)"
+                  : "Master data — one record per entity with multiple roles (the same partner can be both customer and supplier)"}
+            </p>
           </div>
+
           <Button onClick={handleCreate} disabled={upsert.isPending}>
             <Plus className="h-4 w-4 me-2" />{ar ? "شريك جديد" : "New Partner"}
           </Button>
