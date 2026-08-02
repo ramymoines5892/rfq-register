@@ -19,7 +19,13 @@ import { PARTNER_ROLES, type PartnerRole } from "@/modules/partners/api";
 import { PartnerCard } from "@/modules/partners/components/PartnerCard";
 import { PartnerSheet } from "@/modules/partners/components/PartnerSheet";
 
+const ALL_ROLES = new Set(PARTNER_ROLES.map((r) => r.value as string));
+
 export const Route = createFileRoute("/_authenticated/partners")({
+  validateSearch: (s: Record<string, unknown>): { role?: PartnerRole } => {
+    const r = typeof s.role === "string" && ALL_ROLES.has(s.role) ? (s.role as PartnerRole) : undefined;
+    return r ? { role: r } : {};
+  },
   head: () => ({
     meta: [
       { title: "شركاء الأعمال — Business Partners" },
@@ -32,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/partners")({
   }),
   component: PartnersPage,
 });
+
 
 const ROLE_ICON: Record<PartnerRole, any> = {
   customer: Users, supplier: Truck, manufacturer: Factory, freight_forwarder: Ship,
