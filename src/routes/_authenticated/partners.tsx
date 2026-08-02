@@ -91,19 +91,11 @@ function PartnersPage() {
 
   useEffect(() => { try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved)); } catch {} }, [saved]);
 
-  async function handleCreate() {
-    try {
-      const p = await upsert.mutateAsync({
-        name_ar: ar ? "شريك جديد" : null,
-        name_en: ar ? null : "New Partner",
-        roles: role === "all" ? ["customer"] : [role],
-      });
-      setOpenId(p.id);
-      toast.success(ar ? "تم الإنشاء" : "Created");
-    } catch (e: any) {
-      toast.error(e?.message ?? (ar ? "تعذّر الإنشاء" : "Create failed"));
-    }
+  function handleCreate() {
+    setOpenId(null);
+    setCreating(true);
   }
+
 
   async function handleDelete(id: string) {
     const ok = await confirm({
