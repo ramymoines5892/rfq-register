@@ -388,6 +388,7 @@ export type UpdateCompanyPatch = Partial<{
   mobiles: ContactEntry[];
   faxes: ContactEntry[];
   websites: ContactEntry[];
+  doc_expiry_warning_days: number;
 }>;
 
 export async function updateCompany(id: string, patch: UpdateCompanyPatch) {
