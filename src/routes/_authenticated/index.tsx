@@ -33,12 +33,14 @@ function Dashboard() {
   const email = currentUser?.email ?? "";
   const fullName = currentUser?.fullName ?? null;
 
+  const expiryWarningDays = (company as { doc_expiry_warning_days?: number } | null | undefined)?.doc_expiry_warning_days ?? 7;
+
   const { data: counts = {
     quotesMine: 0, quotesPending: 0, customers: 0,
     pendingUsers: 0, unreadNotifs: 0, expiringDocs: 0, expiredDocs: 0,
   } } = useDashboardCounts(
     access.ready && access.userId
-      ? { userId: access.userId, canManageUsers: !!access.canManageUsers }
+      ? { userId: access.userId, canManageUsers: !!access.canManageUsers, expiryWarningDays }
       : null,
   );
 
