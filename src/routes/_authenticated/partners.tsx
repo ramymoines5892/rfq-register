@@ -19,7 +19,13 @@ import { PARTNER_ROLES, type PartnerRole } from "@/modules/partners/api";
 import { PartnerCard } from "@/modules/partners/components/PartnerCard";
 import { PartnerSheet } from "@/modules/partners/components/PartnerSheet";
 
+const ALL_ROLES = new Set(PARTNER_ROLES.map((r) => r.value as string));
+
 export const Route = createFileRoute("/_authenticated/partners")({
+  validateSearch: (s: Record<string, unknown>): { role?: PartnerRole } => {
+    const r = typeof s.role === "string" && ALL_ROLES.has(s.role) ? (s.role as PartnerRole) : undefined;
+    return r ? { role: r } : {};
+  },
   head: () => ({
     meta: [
       { title: "شركاء الأعمال — Business Partners" },
@@ -32,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/partners")({
   }),
   component: PartnersPage,
 });
+
 
 const ROLE_ICON: Record<PartnerRole, any> = {
   customer: Users, supplier: Truck, manufacturer: Factory, freight_forwarder: Ship,
@@ -48,7 +55,12 @@ function PartnersPage() {
   const ar = lang === "ar";
   const confirm = useConfirm();
   const prompt = usePrompt();
-  const [role, setRole] = useState<PartnerRole | "all">("all");
+  const { role: roleParam } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const role: PartnerRole | "all" = roleParam ?? "all";
+  const setRole = (v: PartnerRole | "all") =>
+    navigate({ search: v === "all" ? {} : { role: v }, replace: true });
+
   const [search, setSearch] = useState("");
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
   const [showAdv, setShowAdv] = useState(false);
@@ -126,8 +138,12 @@ function PartnersPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">{ar ? "شركاء الأعمال" : "Business Partners"}</h1>
-            <p className="text-sm text-muted-foreground">{ar ? "إدارة موحّدة للعملاء والموردين وباقي الأطراف" : "Unified partners across the enterprise"}</p>
+            <p className="text-sm text-muted-foreground">
+              {ar ? "بيانات أساسية — سجل واحد لكل جهة، والأدوار متعدّدة (نفس الشريك ممكن يكون عميل ومورد في نفس الوقت)"
+                  : "Master data — one record per entity with multiple roles (the same partner can be both customer and supplier)"}
+            </p>
           </div>
+
           <Button onClick={handleCreate} disabled={upsert.isPending}>
             <Plus className="h-4 w-4 me-2" />{ar ? "شريك جديد" : "New Partner"}
           </Button>
