@@ -65,6 +65,8 @@ function PartnersPage() {
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
   const [showAdv, setShowAdv] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
   const [saved, setSaved] = useState<SavedFilter[]>(() => {
     try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch { return []; }
   });
