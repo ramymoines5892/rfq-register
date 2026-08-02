@@ -95,6 +95,8 @@ function DocumentsPageInner({ ar, dir, filter, focus, navigate }: { ar: boolean;
   const { data: types = [] } = useDocumentTypes();
   const { data: currents = [] } = useCurrentDocuments();
   const { data: depts = [] } = useDepartmentsLookup();
+  const { data: company } = useCurrentCompany();
+  const companyWindow = (company as { doc_expiry_warning_days?: number } | null | undefined)?.doc_expiry_warning_days ?? null;
   const [addingType, setAddingType] = useState<DocumentType | null>(null);
   const [historyType, setHistoryType] = useState<DocumentType | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
