@@ -139,7 +139,7 @@ function AuthenticatedLayout() {
           id: "sales", labelAr: "المبيعات", labelEn: "Sales", icon: Store,
           children: [
             { to: "/customers", labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p) => p.startsWith("/customers") },
-            { to: "/partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", icon: Users, match: (p: string) => p.startsWith("/partners") },
+            /* شركاء الأعمال: مخفي مؤقتًا من القائمة لحين تجهيز المشتريات واللوجستيات — المسار /partners ما زال يعمل */
             { labelAr: "عروض الأسعار", labelEn: "Quotes", icon: FileText, soon: true },
             { labelAr: "أوامر البيع", labelEn: "Sales Orders", icon: ClipboardList, soon: true },
             { labelAr: "فواتير البيع", labelEn: "Sales Invoices", icon: Receipt, soon: true },
