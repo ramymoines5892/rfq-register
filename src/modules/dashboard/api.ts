@@ -19,13 +19,16 @@ export interface DashboardCounts {
 export interface DashboardCountsInput {
   userId: Id;
   canManageUsers: boolean;
+  /** "Expiring soon" window in days (company setting). Defaults to 7. */
+  expiryWarningDays?: number;
 }
 
 export async function getDashboardCounts(
   input: DashboardCountsInput,
 ): Promise<DashboardCounts> {
   const { userId, canManageUsers } = input;
-  const in7 = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const windowDays = input.expiryWarningDays ?? 7;
+  const in7 = new Date(Date.now() + windowDays * 86_400_000).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
 
   const zero = Promise.resolve({ count: 0 as number | null });
