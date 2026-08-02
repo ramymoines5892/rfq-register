@@ -29,51 +29,74 @@ import {
   type SortBy, type DocFilters,
 } from "@/modules/partners/docs-utils";
 
-export function PartnerSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
+export function PartnerSheet({
+  id, onClose, creating = false, defaultRoles = [], onCreated,
+}: {
+  id: string | null;
+  onClose: () => void;
+  creating?: boolean;
+  defaultRoles?: PartnerRole[];
+  onCreated?: (id: string) => void;
+}) {
   const { lang } = useI18n();
   const ar = lang === "ar";
   const { data: partner } = usePartner(id);
   const upsert = useUpsertPartner();
   const [form, setForm] = useState<Partial<BusinessPartner>>({});
-  const merged = { ...partner, ...form } as BusinessPartner;
+  const open = creating || !!id;
+  const base: Partial<BusinessPartner> = creating
+    ? { status: "active", currency: "EGP", roles: defaultRoles }
+    : (partner ?? {});
+  const merged = { ...base, ...form } as BusinessPartner;
 
-  const errors = useMemo(() => partner ? validatePartner(merged, ar) : [], [merged, partner, ar]);
+  useEffect(() => {
+    if (creating) setForm({ roles: defaultRoles, status: "active", currency: "EGP" });
+  }, [creating]);
+
+  const errors = useMemo(() => (partner || creating ? validatePartner(merged, ar) : []), [merged, partner, creating, ar]);
   const errorMap = useMemo(() => Object.fromEntries(errors.map((e) => [e.field, e.message])), [errors]);
   const requiredSet = useMemo(() => new Set(requiredFieldsFor((merged.roles ?? []) as PartnerRole[]).map((r) => String(r.field))), [merged.roles]);
 
   function set<K extends keyof BusinessPartner>(k: K, v: BusinessPartner[K]) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function save() {
-    if (!id) return;
+    if (!id && !creating) return;
     if (errors.length > 0) {
       toast.error(ar ? `يوجد ${errors.length} حقل مطلوب` : `${errors.length} required field(s)`);
       return;
     }
-    try { await upsert.mutateAsync({ ...form, id }); setForm({}); toast.success(ar ? "تم الحفظ" : "Saved"); }
+    try {
+      const saved = await upsert.mutateAsync(id ? { ...form, id } : { ...form });
+      setForm({});
+      toast.success(ar ? "تم الحفظ" : "Saved");
+      if (!id) onCreated?.(saved.id);
+    }
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
 
   return (
-    <Sheet open={!!id} onOpenChange={(o) => { if (!o) { setForm({}); onClose(); } }}>
+    <Sheet open={open} onOpenChange={(o) => { if (!o) { setForm({}); onClose(); } }}>
       <SheetContent side={ar ? "left" : "right"} className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            {ar ? "تفاصيل الشريك" : "Partner Details"}
+            {creating ? (ar ? "شريك جديد" : "New Partner") : (ar ? "تفاصيل الشريك" : "Partner Details")}
             {errors.length > 0 && (
               <Badge variant="destructive" className="text-[10px]">{errors.length} {ar ? "تنبيه" : "issues"}</Badge>
             )}
           </SheetTitle>
         </SheetHeader>
 
-        {!partner ? <div className="py-10 text-center text-muted-foreground">…</div> : (
+        {!partner && !creating ? <div className="py-10 text-center text-muted-foreground">…</div> : (
+
           <Tabs defaultValue="general" className="mt-4">
             <TabsList className="w-full grid grid-cols-6">
               <TabsTrigger value="general">{ar ? "عام" : "General"}</TabsTrigger>
-              <TabsTrigger value="contacts">{ar ? "اتصال" : "Contacts"}</TabsTrigger>
-              <TabsTrigger value="addresses">{ar ? "عناوين" : "Addr."}</TabsTrigger>
-              <TabsTrigger value="banks">{ar ? "بنوك" : "Banks"}</TabsTrigger>
-              <TabsTrigger value="docs">{ar ? "مستندات" : "Docs"}</TabsTrigger>
-              <TabsTrigger value="audit">{ar ? "التدقيق" : "Audit"}</TabsTrigger>
+              <TabsTrigger value="contacts" disabled={creating}>{ar ? "اتصال" : "Contacts"}</TabsTrigger>
+              <TabsTrigger value="addresses" disabled={creating}>{ar ? "عناوين" : "Addr."}</TabsTrigger>
+              <TabsTrigger value="banks" disabled={creating}>{ar ? "بنوك" : "Banks"}</TabsTrigger>
+              <TabsTrigger value="docs" disabled={creating}>{ar ? "مستندات" : "Docs"}</TabsTrigger>
+              <TabsTrigger value="audit" disabled={creating}>{ar ? "التدقيق" : "Audit"}</TabsTrigger>
+
             </TabsList>
 
             <TabsContent value="general" className="space-y-4 mt-4">
@@ -178,11 +201,16 @@ export function PartnerSheet({ id, onClose }: { id: string | null; onClose: () =
               </div>
             </TabsContent>
 
-            <TabsContent value="contacts" className="mt-4"><ContactsPanel partnerId={partner.id} ar={ar} /></TabsContent>
-            <TabsContent value="addresses" className="mt-4"><AddressesPanel partnerId={partner.id} ar={ar} /></TabsContent>
-            <TabsContent value="banks" className="mt-4"><BanksPanel partnerId={partner.id} ar={ar} /></TabsContent>
-            <TabsContent value="docs" className="mt-4"><DocsPanel partner={partner} ar={ar} /></TabsContent>
-            <TabsContent value="audit" className="mt-4"><AuditPanel partnerId={partner.id} ar={ar} /></TabsContent>
+            {partner && (
+              <>
+                <TabsContent value="contacts" className="mt-4"><ContactsPanel partnerId={partner.id} ar={ar} /></TabsContent>
+                <TabsContent value="addresses" className="mt-4"><AddressesPanel partnerId={partner.id} ar={ar} /></TabsContent>
+                <TabsContent value="banks" className="mt-4"><BanksPanel partnerId={partner.id} ar={ar} /></TabsContent>
+                <TabsContent value="docs" className="mt-4"><DocsPanel partner={partner} ar={ar} /></TabsContent>
+                <TabsContent value="audit" className="mt-4"><AuditPanel partnerId={partner.id} ar={ar} /></TabsContent>
+              </>
+            )}
+
           </Tabs>
         )}
 

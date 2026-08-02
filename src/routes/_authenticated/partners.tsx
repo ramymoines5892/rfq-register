@@ -65,6 +65,8 @@ function PartnersPage() {
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
   const [showAdv, setShowAdv] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
   const [saved, setSaved] = useState<SavedFilter[]>(() => {
     try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch { return []; }
   });
@@ -91,19 +93,11 @@ function PartnersPage() {
 
   useEffect(() => { try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved)); } catch {} }, [saved]);
 
-  async function handleCreate() {
-    try {
-      const p = await upsert.mutateAsync({
-        name_ar: ar ? "شريك جديد" : null,
-        name_en: ar ? null : "New Partner",
-        roles: role === "all" ? ["customer"] : [role],
-      });
-      setOpenId(p.id);
-      toast.success(ar ? "تم الإنشاء" : "Created");
-    } catch (e: any) {
-      toast.error(e?.message ?? (ar ? "تعذّر الإنشاء" : "Create failed"));
-    }
+  function handleCreate() {
+    setOpenId(null);
+    setCreating(true);
   }
+
 
   async function handleDelete(id: string) {
     const ok = await confirm({
@@ -220,7 +214,14 @@ function PartnersPage() {
           </TabsContent>
         </Tabs>
 
-        <PartnerSheet id={openId} onClose={() => setOpenId(null)} />
+        <PartnerSheet
+          id={openId}
+          creating={creating}
+          defaultRoles={role === "all" ? [] : [role]}
+          onCreated={(newId) => { setCreating(false); setOpenId(newId); }}
+          onClose={() => { setCreating(false); setOpenId(null); }}
+        />
+
       </div>
     </TooltipProvider>
   );
