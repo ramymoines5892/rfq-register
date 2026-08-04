@@ -135,7 +135,8 @@ function AuthenticatedLayout() {
     {
       labelAr: "البيانات الأساسية", labelEn: "Master Data",
       entries: [
-        { to: "/partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", icon: Handshake, match: (p: string) => p.startsWith("/partners") && !searchStr.includes("role=") },
+        { to: "/customers", labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/customers") },
+        { to: "/suppliers", labelAr: "الموردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/suppliers") },
       ],
     },
     {
@@ -145,7 +146,7 @@ function AuthenticatedLayout() {
         {
           id: "sales", labelAr: "المبيعات", labelEn: "Sales", icon: Store,
           children: [
-            { to: "/partners", search: { role: "customer" }, labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=customer") },
+            { to: "/customers", labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/customers") },
             { labelAr: "عروض الأسعار", labelEn: "Quotes", icon: FileText, soon: true },
             { labelAr: "أوامر البيع", labelEn: "Sales Orders", icon: ClipboardList, soon: true },
             { labelAr: "فواتير البيع", labelEn: "Sales Invoices", icon: Receipt, soon: true },
@@ -155,7 +156,7 @@ function AuthenticatedLayout() {
           id: "procurement", labelAr: "المشتريات", labelEn: "Purchases", icon: ShoppingCart,
           featureKey: "procurement",
           children: [
-            { to: "/partners", search: { role: "supplier" }, labelAr: "الموردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
+            { to: "/suppliers", labelAr: "الموردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/suppliers") },
             { labelAr: "طلبات الشراء", labelEn: "Purchase Requests", icon: ClipboardList, soon: true },
             { labelAr: "أوامر التوريد", labelEn: "Purchase Orders", icon: FileText, soon: true },
             { labelAr: "فواتير المشتريات", labelEn: "Purchase Invoices", icon: Receipt, soon: true },

@@ -1,65 +1,44 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  Plus, Search, Users, Building2, Factory, Ship, ShieldCheck, Truck,
-  Landmark, Umbrella, Handshake, Bookmark, BookmarkPlus, X,
-  ChevronDown, ChevronUp,
-} from "lucide-react";
+import { Plus, Search, X, Bookmark, BookmarkPlus, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useI18n } from "@/lib/i18n";
 import { useConfirm, usePrompt } from "@/hooks/useConfirm";
 import { usePartners, useUpsertPartner, useDeletePartner } from "@/modules/partners/queries";
-import { PARTNER_ROLES, type PartnerRole } from "@/modules/partners/api";
+import type { PartnerRole } from "@/modules/partners/api";
 import { PartnerCard } from "@/modules/partners/components/PartnerCard";
 import { PartnerSheet } from "@/modules/partners/components/PartnerSheet";
 
-const ALL_ROLES = new Set(PARTNER_ROLES.map((r) => r.value as string));
-
-export const Route = createFileRoute("/_authenticated/partners")({
-  validateSearch: (s: Record<string, unknown>): { role?: PartnerRole } => {
-    const r = typeof s.role === "string" && ALL_ROLES.has(s.role) ? (s.role as PartnerRole) : undefined;
-    return r ? { role: r } : {};
-  },
-  head: () => ({
-    meta: [
-      { title: "شركاء الأعمال — Business Partners" },
-      { name: "description", content: "إدارة موحّدة للعملاء والموردين والمصنّعين وشركات الشحن والفحص والبنوك والتأمين والوكلاء." },
-      { property: "og:title", content: "Business Partners" },
-      { property: "og:description", content: "Unified management for customers, suppliers, manufacturers, and more." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
-  component: PartnersPage,
-});
-
-
-const ROLE_ICON: Record<PartnerRole, any> = {
-  customer: Users, supplier: Truck, manufacturer: Factory, freight_forwarder: Ship,
-  inspection: ShieldCheck, shipping: Truck, bank: Landmark, insurance: Umbrella, agent: Handshake,
-};
-
 type AdvFilters = { name: string; tax_id: string; industry: string; address: string };
-type SavedFilter = { name: string; role: PartnerRole | "all"; adv: AdvFilters };
-const SAVED_KEY = "partners:savedFilters:v1";
+type SavedFilter = { name: string; adv: AdvFilters };
 const EMPTY_ADV: AdvFilters = { name: "", tax_id: "", industry: "", address: "" };
 
-function PartnersPage() {
+export function PartnersDirectory({
+  role,
+  titleAr,
+  titleEn,
+  subtitleAr,
+  subtitleEn,
+  newLabelAr,
+  newLabelEn,
+}: {
+  role: PartnerRole;
+  titleAr: string;
+  titleEn: string;
+  subtitleAr: string;
+  subtitleEn: string;
+  newLabelAr: string;
+  newLabelEn: string;
+}) {
   const { t, lang } = useI18n();
   const ar = lang === "ar";
   const confirm = useConfirm();
   const prompt = usePrompt();
-  const { role: roleParam } = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const role: PartnerRole | "all" = roleParam ?? "all";
-  const setRole = (v: PartnerRole | "all") =>
-    navigate({ search: v === "all" ? {} : { role: v }, replace: true });
+  const SAVED_KEY = `partners:${role}:savedFilters:v1`;
 
   const [search, setSearch] = useState("");
   const [adv, setAdv] = useState<AdvFilters>(EMPTY_ADV);
@@ -67,11 +46,13 @@ function PartnersPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const [saved, setSaved] = useState<SavedFilter[]>(() => {
-    try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch { return []; }
-  });
+  const [saved, setSaved] = useState<SavedFilter[]>([]);
+  useEffect(() => {
+    try { setSaved(JSON.parse(localStorage.getItem(SAVED_KEY) || "[]")); } catch { setSaved([]); }
+  }, [SAVED_KEY]);
+  useEffect(() => { try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved)); } catch {} }, [SAVED_KEY, saved]);
 
-  const { data: rows = [], isLoading } = usePartners(role === "all" ? undefined : role, search);
+  const { data: rows = [], isLoading } = usePartners(role, search);
   const upsert = useUpsertPartner();
   const del = useDeletePartner();
 
@@ -86,22 +67,9 @@ function PartnersPage() {
     });
   }, [rows, adv]);
 
-  const roleTabs = useMemo(() => [
-    { value: "all" as const, ar: "الكل", en: "All", icon: Building2 },
-    ...PARTNER_ROLES.map((r) => ({ value: r.value, ar: r.ar, en: r.en, icon: ROLE_ICON[r.value] })),
-  ], []);
-
-  useEffect(() => { try { localStorage.setItem(SAVED_KEY, JSON.stringify(saved)); } catch {} }, [saved]);
-
-  function handleCreate() {
-    setOpenId(null);
-    setCreating(true);
-  }
-
-
   async function handleDelete(id: string) {
     const ok = await confirm({
-      title: ar ? "حذف الشريك؟" : "Delete partner?",
+      title: ar ? "حذف السجل؟" : "Delete record?",
       description: ar ? "لن يمكن التراجع عن هذا الإجراء." : "This action cannot be undone.",
       confirmText: ar ? "حذف" : "Delete",
       variant: "destructive",
@@ -118,11 +86,9 @@ function PartnersPage() {
       required: true,
     });
     if (!name) return;
-    setSaved((s) => [...s.filter((x) => x.name !== name), { name, role, adv }]);
+    setSaved((s) => [...s.filter((x) => x.name !== name), { name, adv }]);
     toast.success(ar ? "تم الحفظ" : "Saved");
   }
-  function applyFilter(f: SavedFilter) { setRole(f.role); setAdv(f.adv); setShowAdv(true); }
-  function removeFilter(name: string) { setSaved((s) => s.filter((x) => x.name !== name)); }
 
   const hasAdv = Object.values(adv).some(Boolean);
 
@@ -131,15 +97,11 @@ function PartnersPage() {
       <div className="p-4 md:p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">{ar ? "شركاء الأعمال" : "Business Partners"}</h1>
-            <p className="text-sm text-muted-foreground">
-              {ar ? "بيانات أساسية — سجل واحد لكل جهة، والأدوار متعدّدة (نفس الشريك ممكن يكون عميل ومورد في نفس الوقت)"
-                  : "Master data — one record per entity with multiple roles (the same partner can be both customer and supplier)"}
-            </p>
+            <h1 className="text-2xl font-bold">{ar ? titleAr : titleEn}</h1>
+            <p className="text-sm text-muted-foreground">{ar ? subtitleAr : subtitleEn}</p>
           </div>
-
-          <Button onClick={handleCreate} disabled={upsert.isPending}>
-            <Plus className="h-4 w-4 me-2" />{ar ? "شريك جديد" : "New Partner"}
+          <Button onClick={() => { setOpenId(null); setCreating(true); }} disabled={upsert.isPending}>
+            <Plus className="h-4 w-4 me-2" />{ar ? newLabelAr : newLabelEn}
           </Button>
         </div>
 
@@ -153,7 +115,7 @@ function PartnersPage() {
             {ar ? "بحث متقدّم" : "Advanced"}
             {hasAdv && <Badge variant="secondary" className="ms-2">{Object.values(adv).filter(Boolean).length}</Badge>}
           </Button>
-          <Button variant="outline" size="sm" onClick={saveCurrentFilter} disabled={!hasAdv && role === "all"}>
+          <Button variant="outline" size="sm" onClick={saveCurrentFilter} disabled={!hasAdv}>
             <BookmarkPlus className="h-4 w-4 me-1" />{ar ? "حفظ الفلتر" : "Save filter"}
           </Button>
         </div>
@@ -175,9 +137,9 @@ function PartnersPage() {
         {saved.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {saved.map((f) => (
-              <Badge key={f.name} variant="outline" className="cursor-pointer gap-1 py-1" onClick={() => applyFilter(f)}>
+              <Badge key={f.name} variant="outline" className="cursor-pointer gap-1 py-1" onClick={() => { setAdv(f.adv); setShowAdv(true); }}>
                 <Bookmark className="h-3 w-3" />{f.name}
-                <button className="ms-1 hover:text-destructive" onClick={(e) => { e.stopPropagation(); removeFilter(f.name); }}>
+                <button className="ms-1 hover:text-destructive" onClick={(e) => { e.stopPropagation(); setSaved((s) => s.filter((x) => x.name !== f.name)); }}>
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
@@ -185,43 +147,27 @@ function PartnersPage() {
           </div>
         )}
 
-        <Tabs value={role} onValueChange={(v) => setRole(v as PartnerRole | "all")}>
-          <TabsList className="flex flex-wrap h-auto">
-            {roleTabs.map((r) => {
-              const Icon = r.icon;
-              return (
-                <TabsTrigger key={r.value} value={r.value} className="gap-1.5">
-                  <Icon className="h-3.5 w-3.5" /> {ar ? r.ar : r.en}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-
-          <TabsContent value={role} className="mt-4">
-            {isLoading ? (
-              <div className="text-center text-muted-foreground py-10">{t("loading") ?? "…"}</div>
-            ) : filtered.length === 0 ? (
-              <Card><CardContent className="py-10 text-center text-muted-foreground">
-                {ar ? "لا توجد نتائج" : "No results"}
-              </CardContent></Card>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filtered.map((p) => (
-                  <PartnerCard key={p.id} p={p} onOpen={() => setOpenId(p.id)} onDelete={() => handleDelete(p.id)} ar={ar} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        {isLoading ? (
+          <div className="text-center text-muted-foreground py-10">{t("loading") ?? "…"}</div>
+        ) : filtered.length === 0 ? (
+          <Card><CardContent className="py-10 text-center text-muted-foreground">
+            {ar ? "لا توجد نتائج" : "No results"}
+          </CardContent></Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((p) => (
+              <PartnerCard key={p.id} p={p} onOpen={() => setOpenId(p.id)} onDelete={() => handleDelete(p.id)} ar={ar} />
+            ))}
+          </div>
+        )}
 
         <PartnerSheet
           id={openId}
           creating={creating}
-          defaultRoles={role === "all" ? [] : [role]}
+          defaultRoles={[role]}
           onCreated={(newId) => { setCreating(false); setOpenId(newId); }}
           onClose={() => { setCreating(false); setOpenId(null); }}
         />
-
       </div>
     </TooltipProvider>
   );

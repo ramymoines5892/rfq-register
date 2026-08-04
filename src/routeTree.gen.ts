@@ -18,10 +18,10 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authenticated/workflows'
 import { Route as AuthenticatedWarehousesRouteImport } from './routes/_authenticated/warehouses'
 import { Route as AuthenticatedTransfersRouteImport } from './routes/_authenticated/transfers'
+import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedRolesRouteImport } from './routes/_authenticated/roles'
 import { Route as AuthenticatedProductsRouteImport } from './routes/_authenticated/products'
-import { Route as AuthenticatedPartnersRouteImport } from './routes/_authenticated/partners'
 import { Route as AuthenticatedOrganizationRouteImport } from './routes/_authenticated/organization'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
 import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
@@ -84,6 +84,11 @@ const AuthenticatedTransfersRoute = AuthenticatedTransfersRouteImport.update({
   path: '/transfers',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSuppliersRoute = AuthenticatedSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -97,11 +102,6 @@ const AuthenticatedRolesRoute = AuthenticatedRolesRouteImport.update({
 const AuthenticatedProductsRoute = AuthenticatedProductsRouteImport.update({
   id: '/products',
   path: '/products',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPartnersRoute = AuthenticatedPartnersRouteImport.update({
-  id: '/partners',
-  path: '/partners',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOrganizationRoute =
@@ -215,10 +215,10 @@ export interface FileRoutesByFullPath {
   '/hr': typeof AuthenticatedHrRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/organization': typeof AuthenticatedOrganizationRoute
-  '/partners': typeof AuthenticatedPartnersRoute
   '/products': typeof AuthenticatedProductsRoute
   '/roles': typeof AuthenticatedRolesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
+  '/suppliers': typeof AuthenticatedSuppliersRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
@@ -245,9 +245,9 @@ export interface FileRoutesByTo {
   '/hr': typeof AuthenticatedHrRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/organization': typeof AuthenticatedOrganizationRoute
-  '/partners': typeof AuthenticatedPartnersRoute
   '/products': typeof AuthenticatedProductsRoute
   '/roles': typeof AuthenticatedRolesRoute
+  '/suppliers': typeof AuthenticatedSuppliersRoute
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
@@ -277,10 +277,10 @@ export interface FileRoutesById {
   '/_authenticated/hr': typeof AuthenticatedHrRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/organization': typeof AuthenticatedOrganizationRoute
-  '/_authenticated/partners': typeof AuthenticatedPartnersRoute
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/roles': typeof AuthenticatedRolesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
+  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/warehouses': typeof AuthenticatedWarehousesRoute
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRoute
@@ -311,10 +311,10 @@ export interface FileRouteTypes {
     | '/hr'
     | '/inventory'
     | '/organization'
-    | '/partners'
     | '/products'
     | '/roles'
     | '/settings'
+    | '/suppliers'
     | '/transfers'
     | '/warehouses'
     | '/workflows'
@@ -341,9 +341,9 @@ export interface FileRouteTypes {
     | '/hr'
     | '/inventory'
     | '/organization'
-    | '/partners'
     | '/products'
     | '/roles'
+    | '/suppliers'
     | '/transfers'
     | '/warehouses'
     | '/workflows'
@@ -372,10 +372,10 @@ export interface FileRouteTypes {
     | '/_authenticated/hr'
     | '/_authenticated/inventory'
     | '/_authenticated/organization'
-    | '/_authenticated/partners'
     | '/_authenticated/products'
     | '/_authenticated/roles'
     | '/_authenticated/settings'
+    | '/_authenticated/suppliers'
     | '/_authenticated/transfers'
     | '/_authenticated/warehouses'
     | '/_authenticated/workflows'
@@ -465,6 +465,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransfersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/suppliers': {
+      id: '/_authenticated/suppliers'
+      path: '/suppliers'
+      fullPath: '/suppliers'
+      preLoaderRoute: typeof AuthenticatedSuppliersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -484,13 +491,6 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof AuthenticatedProductsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/partners': {
-      id: '/_authenticated/partners'
-      path: '/partners'
-      fullPath: '/partners'
-      preLoaderRoute: typeof AuthenticatedPartnersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/organization': {
@@ -656,10 +656,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHrRoute: typeof AuthenticatedHrRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedOrganizationRoute: typeof AuthenticatedOrganizationRoute
-  AuthenticatedPartnersRoute: typeof AuthenticatedPartnersRoute
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedRolesRoute: typeof AuthenticatedRolesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
+  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedWarehousesRoute: typeof AuthenticatedWarehousesRoute
   AuthenticatedWorkflowsRoute: typeof AuthenticatedWorkflowsRoute
@@ -674,10 +674,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHrRoute: AuthenticatedHrRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedOrganizationRoute: AuthenticatedOrganizationRoute,
-  AuthenticatedPartnersRoute: AuthenticatedPartnersRoute,
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedRolesRoute: AuthenticatedRolesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
+  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedWarehousesRoute: AuthenticatedWarehousesRoute,
   AuthenticatedWorkflowsRoute: AuthenticatedWorkflowsRoute,
