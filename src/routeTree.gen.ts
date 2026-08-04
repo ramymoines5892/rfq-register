@@ -30,6 +30,7 @@ import { Route as AuthenticatedCustomersRouteImport } from './routes/_authentica
 import { Route as AuthenticatedApprovalsRouteImport } from './routes/_authenticated/approvals'
 import { Route as AuthenticatedAdjustmentsRouteImport } from './routes/_authenticated/adjustments'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings.index'
+import { Route as AuthenticatedSuppliersIdRouteImport } from './routes/_authenticated/suppliers.$id'
 import { Route as AuthenticatedSettingsTrashRouteImport } from './routes/_authenticated/settings.trash'
 import { Route as AuthenticatedSettingsSearchRouteImport } from './routes/_authenticated/settings.search'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings.notifications'
@@ -39,6 +40,7 @@ import { Route as AuthenticatedSettingsFeaturesRouteImport } from './routes/_aut
 import { Route as AuthenticatedSettingsDocumentTypesRouteImport } from './routes/_authenticated/settings.document-types'
 import { Route as AuthenticatedSettingsCompanyRouteImport } from './routes/_authenticated/settings.company'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings.appearance'
+import { Route as AuthenticatedCustomersIdRouteImport } from './routes/_authenticated/customers.$id'
 
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
@@ -147,6 +149,12 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSuppliersIdRoute =
+  AuthenticatedSuppliersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedSuppliersRoute,
+  } as any)
 const AuthenticatedSettingsTrashRoute =
   AuthenticatedSettingsTrashRouteImport.update({
     id: '/trash',
@@ -201,6 +209,12 @@ const AuthenticatedSettingsAppearanceRoute =
     path: '/appearance',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedCustomersIdRoute =
+  AuthenticatedCustomersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedCustomersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -210,7 +224,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/adjustments': typeof AuthenticatedAdjustmentsRoute
   '/approvals': typeof AuthenticatedApprovalsRoute
-  '/customers': typeof AuthenticatedCustomersRoute
+  '/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
   '/inventory': typeof AuthenticatedInventoryRoute
@@ -218,10 +232,11 @@ export interface FileRoutesByFullPath {
   '/products': typeof AuthenticatedProductsRoute
   '/roles': typeof AuthenticatedRolesRoute
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
-  '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
+  '/customers/$id': typeof AuthenticatedCustomersIdRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/company': typeof AuthenticatedSettingsCompanyRoute
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
@@ -231,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
+  '/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -240,18 +256,19 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/adjustments': typeof AuthenticatedAdjustmentsRoute
   '/approvals': typeof AuthenticatedApprovalsRoute
-  '/customers': typeof AuthenticatedCustomersRoute
+  '/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/documents': typeof AuthenticatedDocumentsRoute
   '/hr': typeof AuthenticatedHrRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/organization': typeof AuthenticatedOrganizationRoute
   '/products': typeof AuthenticatedProductsRoute
   '/roles': typeof AuthenticatedRolesRoute
-  '/suppliers': typeof AuthenticatedSuppliersRoute
+  '/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/transfers': typeof AuthenticatedTransfersRoute
   '/warehouses': typeof AuthenticatedWarehousesRoute
   '/workflows': typeof AuthenticatedWorkflowsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/customers/$id': typeof AuthenticatedCustomersIdRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/company': typeof AuthenticatedSettingsCompanyRoute
   '/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
@@ -261,6 +278,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/settings/trash': typeof AuthenticatedSettingsTrashRoute
+  '/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -272,7 +290,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/_authenticated/adjustments': typeof AuthenticatedAdjustmentsRoute
   '/_authenticated/approvals': typeof AuthenticatedApprovalsRoute
-  '/_authenticated/customers': typeof AuthenticatedCustomersRoute
+  '/_authenticated/customers': typeof AuthenticatedCustomersRouteWithChildren
   '/_authenticated/documents': typeof AuthenticatedDocumentsRoute
   '/_authenticated/hr': typeof AuthenticatedHrRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
@@ -280,11 +298,12 @@ export interface FileRoutesById {
   '/_authenticated/products': typeof AuthenticatedProductsRoute
   '/_authenticated/roles': typeof AuthenticatedRolesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
-  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
+  '/_authenticated/suppliers': typeof AuthenticatedSuppliersRouteWithChildren
   '/_authenticated/transfers': typeof AuthenticatedTransfersRoute
   '/_authenticated/warehouses': typeof AuthenticatedWarehousesRoute
   '/_authenticated/workflows': typeof AuthenticatedWorkflowsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/customers/$id': typeof AuthenticatedCustomersIdRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/company': typeof AuthenticatedSettingsCompanyRoute
   '/_authenticated/settings/document-types': typeof AuthenticatedSettingsDocumentTypesRoute
@@ -294,6 +313,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/settings/search': typeof AuthenticatedSettingsSearchRoute
   '/_authenticated/settings/trash': typeof AuthenticatedSettingsTrashRoute
+  '/_authenticated/suppliers/$id': typeof AuthenticatedSuppliersIdRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -318,6 +338,7 @@ export interface FileRouteTypes {
     | '/transfers'
     | '/warehouses'
     | '/workflows'
+    | '/customers/$id'
     | '/settings/appearance'
     | '/settings/company'
     | '/settings/document-types'
@@ -327,6 +348,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/search'
     | '/settings/trash'
+    | '/suppliers/$id'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -348,6 +370,7 @@ export interface FileRouteTypes {
     | '/warehouses'
     | '/workflows'
     | '/'
+    | '/customers/$id'
     | '/settings/appearance'
     | '/settings/company'
     | '/settings/document-types'
@@ -357,6 +380,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/search'
     | '/settings/trash'
+    | '/suppliers/$id'
     | '/settings'
   id:
     | '__root__'
@@ -380,6 +404,7 @@ export interface FileRouteTypes {
     | '/_authenticated/warehouses'
     | '/_authenticated/workflows'
     | '/_authenticated/'
+    | '/_authenticated/customers/$id'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/company'
     | '/_authenticated/settings/document-types'
@@ -389,6 +414,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/notifications'
     | '/_authenticated/settings/search'
     | '/_authenticated/settings/trash'
+    | '/_authenticated/suppliers/$id'
     | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -549,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/suppliers/$id': {
+      id: '/_authenticated/suppliers/$id'
+      path: '/$id'
+      fullPath: '/suppliers/$id'
+      preLoaderRoute: typeof AuthenticatedSuppliersIdRouteImport
+      parentRoute: typeof AuthenticatedSuppliersRoute
+    }
     '/_authenticated/settings/trash': {
       id: '/_authenticated/settings/trash'
       path: '/trash'
@@ -612,8 +645,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/customers/$id': {
+      id: '/_authenticated/customers/$id'
+      path: '/$id'
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof AuthenticatedCustomersIdRouteImport
+      parentRoute: typeof AuthenticatedCustomersRoute
+    }
   }
 }
+
+interface AuthenticatedCustomersRouteChildren {
+  AuthenticatedCustomersIdRoute: typeof AuthenticatedCustomersIdRoute
+}
+
+const AuthenticatedCustomersRouteChildren: AuthenticatedCustomersRouteChildren =
+  {
+    AuthenticatedCustomersIdRoute: AuthenticatedCustomersIdRoute,
+  }
+
+const AuthenticatedCustomersRouteWithChildren =
+  AuthenticatedCustomersRoute._addFileChildren(
+    AuthenticatedCustomersRouteChildren,
+  )
 
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
@@ -648,10 +702,24 @@ const AuthenticatedSettingsRouteWithChildren =
     AuthenticatedSettingsRouteChildren,
   )
 
+interface AuthenticatedSuppliersRouteChildren {
+  AuthenticatedSuppliersIdRoute: typeof AuthenticatedSuppliersIdRoute
+}
+
+const AuthenticatedSuppliersRouteChildren: AuthenticatedSuppliersRouteChildren =
+  {
+    AuthenticatedSuppliersIdRoute: AuthenticatedSuppliersIdRoute,
+  }
+
+const AuthenticatedSuppliersRouteWithChildren =
+  AuthenticatedSuppliersRoute._addFileChildren(
+    AuthenticatedSuppliersRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdjustmentsRoute: typeof AuthenticatedAdjustmentsRoute
   AuthenticatedApprovalsRoute: typeof AuthenticatedApprovalsRoute
-  AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
+  AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRouteWithChildren
   AuthenticatedDocumentsRoute: typeof AuthenticatedDocumentsRoute
   AuthenticatedHrRoute: typeof AuthenticatedHrRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
@@ -659,7 +727,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProductsRoute: typeof AuthenticatedProductsRoute
   AuthenticatedRolesRoute: typeof AuthenticatedRolesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
-  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
+  AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRouteWithChildren
   AuthenticatedTransfersRoute: typeof AuthenticatedTransfersRoute
   AuthenticatedWarehousesRoute: typeof AuthenticatedWarehousesRoute
   AuthenticatedWorkflowsRoute: typeof AuthenticatedWorkflowsRoute
@@ -669,7 +737,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdjustmentsRoute: AuthenticatedAdjustmentsRoute,
   AuthenticatedApprovalsRoute: AuthenticatedApprovalsRoute,
-  AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
+  AuthenticatedCustomersRoute: AuthenticatedCustomersRouteWithChildren,
   AuthenticatedDocumentsRoute: AuthenticatedDocumentsRoute,
   AuthenticatedHrRoute: AuthenticatedHrRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
@@ -677,7 +745,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProductsRoute: AuthenticatedProductsRoute,
   AuthenticatedRolesRoute: AuthenticatedRolesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
-  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
+  AuthenticatedSuppliersRoute: AuthenticatedSuppliersRouteWithChildren,
   AuthenticatedTransfersRoute: AuthenticatedTransfersRoute,
   AuthenticatedWarehousesRoute: AuthenticatedWarehousesRoute,
   AuthenticatedWorkflowsRoute: AuthenticatedWorkflowsRoute,

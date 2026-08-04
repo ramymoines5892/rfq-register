@@ -73,3 +73,16 @@ export function useDeleteBank(partnerId: string) {
   const qc = useQueryClient();
   return useMutation({ mutationFn: api.deleteBank, onSuccess: () => qc.invalidateQueries({ queryKey: key.banks(partnerId) }) });
 }
+
+export function usePartnerBulk() {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["partners"] });
+  return {
+    setStatus: useMutation({ mutationFn: (v: { ids: string[]; status: string }) => api.bulkSetStatus(v.ids, v.status), onSuccess: invalidate }),
+    remove: useMutation({ mutationFn: (ids: string[]) => api.bulkSoftDelete(ids), onSuccess: invalidate }),
+    importCsv: useMutation({
+      mutationFn: (v: { rows: Record<string, string>[]; role: PartnerRole }) => api.importPartners(v.rows, v.role),
+      onSuccess: invalidate,
+    }),
+  };
+}

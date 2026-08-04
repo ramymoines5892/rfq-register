@@ -223,7 +223,7 @@ export function PartnerSheet({
   );
 }
 
-function RField({ label, name, children, className, errorMap, requiredSet }: {
+export function RField({ label, name, children, className, errorMap, requiredSet }: {
   label: string; name: string; children: React.ReactNode; className?: string;
   errorMap: Record<string, string>; requiredSet: Set<string>;
 }) {
@@ -245,7 +245,7 @@ function RField({ label, name, children, className, errorMap, requiredSet }: {
   );
 }
 
-function ContactsPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
+export function ContactsPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   const { data: rows = [] } = usePartnerContacts(partnerId);
   const up = useUpsertContact(partnerId);
   const del = useDeleteContact(partnerId);
@@ -273,7 +273,7 @@ function ContactsPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   );
 }
 
-function AddressesPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
+export function AddressesPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   const { data: rows = [] } = usePartnerAddresses(partnerId);
   const up = useUpsertAddress(partnerId);
   const del = useDeleteAddress(partnerId);
@@ -309,7 +309,7 @@ function AddressesPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   );
 }
 
-function BanksPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
+export function BanksPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   const { data: rows = [] } = usePartnerBanks(partnerId);
   const up = useUpsertBank(partnerId);
   const del = useDeleteBank(partnerId);
@@ -340,7 +340,7 @@ function BanksPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   );
 }
 
-function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
+export function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   const { data: rows = [], isLoading } = usePartnerRelated(partner);
   const [kind, setKind] = useState<DocFilters["kind"]>("all");
   const [status, setStatus] = useState<string>("all");
@@ -514,7 +514,7 @@ function DocsPanel({ partner, ar }: { partner: BusinessPartner; ar: boolean }) {
   );
 }
 
-function AuditPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
+export function AuditPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   const { data: rows = [], isLoading, error } = usePartnerAudit(partnerId);
   if (isLoading) return <div className="text-center text-muted-foreground py-6">…</div>;
   if (error) return <div className="text-center text-destructive py-6 text-sm">{ar ? "لا صلاحية لعرض التدقيق" : "No permission to view audit"}</div>;

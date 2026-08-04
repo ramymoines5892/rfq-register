@@ -220,3 +220,66 @@ export async function upsertBank(row: Partial<PartnerBank>): Promise<PartnerBank
 export async function deleteBank(id: string): Promise<void> {
   const { error } = await pb().delete().eq("id", id); if (error) throw error;
 }
+
+// ===== Bulk operations =====
+export async function bulkSetStatus(ids: string[], status: string): Promise<void> {
+  if (!ids.length) return;
+  const { error } = await bp().update({ status }).in("id", ids);
+  if (error) throw error;
+  for (const id of ids) await logAudit("update", id, { status: { from: null, to: status } }, null);
+}
+
+export async function bulkSoftDelete(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const { error } = await bp().update({ deleted_at: new Date().toISOString() }).in("id", ids);
+  if (error) throw error;
+  for (const id of ids) await logAudit("delete", id, null, null);
+}
+
+export async function bulkAddRole(ids: string[], role: PartnerRole, current: BusinessPartner[]): Promise<void> {
+  for (const id of ids) {
+    const row = current.find((r) => r.id === id);
+    const roles = Array.from(new Set([...(row?.roles ?? []), role]));
+    const { error } = await bp().update({ roles }).eq("id", id);
+    if (error) throw error;
+  }
+}
+
+export type ImportResult = { inserted: number; failed: { row: number; message: string }[] };
+
+export async function importPartners(rows: Record<string, string>[], role: PartnerRole): Promise<ImportResult> {
+  const { data: company } = await supabase.from("companies").select("id").order("created_at").limit(1).maybeSingle();
+  const failed: ImportResult["failed"] = [];
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const payload: Record<string, any> = {
+      company_id: company?.id ?? null,
+      code: r.code || null,
+      name_ar: r.name_ar || null,
+      name_en: r.name_en || null,
+      legal_name: r.legal_name || null,
+      tax_id: r.tax_id || null,
+      email: r.email || null,
+      phone: r.phone || null,
+      mobile: r.mobile || null,
+      country: r.country || null,
+      city: r.city || null,
+      address: r.address || null,
+      industry: r.industry || null,
+      currency: r.currency || "EGP",
+      payment_terms: r.payment_terms || null,
+      credit_limit: r.credit_limit ? Number(r.credit_limit) : null,
+      status: r.status || "active",
+      roles: r.roles ? r.roles.split("|").map((s) => s.trim()).filter(Boolean) : [role],
+    };
+    if (!payload.name_ar && !payload.name_en) {
+      failed.push({ row: i + 2, message: "name_ar / name_en required" });
+      continue;
+    }
+    const { error } = await bp().insert(payload);
+    if (error) failed.push({ row: i + 2, message: error.message });
+    else inserted++;
+  }
+  return { inserted, failed };
+}
