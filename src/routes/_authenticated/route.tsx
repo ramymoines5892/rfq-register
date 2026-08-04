@@ -155,7 +155,7 @@ function AuthenticatedLayout() {
           id: "procurement", labelAr: "المشتريات", labelEn: "Purchases", icon: ShoppingCart,
           featureKey: "procurement",
           children: [
-            { to: "/partners", search: { role: "supplier" }, labelAr: "شركاء الأعمال (موردون)", labelEn: "Partners (Suppliers)", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
+            { to: "/partners", search: { role: "supplier" }, labelAr: "الموردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
             { labelAr: "طلبات الشراء", labelEn: "Purchase Requests", icon: ClipboardList, soon: true },
             { labelAr: "أوامر التوريد", labelEn: "Purchase Orders", icon: FileText, soon: true },
             { labelAr: "فواتير المشتريات", labelEn: "Purchase Invoices", icon: Receipt, soon: true },
