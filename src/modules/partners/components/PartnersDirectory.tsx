@@ -384,10 +384,9 @@ export function PartnersDirectory({
           {ar ? `${filtered.length} من ${rows.length}` : `${filtered.length} of ${rows.length}`}
         </div>
 
-        <PartnerSheet
-          id={null}
-          creating={creating}
-          defaultRoles={[role]}
+        <QuickCreatePartner
+          open={creating}
+          role={role}
           onCreated={(newId) => { setCreating(false); navigate({ to: `${basePath}/$id`, params: { id: newId } }); }}
           onClose={() => setCreating(false)}
         />
