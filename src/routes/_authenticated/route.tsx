@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, Workflow, LogOut, Languages, UsersRound, Building2,
   Settings2, Pin, PinOff, FolderArchive, ChevronDown, ShoppingCart, Store,
-  Package, Warehouse, FileText, Truck, Receipt, ClipboardList, Boxes, Search, Landmark, Sliders, ShieldCheck, Handshake, Database,
+  Package, Warehouse, FileText, Truck, Receipt, ClipboardList, Boxes, Search, Landmark, Sliders, ShieldCheck, Handshake,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { GlobalSearch, GlobalSearchTrigger } from "@/components/search/GlobalSearch";
@@ -135,14 +135,7 @@ function AuthenticatedLayout() {
     {
       labelAr: "البيانات الأساسية", labelEn: "Master Data",
       entries: [
-        {
-          id: "partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", icon: Handshake,
-          children: [
-            { to: "/partners", labelAr: "كل الشركاء", labelEn: "All Partners", icon: Database, match: (p: string) => p.startsWith("/partners") && !searchStr.includes("role=") },
-            { to: "/partners", search: { role: "customer" }, labelAr: "عملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=customer") },
-            { to: "/partners", search: { role: "supplier" }, labelAr: "موردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
-          ],
-        },
+        { to: "/partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", icon: Handshake, match: (p: string) => p.startsWith("/partners") && !searchStr.includes("role=") },
       ],
     },
     {
@@ -152,8 +145,7 @@ function AuthenticatedLayout() {
         {
           id: "sales", labelAr: "المبيعات", labelEn: "Sales", icon: Store,
           children: [
-            { to: "/customers", labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p) => p.startsWith("/customers") },
-            { to: "/partners", search: { role: "customer" }, labelAr: "شركاء الأعمال (عملاء)", labelEn: "Partners (Customers)", icon: Handshake, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=customer") },
+            { to: "/partners", search: { role: "customer" }, labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=customer") },
             { labelAr: "عروض الأسعار", labelEn: "Quotes", icon: FileText, soon: true },
             { labelAr: "أوامر البيع", labelEn: "Sales Orders", icon: ClipboardList, soon: true },
             { labelAr: "فواتير البيع", labelEn: "Sales Invoices", icon: Receipt, soon: true },
@@ -163,7 +155,7 @@ function AuthenticatedLayout() {
           id: "procurement", labelAr: "المشتريات", labelEn: "Purchases", icon: ShoppingCart,
           featureKey: "procurement",
           children: [
-            { to: "/partners", search: { role: "supplier" }, labelAr: "شركاء الأعمال (موردون)", labelEn: "Partners (Suppliers)", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
+            { to: "/partners", search: { role: "supplier" }, labelAr: "الموردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
             { labelAr: "طلبات الشراء", labelEn: "Purchase Requests", icon: ClipboardList, soon: true },
             { labelAr: "أوامر التوريد", labelEn: "Purchase Orders", icon: FileText, soon: true },
             { labelAr: "فواتير المشتريات", labelEn: "Purchase Invoices", icon: Receipt, soon: true },
