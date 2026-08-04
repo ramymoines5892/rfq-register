@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, FileText, Building2, UsersRound, Settings2,
   ShoppingCart, Store, ClipboardList, CheckCircle2, Bell, ArrowRight,
-  UserPlus, ToggleRight, FolderArchive, TrendingUp, Sparkles,,
-  Truck,
+  UserPlus, ToggleRight, FolderArchive, TrendingUp, Sparkles, Truck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
