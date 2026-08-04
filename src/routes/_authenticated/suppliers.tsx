@@ -5,9 +5,9 @@ export const Route = createFileRoute("/_authenticated/suppliers")({
   head: () => ({
     meta: [
       { title: "الموردون — Suppliers" },
-      { name: "description", content: "إدارة بيانات الموردين: العقود، المستندات، جهات الاتصال والحسابات البنكية." },
+      { name: "description", content: "إدارة بيانات الموردين: جهات الاتصال، العناوين، الشروط المالية والمعاملات." },
       { property: "og:title", content: "Suppliers" },
-      { property: "og:description", content: "Manage supplier master data, contacts and documents." },
+      { property: "og:description", content: "Manage supplier master data, contacts, terms and transactions." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -15,10 +15,11 @@ export const Route = createFileRoute("/_authenticated/suppliers")({
   component: () => (
     <PartnersDirectory
       role="supplier"
+      basePath="/suppliers"
       titleAr="الموردون"
       titleEn="Suppliers"
-      subtitleAr="بيانات الموردين — جهات الاتصال، العناوين، المستندات والحسابات البنكية"
-      subtitleEn="Supplier master data — contacts, addresses, documents and bank accounts"
+      subtitleAr="بيانات الموردين — جهات الاتصال، العناوين، الشروط المالية والمعاملات"
+      subtitleEn="Supplier master data — contacts, addresses, terms and transactions"
       newLabelAr="مورد جديد"
       newLabelEn="New Supplier"
     />
