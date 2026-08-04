@@ -18,7 +18,7 @@ import { usePartner, useUpsertPartner, useDeletePartner } from "@/modules/partne
 import type { BusinessPartner, PartnerRole } from "@/modules/partners/api";
 import { requiredFieldsFor, validatePartner } from "@/modules/partners/rules";
 import {
-  RField, ContactsPanel, AddressesPanel, BanksPanel, DocsPanel, AuditPanel,
+  RField, ContactsPanel, AddressesPanel, BanksPanel, DocsPanel, AuditPanel, AttachmentsPanel,
 } from "@/modules/partners/components/PartnerSheet";
 
 export function PartnerDetailPage({
@@ -135,10 +135,11 @@ export function PartnerDetailPage({
         </div>
 
         <Tabs defaultValue="general">
-          <TabsList className="w-full grid grid-cols-2 md:grid-cols-4">
+          <TabsList className="w-full grid grid-cols-2 md:grid-cols-5">
             <TabsTrigger value="general">{ar ? "البيانات وجهات الاتصال" : "General & Contacts"}</TabsTrigger>
             <TabsTrigger value="addresses">{ar ? "العناوين والشحن" : "Addresses & Shipping"}</TabsTrigger>
             <TabsTrigger value="financial">{ar ? "الشروط المالية" : "Financial Terms"}</TabsTrigger>
+            <TabsTrigger value="files">{ar ? "الملفات والمستندات" : "Files & Documents"}</TabsTrigger>
             <TabsTrigger value="activity">{ar ? "المعاملات والسجل" : "Transactions & Log"}</TabsTrigger>
           </TabsList>
 
@@ -243,6 +244,29 @@ export function PartnerDetailPage({
               <RField label={ar ? "قائمة الأسعار" : "Price List"} name="price_list" errorMap={errorMap} requiredSet={requiredSet}>
                 <Input value={merged.price_list ?? ""} onChange={(e) => set("price_list", e.target.value)} />
               </RField>
+              <RField label={ar ? "نسبة الخصم %" : "Discount %"} name="discount_percent" errorMap={errorMap} requiredSet={requiredSet}>
+                <Input type="number" min={0} max={100} step="0.01" value={merged.discount_percent ?? 0}
+                  onChange={(e) => set("discount_percent", Number(e.target.value))} />
+              </RField>
+              <RField label={ar ? "نظام الضريبة" : "Taxing Scheme"} name="tax_scheme" errorMap={errorMap} requiredSet={requiredSet}>
+                <Select value={merged.tax_scheme ?? "standard"} onValueChange={(v) => set("tax_scheme", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">{ar ? "ضريبة قياسية 14%" : "Standard VAT 14%"}</SelectItem>
+                    <SelectItem value="zero_rated">{ar ? "نسبة صفرية" : "Zero rated"}</SelectItem>
+                    <SelectItem value="exempt">{ar ? "معفى" : "Exempt"}</SelectItem>
+                    <SelectItem value="export">{ar ? "تصدير" : "Export"}</SelectItem>
+                    <SelectItem value="reverse_charge">{ar ? "التكليف العكسي" : "Reverse charge"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </RField>
+              <RField label={ar ? "رقم الإعفاء الضريبي" : "Tax Exempt #"} name="tax_exempt_no" errorMap={errorMap} requiredSet={requiredSet}>
+                <Input value={merged.tax_exempt_no ?? ""} onChange={(e) => set("tax_exempt_no", e.target.value)}
+                  disabled={(merged.tax_scheme ?? "standard") === "standard"} />
+              </RField>
+              <RField label={ar ? "ملاحظات مالية / شراء" : "Purchasing Notes"} name="notes" className="sm:col-span-2 lg:col-span-4" errorMap={errorMap} requiredSet={requiredSet}>
+                <Textarea rows={3} value={merged.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
+              </RField>
             </CardContent></Card>
 
             <div>
@@ -252,6 +276,10 @@ export function PartnerDetailPage({
               </div>
               <BanksPanel partnerId={partner.id} ar={ar} />
             </div>
+          </TabsContent>
+
+          <TabsContent value="files" className="mt-4">
+            <AttachmentsPanel partnerId={partner.id} ar={ar} />
           </TabsContent>
 
           <TabsContent value="activity" className="mt-4 space-y-4">
