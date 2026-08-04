@@ -19,7 +19,7 @@ import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
 import { usePartners, usePartnerBulk } from "@/modules/partners/queries";
 import type { BusinessPartner, PartnerRole } from "@/modules/partners/api";
-import { PartnerSheet } from "@/modules/partners/components/PartnerSheet";
+import { QuickCreatePartner } from "@/modules/partners/components/QuickCreatePartner";
 import { toCSV, downloadCSV, parseCSV } from "@/modules/partners/csv";
 
 type ColKey =
@@ -384,10 +384,9 @@ export function PartnersDirectory({
           {ar ? `${filtered.length} من ${rows.length}` : `${filtered.length} of ${rows.length}`}
         </div>
 
-        <PartnerSheet
-          id={null}
-          creating={creating}
-          defaultRoles={[role]}
+        <QuickCreatePartner
+          open={creating}
+          role={role}
           onCreated={(newId) => { setCreating(false); navigate({ to: `${basePath}/$id`, params: { id: newId } }); }}
           onClose={() => setCreating(false)}
         />
