@@ -43,6 +43,9 @@ export type BusinessPartner = {
   price_list: string | null;
   incoterm: string | null;
   rating: number | null;
+  discount_percent: number | null;
+  tax_scheme: string | null;
+  tax_exempt_no: string | null;
   status: string;
   notes: string | null;
   created_at: string;
@@ -52,7 +55,9 @@ export type BusinessPartner = {
 
 export type PartnerContact = {
   id: string; partner_id: string; name: string; title: string | null;
+  role: string | null;
   email: string | null; phone: string | null; mobile: string | null;
+  mobile_is_whatsapp: boolean; phone_is_whatsapp: boolean;
   is_default: boolean; notes: string | null;
 };
 
@@ -282,4 +287,65 @@ export async function importPartners(rows: Record<string, string>[], role: Partn
     else inserted++;
   }
   return { inserted, failed };
+}
+
+/* ---------------- attachments ---------------- */
+
+export const PARTNER_ATTACHMENT_BUCKET = "partner-attachments";
+
+export const PARTNER_ATTACHMENT_CATEGORIES: { value: string; ar: string; en: string }[] = [
+  { value: "commercial_register", ar: "السجل التجاري", en: "Commercial Register" },
+  { value: "tax_card",            ar: "البطاقة الضريبية", en: "Tax Card" },
+  { value: "company_profile",     ar: "بروفايل الشركة", en: "Company Profile" },
+  { value: "contract",            ar: "عقد / اتفاقية", en: "Contract" },
+  { value: "bank_letter",         ar: "خطاب بنكي", en: "Bank Letter" },
+  { value: "other",               ar: "أخرى", en: "Other" },
+];
+
+export type PartnerAttachment = {
+  id: string; partner_id: string; category: string; label: string | null;
+  file_path: string; file_name: string; mime_type: string | null;
+  size_bytes: number | null; created_at: string;
+};
+
+const pat = () => (supabase as any).from("partner_attachments");
+
+export async function listAttachments(partnerId: string): Promise<PartnerAttachment[]> {
+  const { data, error } = await pat().select("*").eq("partner_id", partnerId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as PartnerAttachment[];
+}
+
+export async function uploadAttachment(v: { partnerId: string; file: File; category: string; label?: string | null }): Promise<PartnerAttachment> {
+  const safe = v.file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${v.partnerId}/${Date.now()}_${safe}`;
+  const { error: upErr } = await supabase.storage
+    .from(PARTNER_ATTACHMENT_BUCKET)
+    .upload(path, v.file, { contentType: v.file.type || undefined });
+  if (upErr) throw upErr;
+  const { data: u } = await supabase.auth.getUser();
+  const { data, error } = await pat().insert({
+    partner_id: v.partnerId,
+    category: v.category,
+    label: v.label ?? null,
+    file_path: path,
+    file_name: v.file.name,
+    mime_type: v.file.type || null,
+    size_bytes: v.file.size,
+    created_by: u?.user?.id ?? null,
+  }).select("*").single();
+  if (error) throw error;
+  return data as PartnerAttachment;
+}
+
+export async function deleteAttachment(a: PartnerAttachment): Promise<void> {
+  await supabase.storage.from(PARTNER_ATTACHMENT_BUCKET).remove([a.file_path]);
+  const { error } = await pat().delete().eq("id", a.id);
+  if (error) throw error;
+}
+
+export async function attachmentUrl(path: string, ttl = 120): Promise<string> {
+  const { data, error } = await supabase.storage.from(PARTNER_ATTACHMENT_BUCKET).createSignedUrl(path, ttl);
+  if (error || !data?.signedUrl) throw error ?? new Error("Failed to create link");
+  return data.signedUrl;
 }
