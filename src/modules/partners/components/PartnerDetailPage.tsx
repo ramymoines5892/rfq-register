@@ -188,9 +188,6 @@ export function PartnerDetailPage({
               <RField label={ar ? "أرضي" : "Phone"} name="phone" errorMap={errorMap} requiredSet={requiredSet}>
                 <Input value={merged.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
               </RField>
-              <RField label={ar ? "ملاحظات" : "Notes"} name="notes" className="sm:col-span-2 lg:col-span-3" errorMap={errorMap} requiredSet={requiredSet}>
-                <Textarea rows={3} value={merged.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
-              </RField>
             </CardContent></Card>
 
             <div>
