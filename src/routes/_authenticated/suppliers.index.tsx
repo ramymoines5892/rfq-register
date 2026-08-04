@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PartnersDirectory } from "@/modules/partners/components/PartnersDirectory";
 
-export const Route = createFileRoute("/_authenticated/suppliers")({
+export const Route = createFileRoute("/_authenticated/suppliers/")({
   head: () => ({
     meta: [
       { title: "الموردون — Suppliers" },
