@@ -272,6 +272,7 @@ export type Database = {
           credit_limit: number | null
           currency: string
           deleted_at: string | null
+          discount_percent: number
           email: string | null
           fax: string | null
           id: string
@@ -289,7 +290,9 @@ export type Database = {
           roles: Database["public"]["Enums"]["partner_role"][]
           state: string | null
           status: string
+          tax_exempt_no: string | null
           tax_id: string | null
+          tax_scheme: string | null
           updated_at: string
           website: string | null
         }
@@ -306,6 +309,7 @@ export type Database = {
           credit_limit?: number | null
           currency?: string
           deleted_at?: string | null
+          discount_percent?: number
           email?: string | null
           fax?: string | null
           id?: string
@@ -323,7 +327,9 @@ export type Database = {
           roles?: Database["public"]["Enums"]["partner_role"][]
           state?: string | null
           status?: string
+          tax_exempt_no?: string | null
           tax_id?: string | null
+          tax_scheme?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -340,6 +346,7 @@ export type Database = {
           credit_limit?: number | null
           currency?: string
           deleted_at?: string | null
+          discount_percent?: number
           email?: string | null
           fax?: string | null
           id?: string
@@ -357,7 +364,9 @@ export type Database = {
           roles?: Database["public"]["Enums"]["partner_role"][]
           state?: string | null
           status?: string
+          tax_exempt_no?: string | null
           tax_id?: string | null
+          tax_scheme?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -2525,6 +2534,53 @@ export type Database = {
           },
         ]
       }
+      partner_attachments: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          file_name: string
+          file_path: string
+          id: string
+          label: string | null
+          mime_type: string | null
+          partner_id: string
+          size_bytes: number | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          label?: string | null
+          mime_type?: string | null
+          partner_id: string
+          size_bytes?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          label?: string | null
+          mime_type?: string | null
+          partner_id?: string
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_attachments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "business_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_banks: {
         Row: {
           account_name: string | null
@@ -2588,10 +2644,13 @@ export type Database = {
           id: string
           is_default: boolean
           mobile: string | null
+          mobile_is_whatsapp: boolean
           name: string
           notes: string | null
           partner_id: string
           phone: string | null
+          phone_is_whatsapp: boolean
+          role: string | null
           title: string | null
           updated_at: string
         }
@@ -2601,10 +2660,13 @@ export type Database = {
           id?: string
           is_default?: boolean
           mobile?: string | null
+          mobile_is_whatsapp?: boolean
           name: string
           notes?: string | null
           partner_id: string
           phone?: string | null
+          phone_is_whatsapp?: boolean
+          role?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -2614,10 +2676,13 @@ export type Database = {
           id?: string
           is_default?: boolean
           mobile?: string | null
+          mobile_is_whatsapp?: boolean
           name?: string
           notes?: string | null
           partner_id?: string
           phone?: string | null
+          phone_is_whatsapp?: boolean
+          role?: string | null
           title?: string | null
           updated_at?: string
         }

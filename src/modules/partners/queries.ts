@@ -74,6 +74,25 @@ export function useDeleteBank(partnerId: string) {
   return useMutation({ mutationFn: api.deleteBank, onSuccess: () => qc.invalidateQueries({ queryKey: key.banks(partnerId) }) });
 }
 
+export function usePartnerAttachments(id: string | null) {
+  return useQuery({ queryKey: ["partners", id ?? "", "attachments"], queryFn: () => api.listAttachments(id!), enabled: !!id });
+}
+export function useUploadAttachment(partnerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.uploadAttachment,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partners", partnerId, "attachments"] }),
+  });
+}
+export function useDeleteAttachment(partnerId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.deleteAttachment,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["partners", partnerId, "attachments"] }),
+  });
+}
+
+
 export function usePartnerBulk() {
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: ["partners"] });
