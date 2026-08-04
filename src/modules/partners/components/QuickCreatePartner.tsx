@@ -79,11 +79,11 @@ export function QuickCreatePartner({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>{ar ? "الاسم (عربي)" : "Name (Arabic)"} *</Label>
-            <ScriptInput script="ar" value={nameAr} onValueChange={setNameAr} maxLength={200} autoFocus />
+            <ScriptInput script="ar" value={nameAr} onChange={setNameAr} isAr={ar} maxLength={200} autoFocus />
           </div>
           <div className="space-y-1.5">
             <Label>{ar ? "الاسم (إنجليزي)" : "Name (English)"}</Label>
-            <ScriptInput script="en" value={nameEn} onValueChange={setNameEn} maxLength={200} />
+            <ScriptInput script="en" value={nameEn} onChange={setNameEn} isAr={ar} maxLength={200} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
