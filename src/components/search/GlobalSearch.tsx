@@ -51,7 +51,9 @@ type PageEntry = {
 
 const PAGES: PageEntry[] = [
   { to: "/", labelAr: "لوحة التحكم", labelEn: "Dashboard", keywords: "home overview dashboard الرئيسية", icon: LayoutGrid, group: "data" },
-  { to: "/customers", labelAr: "العملاء", labelEn: "Customers", keywords: "clients customers عملاء زبائن", icon: Users, group: "data" },
+  { to: "/partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", keywords: "partners vendors customers suppliers شركاء عملاء موردين", icon: Users, group: "data" },
+  { to: "/partners?role=customer", labelAr: "العملاء", labelEn: "Customers", keywords: "clients customers عملاء زبائن", icon: Users, group: "data" },
+  { to: "/partners?role=supplier", labelAr: "الموردون", labelEn: "Suppliers", keywords: "suppliers vendors موردين موردون", icon: Users, group: "data" },
   { to: "/workflows", labelAr: "عروض الأسعار وسير العمل", labelEn: "Quotes & Workflows", keywords: "quotes workflow approvals عروض اسعار موافقات", icon: Workflow, group: "data" },
   { to: "/hr", labelAr: "الموارد البشرية", labelEn: "HR", keywords: "hr users employees team members موظفين موارد بشرية فريق أدوار صلاحيات", icon: Building2, group: "admin", when: (a) => a.isAdmin },
   { to: "/settings", labelAr: "الإعدادات", labelEn: "Settings", keywords: "settings preferences الإعدادات", icon: Settings2, group: "settings", when: (a) => a.isAdmin || a.canManageFormFields },
