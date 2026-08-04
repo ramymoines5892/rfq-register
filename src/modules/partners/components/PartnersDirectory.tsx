@@ -19,7 +19,7 @@ import { useI18n } from "@/lib/i18n";
 import { useConfirm } from "@/hooks/useConfirm";
 import { usePartners, usePartnerBulk } from "@/modules/partners/queries";
 import type { BusinessPartner, PartnerRole } from "@/modules/partners/api";
-import { PartnerSheet } from "@/modules/partners/components/PartnerSheet";
+import { QuickCreatePartner } from "@/modules/partners/components/QuickCreatePartner";
 import { toCSV, downloadCSV, parseCSV } from "@/modules/partners/csv";
 
 type ColKey =
