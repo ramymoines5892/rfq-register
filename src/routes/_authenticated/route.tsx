@@ -135,14 +135,7 @@ function AuthenticatedLayout() {
     {
       labelAr: "البيانات الأساسية", labelEn: "Master Data",
       entries: [
-        {
-          id: "partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", icon: Handshake,
-          children: [
-            { to: "/partners", labelAr: "كل الشركاء", labelEn: "All Partners", icon: Database, match: (p: string) => p.startsWith("/partners") && !searchStr.includes("role=") },
-            { to: "/partners", search: { role: "customer" }, labelAr: "عملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=customer") },
-            { to: "/partners", search: { role: "supplier" }, labelAr: "موردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/partners") && searchStr.includes("role=supplier") },
-          ],
-        },
+        { to: "/partners", labelAr: "شركاء الأعمال", labelEn: "Business Partners", icon: Handshake, match: (p: string) => p.startsWith("/partners") && !searchStr.includes("role=") },
       ],
     },
     {
