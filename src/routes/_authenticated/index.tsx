@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, Users, FileText, Building2, UsersRound, Settings2,
   ShoppingCart, Store, ClipboardList, CheckCircle2, Bell, ArrowRight,
-  UserPlus, ToggleRight, FolderArchive, TrendingUp, Sparkles,
+  UserPlus, ToggleRight, FolderArchive, TrendingUp, Sparkles, Truck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -69,28 +69,29 @@ function Dashboard() {
         { key: "pendingUsers", label: ar ? "مستخدمون بانتظار التفعيل" : "Pending Users", value: counts.pendingUsers, icon: UserPlus, tint: "text-amber-600 bg-amber-500/10", to: "/hr" },
         { key: "quotesPending", label: ar ? "عروض قيد الاعتماد" : "Quotes Awaiting Approval", value: counts.quotesPending, icon: ClipboardList, tint: "text-blue-600 bg-blue-500/10", to: "/workflows" },
         { key: "expiringDocs", label: ar ? "مستندات منتهية أو تنتهي قريبًا" : "Docs Expired / Expiring", value: counts.expiringDocs + counts.expiredDocs, icon: FolderArchive, tint: "text-rose-600 bg-rose-500/10", to: "/documents", search: { filter: "expiring" } },
-        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
+        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/partners", search: { role: "customer" } },
       );
     } else if (access.canApprove) {
       all.push(
         { key: "quotesPending", label: ar ? "بانتظار اعتمادك" : "Awaiting Your Approval", value: counts.quotesPending, icon: CheckCircle2, tint: "text-blue-600 bg-blue-500/10", to: "/workflows" },
         { key: "quotesMine", label: ar ? "عروضي" : "My Quotes", value: counts.quotesMine, icon: FileText, tint: "text-primary bg-primary/10", to: "/workflows" },
-        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
+        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/partners", search: { role: "customer" } },
       );
     } else {
       all.push(
         { key: "quotesMine", label: ar ? "عروضي" : "My Quotes", value: counts.quotesMine, icon: FileText, tint: "text-primary bg-primary/10", to: "/workflows" },
-        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/customers" },
+        { key: "customers", label: ar ? "عملاء" : "Customers", value: counts.customers, icon: Users, tint: "text-emerald-600 bg-emerald-500/10", to: "/partners", search: { role: "customer" } },
         { key: "unreadNotifs", label: ar ? "إشعارات غير مقروءة" : "Unread Notifications", value: counts.unreadNotifs, icon: Bell, tint: "text-amber-600 bg-amber-500/10" },
       );
     }
     return all;
   }, [access, counts, ar]);
 
-  type Action = { label: string; desc: string; to: string; icon: any };
+  type Action = { label: string; desc: string; to: string; icon: any; search?: Record<string, string> };
   const actions: Action[] = useMemo(() => {
     const list: Action[] = [
-      { label: ar ? "العملاء" : "Customers", desc: ar ? "قاعدة بيانات العملاء" : "Customer database", to: "/customers", icon: Users },
+      { label: ar ? "العملاء" : "Customers", desc: ar ? "شركاء الأعمال بدور عميل" : "Business partners as customers", to: "/partners", search: { role: "customer" }, icon: Users },
+      { label: ar ? "الموردون" : "Suppliers", desc: ar ? "شركاء الأعمال بدور مورد" : "Business partners as suppliers", to: "/partners", search: { role: "supplier" }, icon: Truck },
     ];
     if (access.isAdmin) {
       list.push(
@@ -172,7 +173,7 @@ function Dashboard() {
             {actions.map((a) => {
               const Icon = a.icon;
               return (
-                <Link key={a.to} to={a.to} className="group">
+                <Link key={a.label} to={a.to} search={a.search as never} className="group">
                   <Card className="h-full hover:border-primary/60 hover:shadow-md transition-all">
                     <CardContent className="p-4 flex items-start gap-3">
                       <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
