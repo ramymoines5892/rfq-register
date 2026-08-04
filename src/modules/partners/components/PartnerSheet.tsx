@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Info, FileText, History, X } from "lucide-react";
+import { Plus, Trash2, Info, FileText, History, X, Upload, Download, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,8 +20,12 @@ import {
   usePartnerAddresses, useUpsertAddress, useDeleteAddress,
   usePartnerBanks, useUpsertBank, useDeleteBank,
   usePartnerAudit, usePartnerRelated,
+  usePartnerAttachments, useUploadAttachment, useDeleteAttachment,
 } from "@/modules/partners/queries";
-import { PARTNER_ROLES, type PartnerRole, type BusinessPartner } from "@/modules/partners/api";
+import {
+  PARTNER_ROLES, PARTNER_ATTACHMENT_CATEGORIES, attachmentUrl,
+  type PartnerRole, type BusinessPartner, type PartnerAttachment,
+} from "@/modules/partners/api";
 import { requiredFieldsFor, validatePartner } from "@/modules/partners/rules";
 import {
   filterDocs, sortDocs, totalsByCurrency, paginate,
@@ -245,30 +249,142 @@ export function RField({ label, name, children, className, errorMap, requiredSet
   );
 }
 
+export const CONTACT_ROLES: { value: string; ar: string; en: string }[] = [
+  { value: "owner",       ar: "المالك", en: "Owner" },
+  { value: "manager",     ar: "مدير", en: "Manager" },
+  { value: "purchasing",  ar: "مشتريات", en: "Purchasing" },
+  { value: "sales",       ar: "مبيعات", en: "Sales" },
+  { value: "finance",     ar: "حسابات / مالية", en: "Finance / Accounting" },
+  { value: "warehouse",   ar: "مخازن / استلام", en: "Warehouse / Receiving" },
+  { value: "technical",   ar: "فني / هندسي", en: "Technical / Engineering" },
+  { value: "logistics",   ar: "شحن ولوجستيات", en: "Logistics" },
+  { value: "other",       ar: "أخرى", en: "Other" },
+];
+
 export function ContactsPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
   const { data: rows = [] } = usePartnerContacts(partnerId);
   const up = useUpsertContact(partnerId);
   const del = useDeleteContact(partnerId);
   return (
     <div className="space-y-3">
-      <Button size="sm" onClick={() => up.mutate({ partner_id: partnerId, name: ar ? "جديد" : "New" })}>
+      <Button size="sm" onClick={() => up.mutate({ partner_id: partnerId, name: ar ? "جهة اتصال جديدة" : "New contact" })}>
         <Plus className="h-4 w-4 me-1" />{ar ? "إضافة جهة اتصال" : "Add Contact"}
       </Button>
       {rows.map((c) => (
-        <Card key={c.id}><CardContent className="p-3 grid grid-cols-2 gap-2">
-          <Input placeholder={ar ? "الاسم" : "Name"} defaultValue={c.name} onBlur={(e) => e.target.value !== c.name && up.mutate({ id: c.id, name: e.target.value })} />
-          <Input placeholder={ar ? "المسمى" : "Title"} defaultValue={c.title ?? ""} onBlur={(e) => up.mutate({ id: c.id, title: e.target.value })} />
-          <Input placeholder={ar ? "البريد" : "Email"} defaultValue={c.email ?? ""} onBlur={(e) => up.mutate({ id: c.id, email: e.target.value })} />
-          <Input placeholder={ar ? "الموبايل" : "Mobile"} defaultValue={c.mobile ?? ""} onBlur={(e) => up.mutate({ id: c.id, mobile: e.target.value })} />
-          <div className="col-span-2 flex justify-between items-center">
+        <Card key={c.id}><CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "الاسم" : "Name"}</Label>
+            <Input defaultValue={c.name} onBlur={(e) => e.target.value !== c.name && up.mutate({ id: c.id, name: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "الدور في شركة العميل" : "Role at customer"}</Label>
+            <Select value={(c as any).role ?? ""} onValueChange={(v) => up.mutate({ id: c.id, role: v } as any)}>
+              <SelectTrigger><SelectValue placeholder={ar ? "اختر الدور" : "Select role"} /></SelectTrigger>
+              <SelectContent>
+                {CONTACT_ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{ar ? r.ar : r.en}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "المسمى الوظيفي" : "Job title"}</Label>
+            <Input defaultValue={c.title ?? ""} onBlur={(e) => up.mutate({ id: c.id, title: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "البريد" : "Email"}</Label>
+            <Input type="email" defaultValue={c.email ?? ""} onBlur={(e) => up.mutate({ id: c.id, email: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "الموبايل" : "Mobile"}</Label>
+            <Input defaultValue={c.mobile ?? ""} onBlur={(e) => up.mutate({ id: c.id, mobile: e.target.value })} />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+              <Checkbox checked={Boolean((c as any).mobile_is_whatsapp)} onCheckedChange={(v) => up.mutate({ id: c.id, mobile_is_whatsapp: Boolean(v) } as any)} />
+              {ar ? "عليه واتساب" : "Has WhatsApp"}
+            </label>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "أرضي" : "Phone"}</Label>
+            <Input defaultValue={c.phone ?? ""} onBlur={(e) => up.mutate({ id: c.id, phone: e.target.value })} />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+              <Checkbox checked={Boolean((c as any).phone_is_whatsapp)} onCheckedChange={(v) => up.mutate({ id: c.id, phone_is_whatsapp: Boolean(v) } as any)} />
+              {ar ? "عليه واتساب" : "Has WhatsApp"}
+            </label>
+          </div>
+          <div className="sm:col-span-2 space-y-1">
+            <Label className="text-[11px] text-muted-foreground">{ar ? "ملاحظات" : "Notes"}</Label>
+            <Textarea rows={2} defaultValue={c.notes ?? ""} onBlur={(e) => up.mutate({ id: c.id, notes: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2 flex flex-wrap justify-between items-center gap-2">
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={c.is_default} onCheckedChange={(v) => up.mutate({ id: c.id, is_default: Boolean(v) })} />
-              {ar ? "افتراضي" : "Default"}
+              {ar ? "جهة الاتصال الأساسية" : "Primary contact"}
             </label>
             <Button variant="ghost" size="icon" onClick={() => del.mutate(c.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
           </div>
         </CardContent></Card>
       ))}
+      {rows.length === 0 && (
+        <p className="text-sm text-muted-foreground">{ar ? "لا توجد جهات اتصال بعد." : "No contacts yet."}</p>
+      )}
+    </div>
+  );
+}
+
+export function AttachmentsPanel({ partnerId, ar }: { partnerId: string; ar: boolean }) {
+  const { data: rows = [] } = usePartnerAttachments(partnerId);
+  const upload = useUploadAttachment(partnerId);
+  const del = useDeleteAttachment(partnerId);
+  const [category, setCategory] = useState("commercial_register");
+
+  async function onPick(files: FileList | null) {
+    if (!files?.length) return;
+    try {
+      for (const f of Array.from(files)) await upload.mutateAsync({ partnerId, file: f, category });
+      toast.success(ar ? "تم رفع الملفات" : "Files uploaded");
+    } catch (e: any) { toast.error(e?.message ?? "Upload failed"); }
+  }
+
+  async function open(a: PartnerAttachment) {
+    try { window.open(await attachmentUrl(a.file_path), "_blank", "noopener"); }
+    catch (e: any) { toast.error(e?.message ?? "Failed"); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1 min-w-[180px]">
+          <Label className="text-[11px] text-muted-foreground">{ar ? "نوع الملف" : "File type"}</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {PARTNER_ATTACHMENT_CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{ar ? c.ar : c.en}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <label className="inline-flex">
+          <input type="file" multiple className="hidden" onChange={(e) => { onPick(e.target.files); e.currentTarget.value = ""; }} />
+          <span className="inline-flex items-center h-10 px-3 rounded-md border text-sm cursor-pointer hover:bg-accent">
+            <Upload className="h-4 w-4 me-1" />{upload.isPending ? (ar ? "جارٍ الرفع…" : "Uploading…") : (ar ? "رفع ملفات" : "Upload files")}
+          </span>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {rows.map((a) => {
+          const cat = PARTNER_ATTACHMENT_CATEGORIES.find((c) => c.value === a.category);
+          return (
+            <Card key={a.id}><CardContent className="p-3 flex items-start gap-2">
+              <Paperclip className="h-4 w-4 mt-1 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{a.file_name}</p>
+                <Badge variant="outline" className="text-[10px] mt-1">{cat ? (ar ? cat.ar : cat.en) : a.category}</Badge>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => open(a)}><Download className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => del.mutate(a)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            </CardContent></Card>
+          );
+        })}
+      </div>
+      {rows.length === 0 && <p className="text-sm text-muted-foreground">{ar ? "لا توجد ملفات مرفقة." : "No files attached."}</p>}
     </div>
   );
 }
