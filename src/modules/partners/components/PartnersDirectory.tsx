@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Plus, Search, X, SlidersHorizontal, Download, Upload, Columns3,
   Trash2, CheckCircle2, Ban, ChevronDown, ChevronUp, ArrowUpDown,
@@ -396,4 +396,3 @@ export function PartnersDirectory({
   );
 }
 
-export { Link };
