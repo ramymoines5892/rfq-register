@@ -133,13 +133,6 @@ function AuthenticatedLayout() {
       ],
     },
     {
-      labelAr: "البيانات الأساسية", labelEn: "Master Data",
-      entries: [
-        { to: "/customers", labelAr: "العملاء", labelEn: "Customers", icon: Users, match: (p: string) => p.startsWith("/customers") },
-        { to: "/suppliers", labelAr: "الموردون", labelEn: "Suppliers", icon: Truck, match: (p: string) => p.startsWith("/suppliers") },
-      ],
-    },
-    {
 
       labelAr: "العمليات", labelEn: "Operations",
       entries: [
